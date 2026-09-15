@@ -14,7 +14,7 @@ pkg install -y root-repo x11-repo
 pkg upgrade -y
 
 echo "[*] Installing core packages..."
-pkg install -y zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip
+pkg install -y zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip unrar
 
 DOTFILES_DIR="$HOME/termux-dotfiles"
 ZSH_DIR="$HOME/.zsh"
@@ -58,10 +58,25 @@ for PLUGIN in "${!PLUGINS[@]}"; do
     fi
 done
 
-echo "[*] Creating quick storage symlinks..."
-ln -sfn ~/storage/downloads ~/Downloads
-ln -sfn ~/storage/dcim ~/Pictures
-ln -sfn ~/storage/shared ~/Documents
+echo "[*] Creating storage symlinks..."
+declare -A STORAGE_DIRS=(
+    ["DCIM"]="/storage/emulated/0/DCIM"
+    ["Downloads"]="/storage/emulated/0/Downloads"
+    ["Movies"]="/storage/emulated/0/Movies"
+    ["Pictures"]="/storage/emulated/0/Pictures"
+    ["Workspace"]="/storage/emulated/0/Workspace"
+)
+
+for NAME in "${!STORAGE_DIRS[@]}"; do
+    TARGET="${STORAGE_DIRS[$NAME]}"
+    if [ ! -d "$TARGET" ]; then
+        mkdir -p "$TARGET"
+        echo "    [+] Created $TARGET"
+    else
+        echo "    [*] $TARGET already exists, skipping creation."
+    fi
+    ln -sfn "$TARGET" "$HOME/$NAME"
+done
 
 echo "[*] Symlinking configurations..."
 ln -sf "$DOTFILES_DIR/zsh/.zshrc" "$HOME/.zshrc"
