@@ -14,6 +14,11 @@ setopt SHARE_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_REDUCE_BLANKS
 
+setopt AUTO_CD
+setopt AUTO_PUSHD
+setopt PUSHD_IGNORE_DUPS
+setopt PUSHD_SILENT
+
 source "$ZSH_CONFIG_DIR/functions.zsh"
 
 source "$ZSH_CONFIG_DIR/aliases.zsh"
@@ -59,3 +64,5 @@ if [[ "$TERMUX_FAKEROOT" == "1" ]]; then
     
     zle -N accept-line magic_su_enter
 fi
+
+source "$ZSH_CONFIG_DIR/motd.zsh"
