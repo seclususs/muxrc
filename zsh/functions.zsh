@@ -34,6 +34,7 @@ sudo() {
     local max_attempts=3
     local success=0
     local current_user="${USER:-$(whoami)}"
+    local user_pass
     
     if [[ "$TERMUX_FAKEROOT" == "1" ]]; then
         success=1
@@ -62,7 +63,30 @@ sudo() {
     if [[ "$1" =~ ^(pm|cmd|am|svc|settings|content|input|dpm)$ ]]; then
         print -r "$env_vars ${(q)@}" | command su
     else
-        command su -c "$env_vars ${(q)@}"
+        local su_pid
+
+        command su -c "$env_vars exec ${(q)@}" &
+        su_pid=$!
+
+        trap '
+            local child line entry ppid
+            for child in /proc/<1->; do
+                line=$(<"$child/status") 2>/dev/null || continue
+                for entry in "${(f)line}"; do
+                    if [[ "$entry" == PPid:* ]]; then
+                        ppid="${entry#PPid:}"
+                        ppid="${ppid//[[:space:]]/}"
+                        [[ "$ppid" == "$su_pid" ]] && kill -INT "${child:t}" 2>/dev/null
+                        break
+                    fi
+                done
+            done
+        ' INT
+
+        wait "$su_pid"
+        local exit_code=$?
+        trap - INT
+        return $exit_code
     fi
 }
 
@@ -89,6 +113,7 @@ su() {
         return 1
     fi
     
+    local user_pass
     print -n "Password: "
     read -r -s user_pass
     echo ""
@@ -216,4 +241,22 @@ ex() {
     else
         echo "ex: '$1' is not a valid file."
     fi
+}
+
+###########################
+# Command not found handler
+###########################
+command_not_found_handler() {
+    local cmd="$1"
+    local matches
+    matches=$(pkg search "$cmd" 2>/dev/null | grep "^$cmd/" )
+
+    if [[ -n "$matches" ]]; then
+        echo "zsh: command not found: $cmd"
+        echo "Did you mean to install it? Try: pkg install $cmd"
+    else
+        echo "zsh: command not found: $cmd"
+    fi
+
+    return 127
 }
