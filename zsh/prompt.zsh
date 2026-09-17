@@ -26,7 +26,7 @@ precmd_status_line() {
         (( elapsed >= 5 )) && duration=" %F{yellow}${elapsed}s%f"
         unset _cmd_start
     fi
-
+    
     if (( exit_code != 0 )); then
         RPROMPT="%F{196}✗ ${exit_code}%f${duration}"
     else
@@ -65,9 +65,9 @@ preexec_set_title() {
 }
 preexec_functions+=(preexec_set_title)
 
-##############################
+#############################
 # Transient prompt (condense)
-##############################
+#############################
 typeset -g _PROMPT_FULL="$PROMPT"
 _prompt_restore() { PROMPT="$_PROMPT_FULL" }
 precmd_functions+=(_prompt_restore)
@@ -81,33 +81,33 @@ _prompt_condense() {
 autoload -Uz add-zle-hook-widget
 add-zle-hook-widget zle-line-finish _prompt_condense
 
-#####################
+#################
 # Git dirty badge
-#####################
+#################
 _prompt_git_dirty() {
     git rev-parse --is-inside-work-tree &>/dev/null || return
     [[ -n "$(git status --porcelain 2>/dev/null)" ]] && RPROMPT+=" %F{#e06c75}✚%f"
 }
 precmd_functions+=(_prompt_git_dirty)
 
-#####################
+###############
 # Battery badge
-#####################
+###############
 _battery_cache="$HOME/.cache/prompt_battery"
 
 _prompt_battery() {
     command -v termux-battery-status >/dev/null 2>&1 || return
     local now=$(date +%s) ts=0 pct color
     [[ -f "$_battery_cache" ]] && read -r ts pct < "$_battery_cache"
-
+    
     if (( now - ts >= 60 )) || [[ -z "$pct" ]]; then
         pct=$(timeout 0.5 termux-battery-status 2>/dev/null | grep -o '"percentage": *[0-9]*' | grep -o '[0-9]*')
         [[ -n "$pct" ]] && echo "$now $pct" > "$_battery_cache"
     fi
     [[ -z "$pct" ]] && return
-
+    
     if (( pct >= 80 )); then color="#98c379"
-    elif (( pct >= 40 )); then color="#e5c07b"
+        elif (( pct >= 40 )); then color="#e5c07b"
     else color="#e06c75"
     fi
     RPROMPT="%F{$color}${pct}%%%f ${RPROMPT}"

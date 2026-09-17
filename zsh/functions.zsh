@@ -64,10 +64,10 @@ sudo() {
         print -r "$env_vars ${(q)@}" | command su
     else
         local su_pid
-
+        
         command su -c "$env_vars exec ${(q)@}" &
         su_pid=$!
-
+        
         trap '
             local child line entry ppid
             for child in /proc/<1->; do
@@ -82,7 +82,7 @@ sudo() {
                 done
             done
         ' INT
-
+        
         wait "$su_pid"
         local exit_code=$?
         trap - INT
@@ -250,40 +250,40 @@ command_not_found_handler() {
     local cmd="$1"
     local matches
     matches=$(pkg search "$cmd" 2>/dev/null | grep "^$cmd/" )
-
+    
     if [[ -n "$matches" ]]; then
         echo "zsh: command not found: $cmd"
         echo "Did you mean to install it? Try: pkg install $cmd"
     else
         echo "zsh: command not found: $cmd"
     fi
-
+    
     return 127
 }
 
-##############################
+###########################
 # Notification task wrapper
-##############################
+###########################
 notify-task() {
     (( $# == 0 )) && { echo "usage: notify-task <cmd> [args...]"; return 1; }
-
+    
     local label="$*"
     local start=$(date +%s)
-
+    
     "$@"
     local code=$?
     local secs=$(( $(date +%s) - start ))
     local status="done in ${secs}s"
     (( code != 0 )) && status="failed (exit ${code}) after ${secs}s"
-
+    
     termux-vibrate -d 250 >/dev/null 2>&1
     termux-notification --id notify-task --title "${label:0:40}" --content "$status"
     return $code
 }
 
-############################
+###########################
 # Clipboard history helpers
-############################
+###########################
 CLIP_HISTORY_FILE="$HOME/.cache/clip_history.log"
 
 clip-save() {
@@ -303,9 +303,9 @@ clip-pick() {
     [[ -n "$pick" ]] && echo -n "$pick" | termux-clipboard-set && termux-toast "copied"
 }
 
-##########################
+########################
 # Safe trash and untrash
-##########################
+########################
 TRASH_DIR="$HOME/.trash"
 
 trash() {
@@ -321,9 +321,9 @@ untrash() {
     [[ -n "$item" ]] && mv -- "$TRASH_DIR/$item" "./${item%.*}"
 }
 
-######################
+#####################
 # Network info helper
-######################
+#####################
 net-info() {
     command -v termux-wifi-connectioninfo >/dev/null 2>&1 || { echo "net-info: needs termux-api"; return 1; }
     local ip=$(termux-wifi-connectioninfo | jq -r '.ip // empty')
@@ -333,39 +333,39 @@ net-info() {
     termux-toast "$cmd"
 }
 
-#################################
+#############################
 # Gemini command auto-correct
-#################################
+#############################
 _gemini_env="$HOME/.gemini_ai_env"
 _gemini_cooldown="$HOME/.cache/gemini_cooldown"
 _gemini_load() { [[ -f "$_gemini_env" ]] && source "$_gemini_env" }
 
 (( $+functions[command_not_found_handler] )) && \
-    functions -c command_not_found_handler _cnf_original
+functions -c command_not_found_handler _cnf_original
 
 command_not_found_handler() {
     local cmd="$1"
     _gemini_load
-
+    
     if [[ "$AI_AUTOCORRECT_ENABLED" == 1 && -n "$GEMINI_API_KEY" ]] \
-        && command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
-
+    && command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        
         mkdir -p "${_gemini_cooldown:h}"
         local now=$(date +%s) last=0
         [[ -f "$_gemini_cooldown" ]] && last=$(cat "$_gemini_cooldown")
-
+        
         if (( now - last >= 8 )); then
             echo "$now" > "$_gemini_cooldown"
-
+            
             local payload=$(jq -n --arg c "$cmd" \
-                '{contents:[{parts:[{text:("shell command not found: \"" + $c + "\". guess the single command the user meant. reply with just the command, nothing else.")}]}]}')
-
+            '{contents:[{parts:[{text:("shell command not found: \"" + $c + "\". guess the single command the user meant. reply with just the command, nothing else.")}]}]}')
+            
             local suggestion=$(curl -s --max-time 4 \
                 -H "x-goog-api-key: $GEMINI_API_KEY" \
                 -H "Content-Type: application/json" \
                 -X POST "https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL:-gemini-3.5-flash-lite}:generateContent" \
-                -d "$payload" 2>/dev/null | jq -r '.candidates[0].content.parts[0].text // empty' | xargs)
-
+            -d "$payload" 2>/dev/null | jq -r '.candidates[0].content.parts[0].text // empty' | xargs)
+            
             if [[ -n "$suggestion" && "$suggestion" != "$cmd" ]]; then
                 echo "zsh: command not found: $cmd"
                 echo "gemini: $suggestion"
@@ -376,7 +376,7 @@ command_not_found_handler() {
             fi
         fi
     fi
-
+    
     if (( $+functions[_cnf_original] )); then
         _cnf_original "$cmd"
     else
@@ -385,9 +385,9 @@ command_not_found_handler() {
     fi
 }
 
-############################
+########################
 # AI auto-correct toggle
-############################
+########################
 ai-toggle() {
     mkdir -p "${_gemini_env:h}"; touch "$_gemini_env"
     _gemini_load
@@ -396,8 +396,8 @@ ai-toggle() {
         echo "gemini auto-correct: off"
     else
         grep -q AI_AUTOCORRECT_ENABLED "$_gemini_env" \
-            && sed -i 's/^AI_AUTOCORRECT_ENABLED=.*/AI_AUTOCORRECT_ENABLED=1/' "$_gemini_env" \
-            || echo "AI_AUTOCORRECT_ENABLED=1" >> "$_gemini_env"
+        && sed -i 's/^AI_AUTOCORRECT_ENABLED=.*/AI_AUTOCORRECT_ENABLED=1/' "$_gemini_env" \
+        || echo "AI_AUTOCORRECT_ENABLED=1" >> "$_gemini_env"
         echo "gemini auto-correct: on"
     fi
 }
