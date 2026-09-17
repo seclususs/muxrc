@@ -260,3 +260,23 @@ command_not_found_handler() {
 
     return 127
 }
+
+##############################
+# Notification task wrapper
+##############################
+notify-task() {
+    (( $# == 0 )) && { echo "usage: notify-task <cmd> [args...]"; return 1; }
+
+    local label="$*"
+    local start=$(date +%s)
+
+    "$@"
+    local code=$?
+    local secs=$(( $(date +%s) - start ))
+    local status="done in ${secs}s"
+    (( code != 0 )) && status="failed (exit ${code}) after ${secs}s"
+
+    termux-vibrate -d 250 >/dev/null 2>&1
+    termux-notification --id notify-task --title "${label:0:40}" --content "$status"
+    return $code
+}
