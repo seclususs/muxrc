@@ -80,3 +80,12 @@ _prompt_condense() {
 }
 autoload -Uz add-zle-hook-widget
 add-zle-hook-widget zle-line-finish _prompt_condense
+
+#####################
+# Git dirty badge
+#####################
+_prompt_git_dirty() {
+    git rev-parse --is-inside-work-tree &>/dev/null || return
+    [[ -n "$(git status --porcelain 2>/dev/null)" ]] && RPROMPT+=" %F{#e06c75}✚%f"
+}
+precmd_functions+=(_prompt_git_dirty)
