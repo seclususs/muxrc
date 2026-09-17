@@ -320,3 +320,15 @@ untrash() {
     local item=$(ls -1t "$TRASH_DIR" 2>/dev/null | fzf --prompt="restore> ") || return
     [[ -n "$item" ]] && mv -- "$TRASH_DIR/$item" "./${item%.*}"
 }
+
+######################
+# Network info helper
+######################
+net-info() {
+    command -v termux-wifi-connectioninfo >/dev/null 2>&1 || { echo "net-info: needs termux-api"; return 1; }
+    local ip=$(termux-wifi-connectioninfo | jq -r '.ip // empty')
+    [[ -z "$ip" || "$ip" == null ]] && { echo "net-info: no wifi ip"; return 1; }
+    local cmd="ssh ${USER:-$(whoami)}@${ip} -p 8022"
+    echo "$cmd"
+    termux-toast "$cmd"
+}
