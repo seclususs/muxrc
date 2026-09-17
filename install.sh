@@ -94,9 +94,9 @@ wget -q --show-progress -O "$HOME/.termux/font.ttf" "https://raw.githubuserconte
 
 termux-reload-settings
 
-if [[ "$SHELL" != *"/zsh" ]]; then
+if [[ "$SHELL" != *"zsh" ]]; then
     echo "[*] Changing default shell to zsh..."
-    chsh -s zsh
+    chsh -s /data/data/com.termux/files/usr/bin/zsh
 fi
 
 echo "[*] Setting up Gemini auto-correct..."
