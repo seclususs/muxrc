@@ -60,10 +60,6 @@ done
 
 echo "[*] Creating storage symlinks..."
 declare -A STORAGE_DIRS=(
-    ["DCIM"]="/storage/emulated/0/DCIM"
-    ["Downloads"]="/storage/emulated/0/Downloads"
-    ["Movies"]="/storage/emulated/0/Movies"
-    ["Pictures"]="/storage/emulated/0/Pictures"
     ["Workspace"]="/storage/emulated/0/Workspace"
 )
 
