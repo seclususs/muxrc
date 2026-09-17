@@ -85,6 +85,10 @@ ln -sf "$DOTFILES_DIR/termux/colors.properties" "$HOME/.termux/colors.properties
 ln -sf "$DOTFILES_DIR/termux/termux.properties" "$HOME/.termux/termux.properties"
 ln -sf "$DOTFILES_DIR/nano/.nanorc" "$HOME/.nanorc"
 
+mkdir -p "$HOME/.termux/boot"
+ln -sf "$DOTFILES_DIR/boot/start-sshd" "$HOME/.termux/boot/start-sshd"
+chmod +x "$DOTFILES_DIR/boot/start-sshd"
+
 echo "[*] Installing JetBrains Mono Nerd Font..."
 wget -q --show-progress -O "$HOME/.termux/font.ttf" "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf"
 
