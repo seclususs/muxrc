@@ -102,7 +102,10 @@ _prompt_battery() {
     
     if (( now - ts >= 60 )) || [[ -z "$pct" ]]; then
         pct=$(timeout 0.5 termux-battery-status 2>/dev/null | grep -o '"percentage": *[0-9]*' | grep -o '[0-9]*')
-        [[ -n "$pct" ]] && echo "$now $pct" > "$_battery_cache"
+        if [[ -n "$pct" ]]; then
+            mkdir -p "${_battery_cache:h}"
+            echo "$now $pct" > "$_battery_cache"
+        fi
     fi
     [[ -z "$pct" ]] && return
     
