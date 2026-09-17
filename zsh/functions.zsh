@@ -384,3 +384,20 @@ command_not_found_handler() {
         return 127
     fi
 }
+
+############################
+# AI auto-correct toggle
+############################
+ai-toggle() {
+    mkdir -p "${_gemini_env:h}"; touch "$_gemini_env"
+    _gemini_load
+    if [[ "$AI_AUTOCORRECT_ENABLED" == 1 ]]; then
+        sed -i 's/^AI_AUTOCORRECT_ENABLED=.*/AI_AUTOCORRECT_ENABLED=0/' "$_gemini_env"
+        echo "gemini auto-correct: off"
+    else
+        grep -q AI_AUTOCORRECT_ENABLED "$_gemini_env" \
+            && sed -i 's/^AI_AUTOCORRECT_ENABLED=.*/AI_AUTOCORRECT_ENABLED=1/' "$_gemini_env" \
+            || echo "AI_AUTOCORRECT_ENABLED=1" >> "$_gemini_env"
+        echo "gemini auto-correct: on"
+    fi
+}
