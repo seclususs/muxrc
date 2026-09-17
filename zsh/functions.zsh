@@ -280,3 +280,25 @@ notify-task() {
     termux-notification --id notify-task --title "${label:0:40}" --content "$status"
     return $code
 }
+
+############################
+# Clipboard history helpers
+############################
+CLIP_HISTORY_FILE="$HOME/.cache/clip_history.log"
+
+clip-save() {
+    mkdir -p "${CLIP_HISTORY_FILE:h}"
+    local cur=$(termux-clipboard-get 2>/dev/null)
+    [[ -z "$cur" ]] && return
+    [[ "$(tail -n1 "$CLIP_HISTORY_FILE" 2>/dev/null)" != "$cur" ]] && echo "$cur" >> "$CLIP_HISTORY_FILE"
+}
+
+clip-watch() {
+    while true; do clip-save; sleep 2; done
+}
+
+clip-pick() {
+    [[ -f "$CLIP_HISTORY_FILE" ]] || return 1
+    local pick=$(tac "$CLIP_HISTORY_FILE" | fzf --prompt="clip> ")
+    [[ -n "$pick" ]] && echo -n "$pick" | termux-clipboard-set && termux-toast "copied"
+}
