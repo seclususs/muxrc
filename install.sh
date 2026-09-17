@@ -89,8 +89,12 @@ mkdir -p "$HOME/.shortcuts"
 ln -sf "$DOTFILES_DIR/shortcuts/backup.sh" "$HOME/.shortcuts/backup.sh"
 chmod +x "$DOTFILES_DIR/shortcuts/backup.sh"
 
-echo "[*] Installing JetBrains Mono Nerd Font..."
-wget -q --show-progress -O "$HOME/.termux/font.ttf" "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf"
+if [ ! -f "$HOME/.termux/font.ttf" ]; then
+    echo "[*] Installing JetBrains Mono Nerd Font..."
+    wget -q --show-progress -O "$HOME/.termux/font.ttf" "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf"
+else
+    echo "[*] JetBrains Mono Nerd Font already installed, skipping."
+fi
 
 termux-reload-settings
 
