@@ -95,4 +95,20 @@ if [[ "$SHELL" != *"/zsh" ]]; then
     chsh -s zsh
 fi
 
+echo "[*] Setting up Gemini auto-correct..."
+echo
+read -r -p "Set up Gemini auto-correct now? [y/N]: " ENABLE_AI
+if [[ "$ENABLE_AI" =~ ^[Yy]$ ]]; then
+    read -r -p "Gemini API key: " -s GEMINI_KEY
+    echo
+    {
+        echo "GEMINI_API_KEY=\"$GEMINI_KEY\""
+        echo "GEMINI_MODEL=\"gemini-3.5-flash-lite\""
+        echo "AI_AUTOCORRECT_ENABLED=1"
+    } > "$HOME/.gemini_ai_env"
+    chmod 600 "$HOME/.gemini_ai_env"
+fi
+
+grep -qxF '.gemini_ai_env' "$DOTFILES_DIR/.gitignore" || echo '.gemini_ai_env' >> "$DOTFILES_DIR/.gitignore"
+
 echo "[+] Installation complete! Please restart your Termux session."

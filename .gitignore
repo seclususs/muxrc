@@ -2,3 +2,4 @@
 *.swp
 .sudo_hash
 .zsh_history
+.gemini_ai_env
