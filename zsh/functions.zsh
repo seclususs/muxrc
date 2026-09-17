@@ -332,3 +332,55 @@ net-info() {
     echo "$cmd"
     termux-toast "$cmd"
 }
+
+#################################
+# Gemini command auto-correct
+#################################
+_gemini_env="$HOME/.gemini_ai_env"
+_gemini_cooldown="$HOME/.cache/gemini_cooldown"
+_gemini_load() { [[ -f "$_gemini_env" ]] && source "$_gemini_env" }
+
+(( $+functions[command_not_found_handler] )) && \
+    functions -c command_not_found_handler _cnf_original
+
+command_not_found_handler() {
+    local cmd="$1"
+    _gemini_load
+
+    if [[ "$AI_AUTOCORRECT_ENABLED" == 1 && -n "$GEMINI_API_KEY" ]] \
+        && command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+
+        mkdir -p "${_gemini_cooldown:h}"
+        local now=$(date +%s) last=0
+        [[ -f "$_gemini_cooldown" ]] && last=$(cat "$_gemini_cooldown")
+
+        if (( now - last >= 8 )); then
+            echo "$now" > "$_gemini_cooldown"
+
+            local payload=$(jq -n --arg c "$cmd" \
+                '{contents:[{parts:[{text:("shell command not found: \"" + $c + "\". guess the single command the user meant. reply with just the command, nothing else.")}]}]}')
+
+            local suggestion=$(curl -s --max-time 4 \
+                -H "x-goog-api-key: $GEMINI_API_KEY" \
+                -H "Content-Type: application/json" \
+                -X POST "https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL:-gemini-3.5-flash-lite}:generateContent" \
+                -d "$payload" 2>/dev/null | jq -r '.candidates[0].content.parts[0].text // empty' | xargs)
+
+            if [[ -n "$suggestion" && "$suggestion" != "$cmd" ]]; then
+                echo "zsh: command not found: $cmd"
+                echo "gemini: $suggestion"
+                if read -q "?run it? [y/N] "; then
+                    echo; eval "$suggestion"; return $?
+                fi
+                echo
+            fi
+        fi
+    fi
+
+    if (( $+functions[_cnf_original] )); then
+        _cnf_original "$cmd"
+    else
+        echo "zsh: command not found: $cmd"
+        return 127
+    fi
+}
