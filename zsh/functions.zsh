@@ -302,3 +302,21 @@ clip-pick() {
     local pick=$(tac "$CLIP_HISTORY_FILE" | fzf --prompt="clip> ")
     [[ -n "$pick" ]] && echo -n "$pick" | termux-clipboard-set && termux-toast "copied"
 }
+
+##########################
+# Safe trash and untrash
+##########################
+TRASH_DIR="$HOME/.trash"
+
+trash() {
+    mkdir -p "$TRASH_DIR"
+    for f in "$@"; do
+        [[ -e "$f" ]] || { echo "trash: no such file: $f"; continue; }
+        mv -- "$f" "$TRASH_DIR/${f:t}.$(date +%s)"
+    done
+}
+
+untrash() {
+    local item=$(ls -1t "$TRASH_DIR" 2>/dev/null | fzf --prompt="restore> ") || return
+    [[ -n "$item" ]] && mv -- "$TRASH_DIR/$item" "./${item%.*}"
+}
