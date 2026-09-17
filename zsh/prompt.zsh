@@ -89,3 +89,27 @@ _prompt_git_dirty() {
     [[ -n "$(git status --porcelain 2>/dev/null)" ]] && RPROMPT+=" %F{#e06c75}✚%f"
 }
 precmd_functions+=(_prompt_git_dirty)
+
+#####################
+# Battery badge
+#####################
+_battery_cache="$HOME/.cache/prompt_battery"
+
+_prompt_battery() {
+    command -v termux-battery-status >/dev/null 2>&1 || return
+    local now=$(date +%s) ts=0 pct color
+    [[ -f "$_battery_cache" ]] && read -r ts pct < "$_battery_cache"
+
+    if (( now - ts >= 60 )) || [[ -z "$pct" ]]; then
+        pct=$(timeout 0.5 termux-battery-status 2>/dev/null | grep -o '"percentage": *[0-9]*' | grep -o '[0-9]*')
+        [[ -n "$pct" ]] && echo "$now $pct" > "$_battery_cache"
+    fi
+    [[ -z "$pct" ]] && return
+
+    if (( pct >= 80 )); then color="#98c379"
+    elif (( pct >= 40 )); then color="#e5c07b"
+    else color="#e06c75"
+    fi
+    RPROMPT="%F{$color}${pct}%%%f ${RPROMPT}"
+}
+precmd_functions+=(_prompt_battery)
