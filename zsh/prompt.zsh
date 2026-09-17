@@ -64,3 +64,19 @@ preexec_set_title() {
     print -Pn "\e]2;%~: $1\a"
 }
 preexec_functions+=(preexec_set_title)
+
+##############################
+# Transient prompt (condense)
+##############################
+typeset -g _PROMPT_FULL="$PROMPT"
+_prompt_restore() { PROMPT="$_PROMPT_FULL" }
+precmd_functions+=(_prompt_restore)
+
+_prompt_condense() {
+    [[ -z $BUFFER ]] && return
+    PROMPT='%F{#5c6370}%*%f ❯ '
+    RPROMPT=''
+    zle && zle .reset-prompt
+}
+autoload -Uz add-zle-hook-widget
+add-zle-hook-widget zle-line-finish _prompt_condense
