@@ -14,7 +14,7 @@ pkg install -y root-repo x11-repo
 pkg upgrade -y
 
 echo "[*] Installing core packages..."
-pkg install -y zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip unrar
+pkg install -y zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip unrar
 
 DOTFILES_DIR="$HOME/termux-dotfiles"
 ZSH_DIR="$HOME/.zsh"
