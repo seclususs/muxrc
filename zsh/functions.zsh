@@ -364,7 +364,7 @@ command_not_found_handler() {
                 -H "x-goog-api-key: $GEMINI_API_KEY" \
                 -H "Content-Type: application/json" \
                 -X POST "https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL:-gemini-3.5-flash-lite}:generateContent" \
-            -d "$payload" 2>/dev/null | jq -r '.candidates[0].content.parts[0].text // empty' | xargs)
+            -d "$payload" 2>/dev/null | jq -r '.candidates[0].content.parts[0].text // empty' 2>/dev/null | xargs)
             
             if [[ -n "$suggestion" && "$suggestion" != "$cmd" ]]; then
                 echo "zsh: command not found: $cmd"
