@@ -388,6 +388,33 @@ command_not_found_handler() {
     fi
 }
 
+#################################
+# Gemini sub-command auto-correct
+#################################
+typeset -ga _gemini_skip_cmds=(grep egrep fgrep diff cmp test true false which type)
+
+_gemini_postcmd_check() {
+    local ret=$?
+    (( ret == 0 || ret == 127 )) && return
+    
+    local lastcmd="$(fc -ln -1)"
+    [[ -z "$lastcmd" ]] && return
+    
+    local head="${${(z)lastcmd}[1]}"
+    (( ${_gemini_skip_cmds[(Ie)$head]} )) && return
+    
+    local suggestion=$(_gemini_query "$lastcmd")
+    [[ -z "$suggestion" ]] && return
+    
+    echo "gemini: $suggestion"
+    if read -q "?run it? [y/N] "; then
+        echo; eval "$suggestion"
+    else
+        echo
+    fi
+}
+precmd_functions+=(_gemini_postcmd_check)
+
 ########################
 # AI auto-correct toggle
 ########################
