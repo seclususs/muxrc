@@ -345,6 +345,7 @@ functions -c command_not_found_handler _cnf_original
 
 command_not_found_handler() {
     local cmd="$1"
+    local fullcmd="$*"
     _gemini_load
     
     if [[ "$AI_AUTOCORRECT_ENABLED" == 1 && -n "$GEMINI_API_KEY" ]] \
@@ -357,8 +358,8 @@ command_not_found_handler() {
         if (( now - last >= 8 )); then
             echo "$now" > "$_gemini_cooldown"
             
-            local payload=$(jq -n --arg c "$cmd" \
-            '{contents:[{parts:[{text:("shell command not found: \"" + $c + "\". guess the single command the user meant. reply with just the command, nothing else.")}]}]}')
+            local payload=$(jq -n --arg c "$fullcmd" \
+            '{contents:[{parts:[{text:("shell command failed: \"" + $c + "\". guess the corrected command line the user meant, including any arguments. reply with just the corrected command, nothing else.")}]}]}')
             
             local suggestion=$(curl -s --max-time 4 \
                 -H "x-goog-api-key: $GEMINI_API_KEY" \
@@ -366,7 +367,7 @@ command_not_found_handler() {
                 -X POST "https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL:-gemini-3.5-flash-lite}:generateContent" \
             -d "$payload" 2>/dev/null | jq -r '.candidates[0].content.parts[0].text // empty' 2>/dev/null | xargs)
             
-            if [[ -n "$suggestion" && "$suggestion" != "$cmd" ]]; then
+            if [[ -n "$suggestion" && "$suggestion" != "$fullcmd" ]]; then
                 echo "zsh: command not found: $cmd"
                 echo "gemini: $suggestion"
                 if read -q "?run it? [y/N] "; then
