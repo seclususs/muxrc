@@ -2,7 +2,7 @@
 # Main Zsh configuration
 ########################
 
-ZSH_CONFIG_DIR="$HOME/termux-dotfiles/zsh"
+ZSH_CONFIG_DIR="$HOME/muxrc/zsh"
 
 source "$ZSH_CONFIG_DIR/env.zsh"
 
