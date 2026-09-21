@@ -1,4 +1,4 @@
-# Termux Dotfiles
+# muxrc
 
 My personal Termux environment configuration. Built for quick setup and automated installation.
 
@@ -7,13 +7,13 @@ My personal Termux environment configuration. Built for quick setup and automate
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/seclususs/termux-dotfiles.git
+git clone https://github.com/seclususs/muxrc.git
 ```
 
 2. Run the installation script:
 
 ```bash
-cd termux-dotfiles
+cd muxrc
 bash install.sh
 ```
 

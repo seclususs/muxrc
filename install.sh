@@ -16,7 +16,7 @@ pkg upgrade -y
 echo "[*] Installing core packages..."
 pkg install -y zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip unrar
 
-DOTFILES_DIR="$HOME/termux-dotfiles"
+DOTFILES_DIR="$HOME/muxrc"
 ZSH_DIR="$HOME/.zsh"
 ZSH_PLUGINS_DIR="$ZSH_DIR/plugins"
 
