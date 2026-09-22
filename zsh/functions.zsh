@@ -486,3 +486,10 @@ clean-meta() {
     
     echo "[+] Done. Output saved to ~/muxrc/tools/output/stripped/"
 }
+
+#######################
+# Steganography Vault
+#######################
+stego-vault() {
+    bash "$HOME/muxrc/tools/sh/steganography.sh"
+}
