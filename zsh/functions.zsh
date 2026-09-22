@@ -545,3 +545,38 @@ spoof-meta() {
     
     bash "$HOME/muxrc/tools/sh/exif-spoofer.sh" "$preset_file" "$image_file"
 }
+
+########################
+# Binary Media Encrypter
+########################
+media-crypt() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: media-crypt <target_file>"
+        return 1
+    fi
+    
+    local target_file="$1"
+    
+    if [[ ! -f "$target_file" ]]; then
+        echo "Error: File '$target_file' not found."
+        return 1
+    fi
+    
+    local pass1 pass2
+    read -r -s -p "Enter encryption password: " pass1
+    echo
+    read -r -s -p "Confirm password: " pass2
+    echo
+    
+    if [[ -z "$pass1" ]]; then
+        echo "Error: Password cannot be empty."
+        return 1
+    fi
+    
+    if [[ "$pass1" != "$pass2" ]]; then
+        echo "Error: Passwords do not match."
+        return 1
+    fi
+    
+    MUXRC_CRYPT_PASS="$pass1" bash "$HOME/muxrc/tools/sh/encrypter.sh" "$target_file"
+}
