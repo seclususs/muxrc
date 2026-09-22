@@ -3,3 +3,11 @@
 .sudo_hash
 .zsh_history
 .gemini_ai_env
+
+tools/output/*
+!tools/output/*/
+tools/output/*/*
+!tools/output/*/.gitkeep
+tools/presets/local-*.json
+*.enc
+.nomedia
