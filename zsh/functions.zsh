@@ -513,3 +513,35 @@ rename-by-date() {
     
     bash "$HOME/muxrc/tools/sh/file-renamer.sh" "$target_dir" "$prefix"
 }
+
+##############
+# EXIF Spoofer
+##############
+spoof-meta() {
+    if [[ $# -lt 2 ]]; then
+        echo "Usage: spoof-meta <preset_name> <image_file>"
+        echo "Example: spoof-meta iphone-nyc photo.jpg"
+        return 1
+    fi
+    
+    local preset_name="$1"
+    local image_file="$2"
+    local preset_file="$HOME/muxrc/tools/presets/${preset_name}.json"
+    
+    if [[ ! -f "$preset_file" ]]; then
+        echo "Error: Preset '$preset_name' not found in ~/muxrc/tools/presets/"
+        return 1
+    fi
+    
+    if [[ ! -f "$image_file" ]]; then
+        echo "Error: Image file '$image_file' not found."
+        return 1
+    fi
+    
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "Error: jq is not installed. Please run: pkg install jq"
+        return 1
+    fi
+    
+    bash "$HOME/muxrc/tools/sh/exif-spoofer.sh" "$preset_file" "$image_file"
+}
