@@ -487,9 +487,29 @@ clean-meta() {
     echo "[+] Done. Output saved to ~/muxrc/tools/output/stripped/"
 }
 
-#######################
+#####################
 # Steganography Vault
-#######################
+#####################
 stego-vault() {
     bash "$HOME/muxrc/tools/sh/steganography.sh"
+}
+
+##############
+# File Renamer
+##############
+rename-by-date() {
+    if [[ $# -lt 2 ]]; then
+        echo "Usage: rename-by-date <directory> <prefix>"
+        return 1
+    fi
+    
+    local target_dir="$1"
+    local prefix="$2"
+    
+    if [[ ! -d "$target_dir" ]]; then
+        echo "Error: Directory '$target_dir' not found."
+        return 1
+    fi
+    
+    bash "$HOME/muxrc/tools/sh/file-renamer.sh" "$target_dir" "$prefix"
 }
