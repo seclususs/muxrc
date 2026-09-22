@@ -435,7 +435,6 @@ ai-toggle() {
 ########################
 # Duplicate File Cleaner
 ########################
-
 clean-dupes() {
     if [[ $# -eq 0 ]]; then
         echo "Usage: clean-dupes <target_directory>"
@@ -455,4 +454,35 @@ clean-dupes() {
     fi
     
     bash "$HOME/muxrc/tools/sh/clean-dupes.sh" "$target_dir"
+}
+
+#######################
+# EXIF Metadata Cleaner
+#######################
+clean-meta() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: clean-meta <target_directory>"
+        return 1
+    fi
+    
+    local target_dir="$1"
+    
+    if [[ ! -d "$target_dir" ]]; then
+        echo "Error: Directory '$target_dir' not found."
+        return 1
+    fi
+    
+    echo "[*] Cleaning metadata..."
+    local err_file
+    err_file=$(mktemp)
+    
+    bash "$HOME/muxrc/tools/sh/exif-cleaner.sh" "$target_dir" 2> "$err_file"
+    
+    if [[ -s "$err_file" ]]; then
+        echo "[!] Warning Summary:"
+        cat "$err_file"
+    fi
+    rm -f "$err_file"
+    
+    echo "[+] Done. Output saved to ~/muxrc/tools/output/stripped/"
 }
