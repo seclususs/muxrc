@@ -431,3 +431,28 @@ ai-toggle() {
         echo "gemini auto-correct: on"
     fi
 }
+
+########################
+# Duplicate File Cleaner
+########################
+
+clean-dupes() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: clean-dupes <target_directory>"
+        return 1
+    fi
+    
+    local target_dir="$1"
+    
+    if [[ ! -d "$target_dir" ]]; then
+        echo "Error: Directory '$target_dir' not found."
+        return 1
+    fi
+    
+    if [[ ! -r "$target_dir" ]]; then
+        echo "Error: Directory '$target_dir' is not readable."
+        return 1
+    fi
+    
+    bash "$HOME/muxrc/tools/sh/clean-dupes.sh" "$target_dir"
+}
