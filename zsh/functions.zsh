@@ -604,3 +604,23 @@ shred-file() {
     
     bash "$HOME/muxrc/tools/sh/shredder.sh" "$target_file"
 }
+
+###########################
+# Local Network ARP Sweeper
+###########################
+net-sweep() {
+    if ! command -v nmap >/dev/null 2>&1; then
+        echo "Error: nmap is not installed. Please run: pkg install nmap"
+        return 1
+    fi
+    
+    local cidr
+    cidr=$(ip route show | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1)
+    
+    if [[ -z "$cidr" ]]; then
+        echo "Error: Could not auto-detect a valid local subnet. Are you connected to a network?"
+        return 1
+    fi
+    
+    bash "$HOME/muxrc/tools/sh/arp-sweeper.sh" "$cidr"
+}
