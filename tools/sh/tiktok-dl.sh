@@ -9,14 +9,16 @@ source "$(dirname "$(realpath "$0")")/_core/init.sh"
 
 url="${1:-}"
 if [[ -z "$url" ]]; then
-    log_error "Usage: $(basename "$0") <tiktok_url>"
+    log_error "usage: $(basename "$0") <tiktok_url>"
     exit 1
 fi
 
 ua="Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36"
 
-log_info "Target: $url"
-log_info "Recording in progress... press Ctrl+C to stop"
+log_info "target: $url"
+log_info "recording... (ctrl+c to stop)"
+
+trap 'echo ""; log_success "recording stopped by user."; exit 0' SIGINT
 
 yt-dlp \
 --user-agent "$ua" \
@@ -24,4 +26,6 @@ yt-dlp \
 --external-downloader-args ffmpeg:"-loglevel error -hide_banner" \
 "$url"
 
-log_success "Recording stopped."
+
+log_success "recording stopped."
+exit 0

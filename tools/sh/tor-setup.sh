@@ -17,7 +17,7 @@ PID_FILE="$OPSEC_DIR/tor.pid"
 if [[ "$action" == "start" ]]; then
     mkdir -p "$TOR_DATA"
     
-    log_info "Generating Tor configuration..."
+    log_info "generating config..."
     cat <<EOF > "$TORRC"
 SocksPort 127.0.0.1:9050
 DNSPort 127.0.0.1:5353
@@ -25,31 +25,31 @@ DataDirectory $TOR_DATA
 PidFile $PID_FILE
 EOF
     
-    log_info "Spawning Tor daemon in background..."
+    log_info "spawning tor..."
     tor -f "$TORRC" > "$OPSEC_DIR/tor.log" 2>&1 &
     
-    log_info "Waiting for Tor to write PID file..."
+    log_info "waiting for pid..."
     sleep 2
     
     if [[ -f "$PID_FILE" ]]; then
         tpid=$(cat "$PID_FILE")
-        log_success "Tor successfully spawned PID: $tpid. SOCKS5 proxy active on 127.0.0.1:9050"
+        log_success "tor spawned (pid: $tpid). proxy: 127.0.0.1:9050"
     else
-        log_error "Error: Tor daemon failed to spawn. Check $OPSEC_DIR/tor.log"
+        log_error "failed to spawn tor. check log"
         exit 1
     fi
     
     elif [[ "$action" == "stop" ]]; then
     if [[ ! -f "$PID_FILE" ]]; then
-        log_warn "Tor PID file not found in $OPSEC_DIR."
-        log_warn "Assume Tor is not running."
+        log_warn "pid file not found in $OPSEC_DIR."
+        log_warn "assume tor is stopped."
         exit 0
     fi
     
     tpid=$(cat "$PID_FILE")
     
     if kill -0 "$tpid" 2>/dev/null; then
-        log_info "Terminating Tor daemon PID: $tpid..."
+        log_info "terminating tor (pid: $tpid)..."
         kill -INT "$tpid"
         
         for i in {1..10}; do
@@ -60,14 +60,14 @@ EOF
         done
         
         if kill -0 "$tpid" 2>/dev/null; then
-            log_error "Tor didn't exit gracefully. Forcing kill..."
+            log_error "force killing tor..."
             kill -9 "$tpid"
         fi
     else
-        log_warn "Tor process $tpid is no longer running."
+        log_warn "tor $tpid no longer running."
     fi
     
-    log_info "Shredding ephemeral configuration and data..."
+    log_info "shredding state..."
     [[ -f "$TORRC" ]] && shred -u "$TORRC" 2>/dev/null || true
     [[ -f "$PID_FILE" ]] && shred -u "$PID_FILE" 2>/dev/null || true
     [[ -f "$OPSEC_DIR/tor.log" ]] && shred -u "$OPSEC_DIR/tor.log" 2>/dev/null || true
@@ -77,8 +77,10 @@ EOF
         rm -rf "$TOR_DATA"
     fi
     
-    log_success "Tor stopped and state files physically destroyed."
+    log_success "tor stopped and shredded."
 else
-    log_error "Usage: tor-setup.sh {start|stop}"
+    log_error "usage: tor-setup.sh {start|stop}"
     exit 1
 fi
+
+exit 0
