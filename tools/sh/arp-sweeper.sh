@@ -9,15 +9,13 @@ source "$(dirname "$(realpath "$0")")/_core/init.sh"
 
 cidr="${1:-}"
 if [[ -z "$cidr" ]]; then
-    log_error "Usage: arp-sweeper.sh <cidr>"
+    log_error "usage: arp-sweeper.sh <cidr>"
     exit 1
 fi
 
-log_info "Target Subnet: $cidr"
-log_info "Initiating Nmap ARP sweep..."
-echo ""
-printf "%-18s | %-19s | %s\n" "IP Address" "MAC Address" "Vendor / Hostname"
-echo "----------------------------------------------------------------------"
+log_info "target subnet: $cidr"
+log_info "initiating sweep..."
+printf "%-15s | %-17s | %s\n" "ip" "mac" "vendor (host)"
 
 nmap -sn "$cidr" | awk '
 /^Nmap scan report for/ {
@@ -43,11 +41,12 @@ nmap -sn "$cidr" | awk '
     gsub(/^\(|\) $/, "", vendor)
 
     if (host != "") {
-        printf "%-18s | %-19s | %s (%s)\n", ip, mac, vendor, host
+        printf "%-15s | %-17s | %s (%s)\n", ip, mac, vendor, host
     } else {
-        printf "%-18s | %-19s | %s\n", ip, mac, vendor
+        printf "%-15s | %-17s | %s\n", ip, mac, vendor
     }
 }'
 
-echo "----------------------------------------------------------------------"
-log_success "Sweep complete."
+log_success "sweep complete."
+
+exit 0

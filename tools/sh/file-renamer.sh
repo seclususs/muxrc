@@ -8,7 +8,7 @@ set -euo pipefail
 source "$(dirname "$(realpath "$0")")/_core/init.sh"
 
 if [[ $# -lt 2 ]]; then
-    log_error "Usage: file-renamer.sh <directory> <prefix>"
+    log_error "usage: file-renamer.sh <directory> <prefix>"
     exit 1
 fi
 
@@ -16,14 +16,14 @@ dir="$1"
 prefix="$2"
 
 if [[ ! -d "$dir" ]]; then
-    log_error "Error: Directory '$dir' not found."
+    log_error "directory '$dir' not found."
     exit 1
 fi
 
 declare -a old_names=()
 declare -a new_names=()
 
-log_info "Parsing dates..."
+log_info "parsing dates..."
 
 while IFS= read -r -d '' file; do
     date_str=$(exiftool -s -s -s -d "%Y%m%d_%H%M%S" -DateTimeOriginal "$file" 2>/dev/null || true)
@@ -81,27 +81,25 @@ while IFS= read -r -d '' file; do
 done < <(find "$dir" -maxdepth 1 -type f -print0)
 
 if [[ ${#old_names[@]} -eq 0 ]]; then
-    echo "No files require renaming."
+    log_info "no files to rename."
     exit 0
 fi
 
-echo "=========================================="
-echo "        Proposed File Name Changes        "
-echo "=========================================="
+log_info "proposed changes:"
 for i in "${!old_names[@]}"; do
     old_base=$(basename "${old_names[$i]}")
     new_base=$(basename "${new_names[$i]}")
     printf "%-30s -> %s\n" "${old_base:0:30}" "$new_base"
 done
-echo "=========================================="
-
-read -r -p "Confirm renaming? [y/N]: " conf
+read -r -p "confirm rename? [y/N]: " conf
 if [[ "$conf" =~ ^[Yy]$ ]]; then
-    log_info "Executing rename..."
+    log_info "executing rename..."
     for i in "${!old_names[@]}"; do
         mv -n "${old_names[$i]}" "${new_names[$i]}"
     done
-    log_success "Done."
+    log_success "done."
 else
-    log_warn "Aborted by user."
+    log_warn "aborted."
 fi
+
+exit 0

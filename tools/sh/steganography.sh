@@ -13,63 +13,61 @@ EXTRACT_DIR="$HOME/muxrc/tools/output/extracted"
 mkdir -p "$OPSEC_DIR"
 mkdir -p "$EXTRACT_DIR"
 
-echo "==========================="
-echo " Steganography Data Vault  "
-echo "==========================="
-echo "1. Embed Data"
-echo "2. Extract Data"
-echo "==========================="
-read -r -p "Select option [1/2]: " opt
+echo "steganography vault"
+echo "1) embed data"
+echo "2) extract data"
+echo "0) exit"
+read -r -p "select [1/2/0]: " opt
 
 if [[ "$opt" == "1" ]]; then
-    read -r -p "Path to cover image: " cover
+    read -r -p "path to cover image: " cover
     if [[ ! -f "$cover" ]]; then
-        log_error "Error: Cover image not found."
+        log_error "cover image not found."
         exit 1
     fi
     
-    echo "What do you want to embed?"
-    echo "1. A text string (typed now)"
-    echo "2. An existing file"
-    read -r -p "Select option [1/2]: " embed_opt
+    echo "what to embed?"
+    echo "1) text string"
+    echo "2) file"
+    read -r -p "select [1/2]: " embed_opt
     
     embed_file=""
     if [[ "$embed_opt" == "1" ]]; then
-        read -r -p "Enter text to hide: " secret_text
+        read -r -p "text to hide: " secret_text
         embed_file="$OPSEC_DIR/secret-payload.txt"
         echo "$secret_text" > "$embed_file"
         elif [[ "$embed_opt" == "2" ]]; then
-        read -r -p "Path to file to hide: " embed_file
+        read -r -p "path to file to hide: " embed_file
         if [[ ! -f "$embed_file" ]]; then
-            log_error "Error: File to embed not found."
+            log_error "file to embed not found."
             exit 1
         fi
     else
-        log_error "Invalid option."
+        log_error "invalid option."
         exit 1
     fi
     
-    read -r -s -p "Enter secure passphrase: " pass
+    read -r -s -p "passphrase: " pass
     echo
     if [[ -z "$pass" ]]; then
-        log_error "Error: Passphrase cannot be empty."
+        log_error "passphrase cannot be empty."
         [[ "$embed_opt" == "1" ]] && shred -u "$embed_file" 2>/dev/null
         exit 1
     fi
     
-    read -r -s -p "Confirm passphrase: " pass_conf
+    read -r -s -p "confirm passphrase: " pass_conf
     echo
     if [[ "$pass" != "$pass_conf" ]]; then
-        log_error "Error: Passphrases do not match."
+        log_error "passphrases do not match."
         [[ "$embed_opt" == "1" ]] && shred -u "$embed_file" 2>/dev/null
         exit 1
     fi
     
-    log_info "Embedding data..."
+    log_info "embedding data..."
     if steghide embed -ef "$embed_file" -cf "$cover" -p "$pass"; then
-        log_success "Data successfully embedded into $cover"
+        log_success "embedded into $cover"
     else
-        log_error "Steghide failed."
+        log_error "steghide failed."
     fi
     
     # OPSEC: Shred temporary payload
@@ -77,32 +75,37 @@ if [[ "$opt" == "1" ]]; then
         shred -u "$embed_file"
     fi
     
+    elif [[ "$opt" == "0" ]]; then
+    log_info "exiting..."
+    exit 0
     elif [[ "$opt" == "2" ]]; then
-    read -r -p "Path to stego-image: " stego_img
+    read -r -p "path to stego-image: " stego_img
     if [[ ! -f "$stego_img" ]]; then
-        log_error "Error: Stego-image not found."
+        log_error "stego-image not found."
         exit 1
     fi
     
     # Resolve absolute path before pushd
     stego_img_abs=$(realpath "$stego_img")
     
-    read -r -s -p "Enter decryption passphrase: " pass
+    read -r -s -p "decryption passphrase: " pass
     echo
     if [[ -z "$pass" ]]; then
-        log_error "Error: Passphrase cannot be empty."
+        log_error "passphrase cannot be empty."
         exit 1
     fi
     
-    log_info "Extracting data..."
+    log_info "extracting data..."
     pushd "$EXTRACT_DIR" >/dev/null
     if steghide extract -sf "$stego_img_abs" -f -p "$pass"; then
-        log_success "Data successfully extracted to $EXTRACT_DIR"
+        log_success "extracted to $EXTRACT_DIR"
     else
-        log_error "Extraction failed."
+        log_error "extraction failed."
     fi
     popd >/dev/null
 else
-    log_error "Invalid option."
+    log_error "invalid option."
     exit 1
 fi
+
+exit 0

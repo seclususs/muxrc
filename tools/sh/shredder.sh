@@ -9,25 +9,21 @@ source "$(dirname "$(realpath "$0")")/_core/init.sh"
 
 target_file="${1:-}"
 if [[ -z "$target_file" ]]; then
-    log_error "Usage: $(basename "$0") <target_file>"
+    log_error "usage: $(basename "$0") <target_file>"
     exit 1
 fi
 
-echo "========================================="
-echo "             !!! WARNING !!!             "
-echo "========================================="
-echo " You will PERMANENTLY DESTROY this file: "
-echo " $target_file"
-echo "========================================="
-echo ""
-
-read -r -p "Type exactly 'SHRED' to execute: " confirm
+log_warn "PERMANENTLY DESTROYING:"
+log_warn "$target_file"
+read -r -p "type 'SHRED' to confirm (or anything else to exit): " confirm
 
 if [[ "$confirm" == "SHRED" ]]; then
-    log_info "Shredding file in progress..."
+    log_info "shredding file..."
     shred -u -z -n 3 "$target_file"
-    log_success "Done. File completely shredded."
+    log_success "file destroyed."
 else
-    log_warn "Shred aborted by user."
+    log_warn "aborted."
     exit 1
 fi
+
+exit 0
