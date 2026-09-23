@@ -5,8 +5,12 @@
 ##############
 set -euo pipefail
 
-preset_file="$1"
-image_file="$2"
+preset_file="${1:-}"
+image_file="${2:-}"
+if [[ -z "$preset_file" || -z "$image_file" ]]; then
+    echo "Usage: $(basename "$0") <preset_json_file> <target_image>"
+    exit 1
+fi
 output_dir="$HOME/muxrc/tools/output/decoys"
 
 mkdir -p "$output_dir"

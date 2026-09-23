@@ -5,7 +5,11 @@
 ########################
 set -euo pipefail
 
-target_file="$1"
+target_file="${1:-}"
+if [[ -z "$target_file" ]]; then
+    echo "Usage: $(basename "$0") <target_file>"
+    exit 1
+fi
 vault_dir="$HOME/.vault"
 
 if [[ -z "${MUXRC_CRYPT_PASS:-}" ]]; then

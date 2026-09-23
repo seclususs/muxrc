@@ -5,4 +5,10 @@
 ########################
 set -euo pipefail
 
-fdupes -rd "$1"
+target_dir="${1:-}"
+if [[ -z "$target_dir" ]]; then
+    echo "Usage: $(basename "$0") <directory>"
+    exit 1
+fi
+
+fdupes -rd "$target_dir"
