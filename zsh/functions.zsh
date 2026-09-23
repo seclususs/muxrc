@@ -340,6 +340,7 @@ _gemini_load() { [[ -f "$_gemini_env" ]] && source "$_gemini_env" }
 
 _gemini_query() {
     local failed="$1"
+    local mode="${2:-error}"
     _gemini_load
     [[ "$AI_AUTOCORRECT_ENABLED" == 1 && -n "$GEMINI_API_KEY" ]] || return
     command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 || return
@@ -347,10 +348,16 @@ _gemini_query() {
     mkdir -p "${_gemini_cooldown:h}"
     local now=$(date +%s) last=0
     [[ -f "$_gemini_cooldown" ]] && last=$(cat "$_gemini_cooldown")
-    (( now - last >= 8 )) || return
+    (( now - last >= 3 )) || return
     echo "$now" > "$_gemini_cooldown"
     
-    local prompt_text="The shell command \"$failed\" exited with an error. If this is a typo, reply with ONLY the corrected command line. If it is NOT a typo (e.g. a valid script execution, valid syntax, or a runtime error), reply EXACTLY with the word 'IGNORE'. Do not explain."
+    local env_info="Environment: Zsh on Termux/Linux."
+    local prompt_text
+    if [[ "$mode" == "not_found" ]]; then
+        prompt_text="$env_info The command '$failed' was not found. Guess the intended command. Reply with ONLY the corrected command line. Do not explain."
+    else
+        prompt_text="$env_info The command '$failed' exited with an error. If this is a misspelling in the command or arguments, reply with ONLY the corrected command line. If the syntax is valid and likely failed due to runtime execution, reply EXACTLY with 'IGNORE'."
+    fi
     local payload=$(jq -n --arg t "$prompt_text" '{contents:[{parts:[{text:$t}]}]}')
     
     local suggestion=$(curl -s --max-time 4 \
@@ -367,7 +374,7 @@ functions -c command_not_found_handler _cnf_original
 
 command_not_found_handler() {
     local cmd="$1"
-    local suggestion=$(_gemini_query "$*")
+    local suggestion=$(_gemini_query "$*" "not_found")
     
     if [[ -n "$suggestion" ]]; then
         echo "zsh: command not found: $cmd"
