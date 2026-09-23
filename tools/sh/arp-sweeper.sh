@@ -5,15 +5,16 @@
 ###########################
 set -euo pipefail
 
-cidr="${1:-}"
+source "$(dirname "$(realpath "$0")")/_core/init.sh"
 
+cidr="${1:-}"
 if [[ -z "$cidr" ]]; then
-    echo "Usage: arp-sweeper.sh <cidr>"
+    log_error "Usage: arp-sweeper.sh <cidr>"
     exit 1
 fi
 
-echo "[*] Target Subnet: $cidr"
-echo "[*] Initiating Nmap ARP sweep..."
+log_info "Target Subnet: $cidr"
+log_info "Initiating Nmap ARP sweep..."
 echo ""
 printf "%-18s | %-19s | %s\n" "IP Address" "MAC Address" "Vendor / Hostname"
 echo "----------------------------------------------------------------------"
@@ -49,4 +50,4 @@ nmap -sn "$cidr" | awk '
 }'
 
 echo "----------------------------------------------------------------------"
-echo "[+] Sweep complete."
+log_success "Sweep complete."
