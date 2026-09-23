@@ -615,14 +615,24 @@ net-sweep() {
     fi
     
     local cidr
-    cidr=$(ip route show | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1)
+    cidr=$(ip route show 2>/dev/null | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1)
+    
+    if [[ -z "$cidr" ]] && command -v sudo >/dev/null 2>&1; then
+        echo "[*] Auto-detecting subnet requires root on this device..."
+        cidr=$(sudo ip route show 2>/dev/null | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1)
+    fi
     
     if [[ -z "$cidr" ]]; then
-        echo "Error: Could not auto-detect a valid local subnet. Are you connected to a network?"
+        echo "Error: Could not auto-detect a valid local subnet."
         return 1
     fi
     
-    bash "$HOME/muxrc/tools/sh/arp-sweeper.sh" "$cidr"
+    echo "[*] Executing ARP sweep on $cidr..."
+    if command -v sudo >/dev/null 2>&1; then
+        sudo bash "$HOME/muxrc/tools/sh/arp-sweeper.sh" "$cidr"
+    else
+        bash "$HOME/muxrc/tools/sh/arp-sweeper.sh" "$cidr"
+    fi
 }
 
 ###################
