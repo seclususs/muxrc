@@ -580,3 +580,27 @@ media-crypt() {
     
     MUXRC_CRYPT_PASS="$pass1" bash "$HOME/muxrc/tools/sh/encrypter.sh" "$target_file"
 }
+
+##########################
+# Permanent Media Shredder
+##########################
+shred-file() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: shred-file <file_path>"
+        return 1
+    fi
+    
+    local target_file="$1"
+    
+    if [[ ! -f "$target_file" ]]; then
+        echo "Error: File '$target_file' not found."
+        return 1
+    fi
+    
+    if ! command -v shred >/dev/null 2>&1; then
+        echo "Error: coreutils is not installed. Please run: pkg install coreutils"
+        return 1
+    fi
+    
+    bash "$HOME/muxrc/tools/sh/shredder.sh" "$target_file"
+}
