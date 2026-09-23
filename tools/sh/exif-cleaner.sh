@@ -5,9 +5,11 @@
 #######################
 set -euo pipefail
 
+source "$(dirname "$(realpath "$0")")/_core/init.sh"
+
 target_dir="${1:-}"
 if [[ -z "$target_dir" ]]; then
-    echo "Usage: $(basename "$0") <target_directory>"
+    log_error "Usage: $(basename "$0") <target_directory>"
     exit 1
 fi
 output_dir="$HOME/muxrc/tools/output/stripped"

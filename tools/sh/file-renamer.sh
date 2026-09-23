@@ -5,8 +5,10 @@
 ##############
 set -euo pipefail
 
+source "$(dirname "$(realpath "$0")")/_core/init.sh"
+
 if [[ $# -lt 2 ]]; then
-    echo "Usage: file-renamer.sh <directory> <prefix>"
+    log_error "Usage: file-renamer.sh <directory> <prefix>"
     exit 1
 fi
 
@@ -14,14 +16,14 @@ dir="$1"
 prefix="$2"
 
 if [[ ! -d "$dir" ]]; then
-    echo "Error: Directory '$dir' not found."
+    log_error "Error: Directory '$dir' not found."
     exit 1
 fi
 
 declare -a old_names=()
 declare -a new_names=()
 
-echo "[*] Parsing dates..."
+log_info "Parsing dates..."
 
 while IFS= read -r -d '' file; do
     date_str=$(exiftool -s -s -s -d "%Y%m%d_%H%M%S" -DateTimeOriginal "$file" 2>/dev/null || true)
@@ -95,11 +97,11 @@ echo "=========================================="
 
 read -r -p "Confirm renaming? [y/N]: " conf
 if [[ "$conf" =~ ^[Yy]$ ]]; then
-    echo "[*] Executing rename..."
+    log_info "Executing rename..."
     for i in "${!old_names[@]}"; do
         mv -n "${old_names[$i]}" "${new_names[$i]}"
     done
-    echo "[+] Done."
+    log_success "Done."
 else
-    echo "[-] Aborted by user."
+    log_warn "Aborted by user."
 fi

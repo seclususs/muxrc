@@ -5,9 +5,11 @@
 ##########################
 set -euo pipefail
 
+source "$(dirname "$(realpath "$0")")/_core/init.sh"
+
 target_file="${1:-}"
 if [[ -z "$target_file" ]]; then
-    echo "Usage: $(basename "$0") <target_file>"
+    log_error "Usage: $(basename "$0") <target_file>"
     exit 1
 fi
 
@@ -22,10 +24,10 @@ echo ""
 read -r -p "Type exactly 'SHRED' to execute: " confirm
 
 if [[ "$confirm" == "SHRED" ]]; then
-    echo "[*] Shredding file in progress..."
+    log_info "Shredding file in progress..."
     shred -u -z -n 3 "$target_file"
-    echo "[+] Done. File completely shredded."
+    log_success "Done. File completely shredded."
 else
-    echo "[-] Shred aborted by user."
+    log_warn "Shred aborted by user."
     exit 1
 fi
