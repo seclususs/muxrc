@@ -653,3 +653,24 @@ tor-start() {
 tor-stop() {
     bash "$HOME/muxrc/tools/sh/tor-setup.sh" stop
 }
+
+######################
+# TikTok Live Recorder
+######################
+ttdl-live() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: ttdl-live <username>"
+        return 1
+    fi
+    
+    local username="$1"
+    username="${username#@}"
+    local url="https://www.tiktok.com/@${username}/live"
+    
+    if ! command -v yt-dlp >/dev/null 2>&1; then
+        echo "Error: yt-dlp is not installed. Please run: pkg install yt-dlp"
+        return 1
+    fi
+    
+    bash "$HOME/muxrc/tools/sh/tiktok-dl.sh" "$url"
+}
