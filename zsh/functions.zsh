@@ -6,6 +6,8 @@
 # Root access wrapper
 #####################
 sudo() {
+    setopt localoptions nomonitor
+    
     local HASH_FILE="$HOME/.sudo_hash"
     local SUDO_HASH=""
     [ -f "$HASH_FILE" ] && SUDO_HASH=$(cat "$HASH_FILE" 2>/dev/null)
