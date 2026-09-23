@@ -624,3 +624,32 @@ net-sweep() {
     
     bash "$HOME/muxrc/tools/sh/arp-sweeper.sh" "$cidr"
 }
+
+###################
+# Tor Privacy Setup
+###################
+tor-start() {
+    local pid_file="$HOME/.muxrc/run/tor.pid"
+    
+    if ! command -v tor >/dev/null 2>&1; then
+        echo "Error: tor is not installed. Please run: pkg install tor"
+        return 1
+    fi
+    
+    if [[ -f "$pid_file" ]]; then
+        local tpid=$(cat "$pid_file" 2>/dev/null)
+        if kill -0 "$tpid" 2>/dev/null; then
+            echo "Error: Tor is already running PID: $tpid. Use tor-stop first."
+            return 1
+        else
+            echo "[*] Found stale PID file. Cleaning up..."
+            bash "$HOME/muxrc/tools/sh/tor-setup.sh" stop
+        fi
+    fi
+    
+    bash "$HOME/muxrc/tools/sh/tor-setup.sh" start
+}
+
+tor-stop() {
+    bash "$HOME/muxrc/tools/sh/tor-setup.sh" stop
+}
