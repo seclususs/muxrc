@@ -193,11 +193,16 @@ net-sweep() {
     
     if [[ -z "$cidr" ]] && command -v sudo >/dev/null 2>&1; then
         log_info "auto-detecting subnet requires root..."
-        cidr=$(sudo ip route show 2>/dev/null | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1)
+        cidr=$(sudo ip route show | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1)
     fi
     
     if [[ -z "$cidr" ]]; then
-        log_error "could not auto-detect valid local subnet"
+        log_warn "could not auto-detect valid local subnet."
+        read -r "cidr?enter subnet manually (e.g. 192.168.1.0/24): "
+    fi
+    
+    if [[ -z "$cidr" ]]; then
+        log_error "subnet cannot be empty."
         return 1
     fi
     
