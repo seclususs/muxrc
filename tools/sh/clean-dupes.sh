@@ -51,7 +51,7 @@ log_warn "Duplicate files found:"
 total_dupe_sets=0
 
 while read -r hash; do
-    ((total_dupe_sets++))
+    total_dupe_sets=$((total_dupe_sets + 1))
     echo "[Group $total_dupe_sets] Hash: ${hash:0:8}..."
     
     awk -v h="$hash" '$1==h { print substr($0, length($1)+3) }' "$tmp_dir/hashed.txt" > "$tmp_dir/current_set.txt"

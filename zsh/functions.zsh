@@ -40,9 +40,8 @@ sudo() {
         success=1
     else
         while (( attempts < max_attempts )); do
-            print -n "[sudo] password for $current_user: "
-            read -r -s user_pass
-            echo ""
+            read -rs "user_pass?[sudo] password for $current_user: "
+            print -u2 ""
             
             local input_hash=$(echo -n "$user_pass" | sha256sum | awk '{print $1}')
             if [[ "$input_hash" == "$SUDO_HASH" ]]; then
@@ -114,9 +113,8 @@ su() {
     fi
     
     local user_pass
-    print -n "Password: "
-    read -r -s user_pass
-    echo ""
+    read -rs "user_pass?Password: "
+    print -u2 ""
     
     local input_hash=$(echo -n "$user_pass" | sha256sum | awk '{print $1}')
     if [[ "$input_hash" != "$SUDO_HASH" ]]; then
@@ -352,8 +350,8 @@ _gemini_query() {
     (( now - last >= 8 )) || return
     echo "$now" > "$_gemini_cooldown"
     
-    local payload=$(jq -n --arg c "$failed" \
-    '{contents:[{parts:[{text:("shell command failed: \"" + $c + "\". guess the corrected command line the user meant, including any arguments. reply with just the corrected command, nothing else.")}]}]}')
+    local prompt_text="The shell command \"$failed\" exited with an error. If this is a typo, reply with ONLY the corrected command line. If it is NOT a typo (e.g. a valid script execution, valid syntax, or a runtime error), reply EXACTLY with the word 'IGNORE'. Do not explain."
+    local payload=$(jq -n --arg t "$prompt_text" '{contents:[{parts:[{text:$t}]}]}')
     
     local suggestion=$(curl -s --max-time 4 \
         -H "x-goog-api-key: $GEMINI_API_KEY" \
@@ -361,7 +359,7 @@ _gemini_query() {
         -X POST "https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL:-gemini-3.5-flash-lite}:generateContent" \
     -d "$payload" 2>/dev/null | jq -r '.candidates[0].content.parts[0].text // empty' 2>/dev/null | xargs)
     
-    [[ -n "$suggestion" && "$suggestion" != "$failed" ]] && echo "$suggestion"
+    [[ -n "$suggestion" && "$suggestion" != "$failed" && "$suggestion" != "IGNORE" ]] && echo "$suggestion"
 }
 
 (( $+functions[command_not_found_handler] )) && \
@@ -373,7 +371,7 @@ command_not_found_handler() {
     
     if [[ -n "$suggestion" ]]; then
         echo "zsh: command not found: $cmd"
-        echo "gemini: $suggestion"
+        print -u2 -P "%F{cyan}[AI]%f: $suggestion"
         if read -q "?run it? [y/N] "; then
             echo; eval "$suggestion"; return $?
         fi
@@ -391,22 +389,17 @@ command_not_found_handler() {
 #################################
 # Gemini sub-command auto-correct
 #################################
-typeset -ga _gemini_skip_cmds=(grep egrep fgrep diff cmp test true false which type)
-
 _gemini_postcmd_check() {
     local ret=$?
-    (( ret == 0 || ret == 127 )) && return
+    (( ret == 0 || ret == 127 || ret >= 128 )) && return
     
     local lastcmd="$(fc -ln -1)"
     [[ -z "$lastcmd" ]] && return
     
-    local head="${${(z)lastcmd}[1]}"
-    (( ${_gemini_skip_cmds[(Ie)$head]} )) && return
-    
     local suggestion=$(_gemini_query "$lastcmd")
     [[ -z "$suggestion" ]] && return
     
-    echo "gemini: $suggestion"
+    print -u2 -P "%F{cyan}[AI]%f: $suggestion"
     if read -q "?run it? [y/N] "; then
         echo; eval "$suggestion"
     else
@@ -563,10 +556,10 @@ media-crypt() {
     fi
     
     local pass1 pass2
-    read -r -s -p "Enter encryption password: " pass1
-    echo
-    read -r -s -p "Confirm password: " pass2
-    echo
+    read -rs "pass1?Enter encryption password: "
+    print -u2 ""
+    read -rs "pass2?Confirm password: "
+    print -u2 ""
     
     if [[ -z "$pass1" ]]; then
         echo "Error: Password cannot be empty."
