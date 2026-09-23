@@ -14,7 +14,7 @@ pkg install -y root-repo x11-repo
 pkg upgrade -y
 
 echo "[*] Installing core packages..."
-pkg install -y zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip unrar
+pkg install -y zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip unrar fdupes exiftool steghide openssl-tool nmap tor yt-dlp
 
 DOTFILES_DIR="$HOME/muxrc"
 ZSH_DIR="$HOME/.zsh"
