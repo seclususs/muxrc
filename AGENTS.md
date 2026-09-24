@@ -1,74 +1,76 @@
 # AGENTS
 
-This document defines the required workflows, coding standards, and execution rules for AI agents operating in this repository. All automated code generation, modifications, and commits must comply with these instructions.
+## 1. Plugin Requirement
 
-## 1. Development Workflow
+All AI agents must utilize the **Superpowers plugin/skill** as the primary
+framework for execution. Before taking any action, answering questions, or
+writing code, invoke the appropriate skill
+(e.g., `brainstorming`, `systematic-debugging`, `writing-plans`).
 
-Utilize the **Superpowers plugin** to structure the development and problem-solving process. The workflow must strictly adhere to the following sequence:
+## 2. Development Workflow & The Absolute Rule
 
-1. **Analyze:** Read and analyze all relevant context before writing any code. Completely read the relevant documentation for the specific feature or script being worked on.
-2. **Write:** Execute the code following best practices, ensuring it is clean and modular.
-3. **Review:** Self-review the code to ensure it meets the defined standards and solves the requested problem without introducing silent bugs.
-4. **PAUSE (The Absolute Rule):** Stop execution. Proceed immediately to Section 2.
-
-## 2. The Absolute Rule: PAUSE and Await Approval
-
-AI agents do not have the authority to automatically commit code. When files are ready to be staged (`git add`) or committed (`git commit`), execution must be paused.
-
-During this pause, output a response containing:
-
-- A concise summary of the files changed and the logic updated.
-- A draft of the commit message (following the rules in Section 5).
-- A prompt requesting explicit manual approval.
-
-Do not proceed until explicit approval is granted. The pause is intended for human review, code formatting, and logic verification. Execution of the commit is only permitted after this approval.
+- **PAUSE AND AWAIT APPROVAL:** AI agents do not have the authority to
+  automatically commit code. When files are ready to be staged (`git add`)
+  or committed (`git commit`), execution must be **paused**.
+- During this pause, output:
+  - A concise summary of the files changed.
+  - A draft commit message (following Section 6 rules).
+  - A prompt requesting explicit manual approval.
+- Do not proceed until explicit approval is granted.
 
 ## 3. Shell (`sh` & `zsh`) Coding Standards
 
-Apply modern, defensive programming principles to all shell scripts:
+Apply best practices intelligently based on context. Do not be overly rigid;
+adapt standard conventions to fit the specific needs of the code.
 
-- **Self-Documenting Code:** Code must explain itself through clear, descriptive variable names and modular functions. Avoid redundant comments that explain obvious shell commands.
-- **Strict Mode:** Enforce safety at the top of scripts to prevent silent pipeline errors:
+- **Self-Documenting Code:** Use clear, descriptive variable names and
+  modular functions. Avoid redundant comments.
+- **Strict Mode:** Use `set -euo pipefail` where appropriate, but adapt
+  to the script's needs
+  (e.g., disable if a failing command is intentionally handled).
+- **Modern Syntax:** Use `$()` for command substitution, not backticks.
+  Wrap variables in double quotes (`"$VAR"`).
+- **Scoping:** Use `local` for variables inside functions.
+- **Clean Exits:** Terminate scripts cleanly
+  (e.g., use `exit 0` for success when applicable).
 
-  ```zsh
-  set -euo pipefail
-  ```
+## 4. UI and Logging Style
 
-- **Modern Syntax:** Use `$()` for command substitution, not backticks. Wrap variables in double quotes (`"$VAR"`) to prevent word splitting.
-- **Scoping:** Use `local` for all variables inside functions to avoid polluting the global namespace.
+Keep all terminal output lowercase and concise.
+Maintain a consistent UI logging format:
 
-## 4. Commenting Style
+- `[*]` for general information or process start.
+- `[+]` for success.
+- `[-]` for warnings or skipped actions.
+- `[!]` for errors or critical failures.
 
-When comments are required to explain the logic (why something is done) or to delineate sections, format them using this exact block style. The top and bottom hash borders must exactly match the length of the text string.
+Use a 4-space indentation for sub-steps inside a broader task block:
 
-**Format:**
+```sh
+echo "[*] initializing setup..."
+echo "    [+] configuration loaded."
+```
+
+## 5. Commenting Style
+
+Format structural or block explanations using this exact block style.
+The top and bottom hash borders must exactly match the length of the
+text string. Do not use inline `#` for block explanations.
 
 ```text
 #######
-# Title
+# title
 #######
-
-#######################################
-# This is a longer explanation sentence
-#######################################
-
 ```
 
-_Do not use standard inline `#` comments for structural or block explanations._
+## 6. Commit Message Rules
 
-## 5. Commit Message Rules
+- **No Prefixes:** Do not use `feat:`, `fix:`, `chore:`, etc.
+- **Imperative Mood:** Start the subject line with a capitalized
+  imperative verb (`Add`, `Drop`, `Fix`, `Update`, `Refactor`).
+- **Length:** Subject line maximum 52 characters, no trailing period.
+- **Detailing:** Leave one blank line after the subject;
+  wrap the body text at 72 characters.
 
-All commit messages must strictly comply with the following constraints:
-
-- **No Prefixes:** Do not use conventional commit prefixes (e.g., `feat:`, `fix:`, `chore:`).
-- **Imperative Mood:** Start the subject line with a capitalized imperative verb (e.g., `Add`, `Drop`, `Fix`, `Update`, `Refactor`).
-- **Length Constraint:** The subject line must be a maximum of 52 characters and must not end with a period.
-- **Detailing:** If the commit requires more explanation, leave one blank line after the subject and wrap the body text at 72 characters.
-
-**Correct Example:**
-`Update Termux vault encryption algorithm`
-
-**Incorrect Examples:**
-`feat: update Termux vault encryption` (Fails: Uses prefix)
-`Updated the script` (Fails: Past tense, not imperative)
-`Refactor the toolkit deployment script to include better error handling` (Fails: Exceeds 52 characters)
+**Correct:**
+`Update termux vault encryption algorithm`
