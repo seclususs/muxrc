@@ -433,3 +433,22 @@ ai-toggle() {
         echo "gemini auto-correct: on"
     fi
 }
+
+###############
+# Clean history
+###############
+clean-history() {
+    local target_file="${HISTFILE:-$HOME/.zsh_history}"
+    
+    echo "[*] cleaning history..."
+    
+    if [[ -e "$target_file" && ! -w "$target_file" ]]; then
+        echo "[!] cannot write to history file."
+        return 1
+    fi
+    
+    > "$target_file"
+    fc -p "$target_file"
+    
+    echo "[+] history cleaned."
+}
