@@ -452,3 +452,61 @@ clean-history() {
     
     echo "[+] history cleaned."
 }
+
+############
+# Sync muxrc
+############
+muxrc-sync() {
+    echo "[*] syncing muxrc..."
+    
+    local muxrc_dir="$HOME/muxrc"
+    local install_script="$muxrc_dir/install.sh"
+    local plugins_dir="$HOME/.zsh/plugins"
+    local old_hash=""
+    local new_hash=""
+    
+    if [[ ! -d "$muxrc_dir" ]]; then
+        echo "    [!] muxrc dir not found."
+        return 1
+    fi
+    
+    if [[ -f "$install_script" ]]; then
+        old_hash=$(sha256sum "$install_script" 2>/dev/null | awk '{print $1}')
+    fi
+    
+    echo "    [*] pulling repository..."
+    if git -C "$muxrc_dir" pull -q; then
+        echo "    [+] repository updated."
+    else
+        echo "    [!] failed to pull repository."
+        return 1
+    fi
+    
+    if [[ -d "$plugins_dir" ]]; then
+        echo "[*] syncing zsh plugins..."
+        local plugin
+        for plugin in "$plugins_dir"/*; do
+            if [[ -d "$plugin/.git" ]]; then
+                echo "    [*] pulling ${plugin:t}..."
+                if git -C "$plugin" pull -q --rebase; then
+                    echo "        [+] updated ${plugin:t}."
+                else
+                    echo "        [-] failed to update ${plugin:t}."
+                fi
+            fi
+        done
+    fi
+    
+    if [[ -f "$install_script" ]]; then
+        new_hash=$(sha256sum "$install_script" 2>/dev/null | awk '{print $1}')
+        if [[ "$old_hash" != "$new_hash" ]]; then
+            echo "[*] install.sh updated. executing..."
+            bash "$install_script"
+        else
+            echo "[*] install.sh unchanged. skipping."
+        fi
+    fi
+    
+    echo "[+] sync complete. reloading shell..."
+    exec zsh
+}
