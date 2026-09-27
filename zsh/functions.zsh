@@ -447,10 +447,18 @@ clean-history() {
         return 1
     fi
     
+    rm -f "${target_file}.LOCK" 2>/dev/null
+    setopt LOCAL_OPTIONS NO_SHARE_HISTORY NO_APPEND_HISTORY
+    
     > "$target_file"
-    local old_size=$HISTSIZE
+    
+    local old_histsize=$HISTSIZE
+    local old_savehist=$SAVEHIST
+    SAVEHIST=0
     HISTSIZE=0
-    HISTSIZE=$old_size
+    
+    HISTSIZE=$old_histsize
+    SAVEHIST=$old_savehist
     
     echo "[+] history cleaned."
 }
