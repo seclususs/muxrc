@@ -91,7 +91,7 @@ if [[ "$mode" == "post" ]]; then
             return
         fi
         
-        log_info "    [+] found user: $username, id: $video_id"
+        log_success "found user: $username, id: $video_id"
         
         log_info "fetching tiktok..."
         local tk_page

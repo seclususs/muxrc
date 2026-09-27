@@ -60,7 +60,7 @@ EOF
         done
         
         if kill -0 "$tpid" 2>/dev/null; then
-            log_error "force killing tor..."
+            log_warn "force killing tor..."
             kill -9 "$tpid"
         fi
     else

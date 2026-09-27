@@ -79,7 +79,7 @@ if [[ "${confirm:-}" =~ ^[Yy]$ ]]; then
     done < "$tmp_dir/to_delete.txt"
     log_success "deleted $total_to_delete files."
 else
-    log_info "aborted."
+    log_warn "aborted."
 fi
 
 exit 0

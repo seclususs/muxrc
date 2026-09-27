@@ -44,11 +44,11 @@ Maintain a consistent UI logging format:
 - `[-]` for warnings or skipped actions.
 - `[!]` for errors or critical failures.
 
-Use a 4-space indentation for sub-steps inside a broader task block:
+Maintain a strictly flat (zero-indentation) log output structure.
 
 ```sh
 echo "[*] initializing setup..."
-echo "    [+] configuration loaded."
+echo "[+] configuration loaded."
 ```
 
 ## 5. Commenting Style

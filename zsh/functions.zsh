@@ -147,7 +147,7 @@ systemctl() {
         enable)
             if [ -d "$PREFIX/share/termux-services/$service" ]; then
                 ln -sf "$PREFIX/share/termux-services/$service" "$PREFIX/var/service/"
-                echo "Created symlink /etc/systemd/system/multi-user.target.wants/${service}.service → /lib/systemd/system/${service}.service."
+                echo "Created symlink /etc/systemd/system/multi-user.target.wants/${service}.service â†’ /lib/systemd/system/${service}.service."
             else
                 echo "Failed to enable unit: Unit file ${service}.service does not exist."
             fi
@@ -460,7 +460,7 @@ muxrc-sync() {
     local new_hash=""
     
     if [[ ! -d "$muxrc_dir" ]]; then
-        echo "    [!] muxrc dir not found."
+        echo "[!] muxrc dir not found."
         return 1
     fi
     
@@ -468,11 +468,11 @@ muxrc-sync() {
         old_hash=$(sha256sum "$install_script" 2>/dev/null | awk '{print $1}')
     fi
     
-    echo "    [*] pulling repository..."
+    echo "[*] pulling repository..."
     if git -C "$muxrc_dir" pull -q; then
-        echo "    [+] repository updated."
+        echo "[+] repository updated."
     else
-        echo "    [!] failed to pull repository."
+        echo "[!] failed to pull repository."
         return 1
     fi
     
@@ -481,11 +481,11 @@ muxrc-sync() {
         local plugin
         for plugin in "$plugins_dir"/*; do
             if [[ -d "$plugin/.git" ]]; then
-                echo "    [*] pulling ${plugin:t}..."
+                echo "[*] pulling ${plugin:t}..."
                 if git -C "$plugin" pull -q --rebase; then
-                    echo "        [+] updated ${plugin:t}."
+                    echo "[+] updated ${plugin:t}."
                 else
-                    echo "        [-] failed to update ${plugin:t}."
+                    echo "[!] failed to update ${plugin:t}."
                 fi
             fi
         done
@@ -497,7 +497,7 @@ muxrc-sync() {
             echo "[*] install.sh updated. executing..."
             bash "$install_script"
         else
-            echo "[*] install.sh unchanged. skipping."
+            echo "[-] install.sh unchanged. skipping."
         fi
     fi
     

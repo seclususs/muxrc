@@ -30,7 +30,7 @@ touch "$HOME/.hushlogin"
 
 echo "[*] Setting up sudo wrapper..."
 if [[ -f "$HOME/.sudo_hash" ]]; then
-    read -r -p "    [?] Sudo password already configured. Overwrite? [y/N]: " reset_sudo
+    read -r -p "[?] Sudo password already configured. Overwrite? [y/N]: " reset_sudo
 else
     reset_sudo="y"
 fi
@@ -44,12 +44,12 @@ if [[ "${reset_sudo:-}" =~ ^[Yy]$ ]]; then
     if [[ "$SUDO_PASS" == "$SUDO_PASS_CONFIRM" ]]; then
         echo -n "$SUDO_PASS" | sha256sum | awk '{print $1}' > "$HOME/.sudo_hash"
         chmod 600 "$HOME/.sudo_hash"
-        echo "    [+] Sudo hash generated successfully."
+        echo "[+] Sudo hash generated successfully."
     else
-        echo "    [-] Passwords do not match. Run installer again to fix."
+        echo "[!] Passwords do not match. Run installer again to fix."
     fi
 else
-    echo "    [*] Keeping existing sudo password."
+    echo "[-] Keeping existing sudo password."
 fi
 
 echo "[*] Fetching Zsh plugins..."
@@ -65,8 +65,8 @@ for PLUGIN in "${!PLUGINS[@]}"; do
     if [ ! -d "$ZSH_PLUGINS_DIR/$PLUGIN" ]; then
         git clone --depth 1 "${PLUGINS[$PLUGIN]}" "$ZSH_PLUGINS_DIR/$PLUGIN"
     else
-        echo "    [*] Updating $PLUGIN..."
-        git -C "$ZSH_PLUGINS_DIR/$PLUGIN" pull --rebase || echo "    [!] Failed to update $PLUGIN"
+        echo "[*] Updating $PLUGIN..."
+        git -C "$ZSH_PLUGINS_DIR/$PLUGIN" pull --rebase || echo "[!] Failed to update $PLUGIN"
     fi
 done
 
@@ -79,9 +79,9 @@ for NAME in "${!STORAGE_DIRS[@]}"; do
     TARGET="${STORAGE_DIRS[$NAME]}"
     if [ ! -d "$TARGET" ]; then
         mkdir -p "$TARGET"
-        echo "    [+] Created $TARGET"
+        echo "[+] Created $TARGET"
     else
-        echo "    [*] $TARGET already exists, skipping creation."
+        echo "[-] $TARGET already exists, skipping creation."
     fi
     ln -sfn "$TARGET" "$HOME/$NAME"
 done
@@ -117,7 +117,7 @@ fi
 
 echo "[*] Setting up Gemini auto-correct..."
 if [[ -f "$HOME/.gemini_ai_env" ]]; then
-    read -r -p "    [?] Gemini config already exists. Overwrite? [y/N]: " reset_gemini
+    read -r -p "[?] Gemini config already exists. Overwrite? [y/N]: " reset_gemini
 else
     reset_gemini="y"
 fi
@@ -133,10 +133,10 @@ if [[ "${reset_gemini:-}" =~ ^[Yy]$ ]]; then
             echo "AI_AUTOCORRECT_ENABLED=1"
         } > "$HOME/.gemini_ai_env"
         chmod 600 "$HOME/.gemini_ai_env"
-        echo "    [+] Gemini configuration saved."
+        echo "[+] Gemini configuration saved."
     fi
 else
-    echo "    [*] Keeping existing Gemini configuration."
+    echo "[-] Keeping existing Gemini configuration."
 fi
 
 grep -qxF '.gemini_ai_env' "$DOTFILES_DIR/.gitignore" || echo '.gemini_ai_env' >> "$DOTFILES_DIR/.gitignore"

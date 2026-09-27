@@ -76,7 +76,7 @@ if [[ "$opt" == "1" ]]; then
     fi
     
     elif [[ "$opt" == "0" ]]; then
-    log_info "exiting..."
+    log_warn "exiting..."
     exit 0
     elif [[ "$opt" == "2" ]]; then
     read -r -p "path to stego-image: " stego_img
