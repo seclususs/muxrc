@@ -17,13 +17,13 @@ If testing or executing outside of a native Linux, `git bash` MUST be used.
 
 ## 3. SHELL (bash/zsh) STANDARDS
 
-- **Safety:** `set -euo pipefail`.
+- **Safety:** `set -euo pipefail` (If needed).
 - **Syntax:** `$()` (NO backticks), `"$VAR"`, `local` for function scope,
   explicit `exit 0`.
 - **Naming:** Lowercase `local` vars, UPPERCASE global/env vars.
 - **Style:** Modular, self-documenting code. NO redundant comments.
 
-## 4. LOGGING UI
+## 4. LOGGING UI (bash/zsh)
 
 - STRICTLY flat (zero-indent) and completely lowercase.
 - Prefixes:
@@ -33,7 +33,7 @@ If testing or executing outside of a native Linux, `git bash` MUST be used.
   - `[!]` error
 - Example: `echo "[+] configuration loaded."`
 
-## 5. COMMENTING
+## 5. COMMENTING (bash/zsh)
 
 - Use exact-length hash borders for structural/block comments.
   NO inline `#` for blocks.
