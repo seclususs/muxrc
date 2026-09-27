@@ -156,25 +156,27 @@ if [[ "$mode" == "post" ]]; then
         
         local post_type="video"
         local dl_links=()
+        local split_html
+        split_html=$(echo "$result" | sed 's/<\/a>/<\/a>\n/g')
         
         if echo "$result" | grep -qi 'CONVERT VIDEO NOW'; then
             post_type="photo"
             while read -r href; do
-                dl_links+=("$href")
-            done < <(echo "$result" | grep -o '<a[^>]*href="[^"]*"' | sed 's/.*href="\([^"]*\)".*/\1/' | grep -iE 'tiktokcdn|p16|musicaldown.com/download' || true)
+                [[ -n "$href" ]] && dl_links+=("$href")
+            done < <(echo "$split_html" | grep -i 'Download' | grep -v 'MP3' | grep -v 'MP4' | grep -iE 'fastdl.muscdn.app|tiktokcdn|p16|musicaldown' | grep -o 'href="[^"]*"' | sed 's/href="\([^"]*\)"/\1/' || true)
+            
+            if [[ ${#dl_links[@]} -eq 0 ]]; then
+                log_error "no photo download links found."
+                return
+            fi
         else
             local mp4_link
-            local all_mp4s
-            all_mp4s=$(echo "$result" | grep -o '<a[^>]*href="[^"]*"' | grep -i 'MP4' | sed 's/.*href="\([^"]*\)".*/\1/' || true)
-            mp4_link=$(echo "$result" | grep -o '<a[^>]*href="[^"]*"' | grep -iE 'MP4.*HD|HD.*MP4' | sed 's/.*href="\([^"]*\)".*/\1/' | head -n 1 || true)
-            if [[ -z "$mp4_link" ]]; then
-                mp4_link=$(echo "$all_mp4s" | head -n 1 || true)
-            fi
+            mp4_link=$(echo "$split_html" | grep -i 'Download MP4' | grep -i 'HD' | grep -o 'href="[^"]*"' | sed 's/href="\([^"]*\)"/\1/' | head -n 1 || true)
             
             if [[ -n "$mp4_link" ]]; then
                 dl_links+=("$mp4_link")
             else
-                log_error "no download link found."
+                log_error "HD download link not found."
                 return
             fi
         fi
