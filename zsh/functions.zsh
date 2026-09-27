@@ -448,7 +448,9 @@ clean-history() {
     fi
     
     > "$target_file"
-    fc -p "$target_file"
+    local old_size=$HISTSIZE
+    HISTSIZE=0
+    HISTSIZE=$old_size
     
     echo "[+] history cleaned."
 }
