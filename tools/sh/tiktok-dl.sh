@@ -51,7 +51,7 @@ fi
 
 if [[ "$mode" == "post" ]]; then
     
-    for cmd in curl jq sed grep awk touch ffmpeg; do
+    for cmd in curl jq sed grep awk touch ffmpeg exiftool; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             log_error "$cmd is not installed. please install it."
             exit 1
@@ -109,15 +109,25 @@ if [[ "$mode" == "post" ]]; then
         fi
         
         if [[ -z "$create_time" ]]; then
-            create_time=$(date +%s)
-            log_warn "could not find createTime, using current time: $create_time"
+            if [[ "$video_id" =~ ^[0-9]+$ ]]; then
+                create_time=$(( video_id >> 32 ))
+                log_info "extracted createTime: $create_time"
+            else
+                create_time=""
+                log_warn "could not find createTime"
+            fi
         fi
         
-        local iso_time
-        if date --version >/dev/null 2>&1; then
-            iso_time=$(date -u -d "@$create_time" +"%Y-%m-%dT%H:%M:%SZ")
-        else
-            iso_time=$(date -u -r "$create_time" +"%Y-%m-%dT%H:%M:%SZ")
+        local iso_time=""
+        local exif_time=""
+        if [[ -n "$create_time" ]]; then
+            if date --version >/dev/null 2>&1; then
+                iso_time=$(date -u -d "@$create_time" +"%Y-%m-%dT%H:%M:%SZ")
+                exif_time=$(date -d "@$create_time" +"%Y:%m:%d %H:%M:%S")
+            else
+                iso_time=$(date -u -r "$create_time" +"%Y-%m-%dT%H:%M:%SZ")
+                exif_time=$(date -r "$create_time" +"%Y:%m:%d %H:%M:%S")
+            fi
         fi
         
         log_info "requesting..."
@@ -190,15 +200,22 @@ if [[ "$mode" == "post" ]]; then
             
             log_info "downloading video..."
             if curl -s -L -o "$temp_raw" "${dl_links[0]}"; then
-                log_info "applying metadata..."
-                if ffmpeg -y -i "$temp_raw" -c copy -metadata creation_time="$iso_time" -v error "$target_file"; then
-                    rm -f "$temp_raw"
-                    touch -d "@$create_time" "$target_file" || true
-                    log_success "saved: $target_file"
+                if [[ -n "$create_time" ]]; then
+                    log_info "applying metadata..."
+                    if ffmpeg -y -i "$temp_raw" -c copy -metadata creation_time="$iso_time" -v error "$target_file"; then
+                        rm -f "$temp_raw"
+                        exiftool -overwrite_original -AllDates="$exif_time" "$target_file" >/dev/null 2>&1 || true
+                        touch -d "@$create_time" "$target_file" || true
+                        log_success "saved: $target_file"
+                    else
+                        log_error "failed to apply metadata, saving raw file"
+                        mv "$temp_raw" "$target_file"
+                        exiftool -overwrite_original -AllDates="$exif_time" "$target_file" >/dev/null 2>&1 || true
+                        touch -d "@$create_time" "$target_file" || true
+                    fi
                 else
-                    log_error "failed, saving raw file"
                     mv "$temp_raw" "$target_file"
-                    touch -d "@$create_time" "$target_file" || true
+                    log_success "saved: $target_file"
                 fi
             else
                 log_error "failed to download video"
@@ -211,8 +228,17 @@ if [[ "$mode" == "post" ]]; then
                 local target_file="$base_dir/${video_id}_s${idx}.jpg"
                 log_info "downloading photo $idx..."
                 if curl -s -L -o "$target_file" "$link"; then
-                    local slide_time=$((create_time + idx - 1))
-                    touch -d "@$slide_time" "$target_file" || true
+                    if [[ -n "$create_time" ]]; then
+                        local slide_time=$((create_time + idx - 1))
+                        local slide_exif=""
+                        if date --version >/dev/null 2>&1; then
+                            slide_exif=$(date -d "@$slide_time" +"%Y:%m:%d %H:%M:%S")
+                        else
+                            slide_exif=$(date -r "$slide_time" +"%Y:%m:%d %H:%M:%S")
+                        fi
+                        exiftool -overwrite_original -AllDates="$slide_exif" "$target_file" >/dev/null 2>&1 || true
+                        touch -d "@$slide_time" "$target_file" || true
+                    fi
                     log_success "saved: $target_file"
                 else
                     log_error "failed to download photo $idx"
