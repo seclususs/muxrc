@@ -163,7 +163,7 @@ if [[ "$mode" == "post" ]]; then
             post_type="photo"
             while read -r href; do
                 [[ -n "$href" ]] && dl_links+=("$href")
-            done < <(echo "$split_html" | grep -i 'Download' | grep -v 'MP3' | grep -v 'MP4' | grep -iE 'fastdl.muscdn.app|tiktokcdn|p16|musicaldown' | grep -o 'href="[^"]*"' | sed 's/href="\([^"]*\)"/\1/' || true)
+            done < <(echo "$split_html" | grep -i 'Download' | grep -v 'MP3' | grep -v 'MP4' | grep -iE 'fastdl.muscdn.app|tiktokcdn|p16' | grep -o 'href="[^"]*"' | sed 's/href="\([^"]*\)"/\1/' || true)
             
             if [[ ${#dl_links[@]} -eq 0 ]]; then
                 log_error "no photo download links found."
@@ -186,7 +186,7 @@ if [[ "$mode" == "post" ]]; then
         
         if [[ "$post_type" == "video" ]]; then
             local target_file="$base_dir/${video_id}.mp4"
-            local temp_raw="/tmp/temp_raw_${video_id}.mp4"
+            local temp_raw="$base_dir/.temp_${video_id}.mp4"
             
             log_info "downloading video..."
             if curl -s -L -o "$temp_raw" "${dl_links[0]}"; then
