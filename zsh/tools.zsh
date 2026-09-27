@@ -262,5 +262,17 @@ ttdl-live() {
         return 1
     fi
     
-    bash "$HOME/muxrc/tools/sh/tiktok-dl.sh" "$url"
+    bash "$HOME/muxrc/tools/sh/tiktok-dl.sh" live "$url"
+}
+
+#########################
+# TikTok Media Downloader
+#########################
+ttdl-dl() {
+    if [[ $# -eq 0 ]]; then
+        log_error "usage: ttdl-dl <url1> [url2 ...]"
+        return 1
+    fi
+    
+    bash "$HOME/muxrc/tools/sh/tiktok-dl.sh" post "$@"
 }
