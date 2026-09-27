@@ -110,7 +110,7 @@ if [[ "$mode" == "post" ]]; then
         
         if [[ -z "$create_time" ]]; then
             if [[ "$video_id" =~ ^[0-9]+$ ]]; then
-                create_time=$(( video_id >> 32 ))
+                create_time=$(echo "$video_id" | awk '{printf "%d\n", $1 / 4294967296}')
                 log_info "extracted createTime: $create_time"
             else
                 create_time=""
@@ -166,14 +166,20 @@ if [[ "$mode" == "post" ]]; then
         
         local post_type="video"
         local dl_links=()
-        local split_html
-        split_html=$(echo "$result" | sed 's/<\/a>/<\/a>\n/g')
         
         if echo "$result" | grep -qi 'CONVERT VIDEO NOW'; then
             post_type="photo"
             while read -r href; do
                 [[ -n "$href" ]] && dl_links+=("$href")
-            done < <(echo "$split_html" | grep -i 'Download' | grep -v 'MP3' | grep -v 'MP4' | grep -iE 'fastdl.muscdn.app|tiktokcdn|p16' | grep -o 'href="[^"]*"' | sed 's/href="\([^"]*\)"/\1/' || true)
+                done < <(echo "$result" | awk -v RS='<a ' '
+            /Download/ && !/MP3/ && !/MP4/ {
+                if (match($0, /href="[^"]*"/)) {
+                    str = substr($0, RSTART + 6, RLENGTH - 7)
+                    if (str ~ /fastdl\.muscdn\.app|tiktokcdn|p16/) {
+                        print str
+                    }
+                }
+            }')
             
             if [[ ${#dl_links[@]} -eq 0 ]]; then
                 log_error "no photo download links found."
@@ -181,7 +187,12 @@ if [[ "$mode" == "post" ]]; then
             fi
         else
             local mp4_link
-            mp4_link=$(echo "$split_html" | grep -i 'Download MP4' | grep -i 'HD' | grep -o 'href="[^"]*"' | sed 's/href="\([^"]*\)"/\1/' | head -n 1 || true)
+            mp4_link=$(echo "$result" | awk -v RS='<a ' '
+            /Download MP4/ && /HD/ {
+                if (match($0, /href="[^"]*"/)) {
+                    print substr($0, RSTART + 6, RLENGTH - 7)
+                }
+            }' | head -n 1)
             
             if [[ -n "$mp4_link" ]]; then
                 dl_links+=("$mp4_link")
