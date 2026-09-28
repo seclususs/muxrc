@@ -3,7 +3,7 @@
 #####################
 # Core Initialization
 #####################
-set -euo pipefail
+[[ $- != *i* ]] && set -euo pipefail
 
 LIB_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
 source "$LIB_DIR/colors.sh"
