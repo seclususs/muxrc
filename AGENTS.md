@@ -31,7 +31,10 @@ If testing or executing outside of a native Linux, `git bash` MUST be used.
   - `[+]` success
   - `[-]` warn/skip
   - `[!]` error
+  - `[?]` prompt
 - Example: `echo "[+] configuration loaded."`
+- **Exceptions:**
+  - `zsh/functions.zsh` is READ-ONLY.
 
 ## 5. COMMENTING (bash/zsh)
 
