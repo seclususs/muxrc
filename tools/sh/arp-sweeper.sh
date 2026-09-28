@@ -5,7 +5,7 @@
 ###########################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/_core/init.sh"
+source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 cidr="${1:-}"
 if [[ -z "$cidr" ]]; then

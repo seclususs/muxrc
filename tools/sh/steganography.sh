@@ -5,7 +5,7 @@
 #####################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/_core/init.sh"
+source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 OPSEC_DIR="$HOME/.muxrc/run"
 EXTRACT_DIR="$HOME/muxrc/tools/output/extracted"
@@ -17,10 +17,12 @@ echo "steganography vault"
 echo "1) embed data"
 echo "2) extract data"
 echo "0) exit"
-read -r -p "select [1/2/0]: " opt
+log_prompt "select [1/2/0]: "
+read -r opt
 
 if [[ "$opt" == "1" ]]; then
-    read -r -p "path to cover image: " cover
+    log_prompt "path to cover image: "
+    read -r cover
     if [[ ! -f "$cover" ]]; then
         log_error "cover image not found."
         exit 1
@@ -29,15 +31,18 @@ if [[ "$opt" == "1" ]]; then
     echo "what to embed?"
     echo "1) text string"
     echo "2) file"
-    read -r -p "select [1/2]: " embed_opt
+    log_prompt "select [1/2]: "
+    read -r embed_opt
     
     embed_file=""
     if [[ "$embed_opt" == "1" ]]; then
-        read -r -p "text to hide: " secret_text
+        log_prompt "text to hide: "
+        read -r secret_text
         embed_file="$OPSEC_DIR/secret-payload.txt"
         echo "$secret_text" > "$embed_file"
         elif [[ "$embed_opt" == "2" ]]; then
-        read -r -p "path to file to hide: " embed_file
+        log_prompt "path to file to hide: "
+        read -r embed_file
         if [[ ! -f "$embed_file" ]]; then
             log_error "file to embed not found."
             exit 1
@@ -47,7 +52,8 @@ if [[ "$opt" == "1" ]]; then
         exit 1
     fi
     
-    read -r -s -p "passphrase: " pass
+    log_prompt "passphrase: "
+    read -r -s pass
     echo
     if [[ -z "$pass" ]]; then
         log_error "passphrase cannot be empty."
@@ -55,7 +61,8 @@ if [[ "$opt" == "1" ]]; then
         exit 1
     fi
     
-    read -r -s -p "confirm passphrase: " pass_conf
+    log_prompt "confirm passphrase: "
+    read -r -s pass_conf
     echo
     if [[ "$pass" != "$pass_conf" ]]; then
         log_error "passphrases do not match."
@@ -63,12 +70,14 @@ if [[ "$opt" == "1" ]]; then
         exit 1
     fi
     
-    log_info "embedding data..."
+    trap '[[ -n "${SPINNER_PID:-}" ]] && kill -0 "$SPINNER_PID" 2>/dev/null && kill -9 "$SPINNER_PID" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
+    start_spinner "embedding data"
     if steghide embed -ef "$embed_file" -cf "$cover" -p "$pass"; then
-        log_success "embedded into $cover"
+        stop_spinner "success" "embedded into $cover"
     else
-        log_error "steghide failed."
+        stop_spinner "error" "steghide failed."
     fi
+    trap - EXIT
     
     # OPSEC: Shred temporary payload
     if [[ "$embed_opt" == "1" && -f "$embed_file" ]]; then
@@ -79,7 +88,8 @@ if [[ "$opt" == "1" ]]; then
     log_warn "exiting..."
     exit 0
     elif [[ "$opt" == "2" ]]; then
-    read -r -p "path to stego-image: " stego_img
+    log_prompt "path to stego-image: "
+    read -r stego_img
     if [[ ! -f "$stego_img" ]]; then
         log_error "stego-image not found."
         exit 1
@@ -88,21 +98,24 @@ if [[ "$opt" == "1" ]]; then
     # Resolve absolute path before pushd
     stego_img_abs=$(realpath "$stego_img")
     
-    read -r -s -p "decryption passphrase: " pass
+    log_prompt "decryption passphrase: "
+    read -r -s pass
     echo
     if [[ -z "$pass" ]]; then
         log_error "passphrase cannot be empty."
         exit 1
     fi
     
-    log_info "extracting data..."
+    trap '[[ -n "${SPINNER_PID:-}" ]] && kill -0 "$SPINNER_PID" 2>/dev/null && kill -9 "$SPINNER_PID" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
+    start_spinner "extracting data"
     pushd "$EXTRACT_DIR" >/dev/null
     if steghide extract -sf "$stego_img_abs" -f -p "$pass"; then
-        log_success "extracted to $EXTRACT_DIR"
+        stop_spinner "success" "extracted to $EXTRACT_DIR"
     else
-        log_error "extraction failed."
+        stop_spinner "error" "extraction failed."
     fi
     popd >/dev/null
+    trap - EXIT
 else
     log_error "invalid option."
     exit 1

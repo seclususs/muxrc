@@ -5,16 +5,21 @@
 ##################
 set -euo pipefail
 
-echo "[*] Requesting Android Storage permission..."
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+source "$SCRIPT_DIR/lib/init.sh"
+
+trap '[[ -n "${SPINNER_PID:-}" ]] && kill -0 "$SPINNER_PID" 2>/dev/null && kill -9 "$SPINNER_PID" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
+
+log_info "requesting android storage permission..."
 termux-setup-storage
 sleep 2
 
-echo "[*] Enabling extra repositories..."
+log_info "enabling extra repositories..."
 pkg update -y
 pkg install -y root-repo x11-repo
 pkg upgrade -y
 
-echo "[*] Installing core packages..."
+log_info "installing packages..."
 pkg install -y zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip unrar exiftool steghide openssl-tool nmap tor yt-dlp ffmpeg
 
 DOTFILES_DIR="$HOME/muxrc"
@@ -25,34 +30,37 @@ mkdir -p "$ZSH_PLUGINS_DIR"
 mkdir -p "$HOME/.termux"
 mkdir -p "$DOTFILES_DIR/nano"
 
-echo "[*] Muting default Termux MOTD..."
+log_info "muting default termux motd..."
 touch "$HOME/.hushlogin"
 
-echo "[*] Setting up sudo wrapper..."
+log_info "setting up sudo wrapper..."
 if [[ -f "$HOME/.sudo_hash" ]]; then
-    read -r -p "[?] Sudo password already configured. Overwrite? [y/N]: " reset_sudo
+    log_prompt "sudo password already configured. overwrite? [y/N]: "
+    read -r reset_sudo
 else
     reset_sudo="y"
 fi
 
 if [[ "${reset_sudo:-}" =~ ^[Yy]$ ]]; then
-    read -r -p "Create your sudo password: " -s SUDO_PASS
+    log_prompt "create your sudo password: "
+    read -r -s SUDO_PASS
     echo ""
-    read -r -p "Confirm sudo password: " -s SUDO_PASS_CONFIRM
+    log_prompt "confirm sudo password: "
+    read -r -s SUDO_PASS_CONFIRM
     echo ""
     
     if [[ "$SUDO_PASS" == "$SUDO_PASS_CONFIRM" ]]; then
         echo -n "$SUDO_PASS" | sha256sum | awk '{print $1}' > "$HOME/.sudo_hash"
         chmod 600 "$HOME/.sudo_hash"
-        echo "[+] Sudo hash generated successfully."
+        log_success "sudo hash generated successfully."
     else
-        echo "[!] Passwords do not match. Run installer again to fix."
+        log_error "passwords do not match. run installer again to fix."
     fi
 else
-    echo "[-] Keeping existing sudo password."
+    log_warn "keeping existing sudo password."
 fi
 
-echo "[*] Fetching Zsh plugins..."
+log_info "fetching zsh plugins..."
 declare -A PLUGINS=(
     ["zsh-syntax-highlighting"]="https://github.com/zsh-users/zsh-syntax-highlighting.git"
     ["zsh-autosuggestions"]="https://github.com/zsh-users/zsh-autosuggestions.git"
@@ -63,14 +71,23 @@ declare -A PLUGINS=(
 
 for PLUGIN in "${!PLUGINS[@]}"; do
     if [ ! -d "$ZSH_PLUGINS_DIR/$PLUGIN" ]; then
-        git clone --depth 1 "${PLUGINS[$PLUGIN]}" "$ZSH_PLUGINS_DIR/$PLUGIN"
+        start_spinner "cloning $PLUGIN"
+        if git clone -q --depth 1 "${PLUGINS[$PLUGIN]}" "$ZSH_PLUGINS_DIR/$PLUGIN"; then
+            stop_spinner "success" "cloned $PLUGIN"
+        else
+            stop_spinner "error" "failed to clone $PLUGIN"
+        fi
     else
-        echo "[*] Updating $PLUGIN..."
-        git -C "$ZSH_PLUGINS_DIR/$PLUGIN" pull --rebase || echo "[!] Failed to update $PLUGIN"
+        start_spinner "updating $PLUGIN"
+        if git -C "$ZSH_PLUGINS_DIR/$PLUGIN" pull -q --rebase; then
+            stop_spinner "success" "updated $PLUGIN"
+        else
+            stop_spinner "error" "failed to update $PLUGIN"
+        fi
     fi
 done
 
-echo "[*] Creating storage symlinks..."
+log_info "creating storage symlinks..."
 declare -A STORAGE_DIRS=(
     ["Workspace"]="/storage/emulated/0/Workspace"
 )
@@ -79,14 +96,14 @@ for NAME in "${!STORAGE_DIRS[@]}"; do
     TARGET="${STORAGE_DIRS[$NAME]}"
     if [ ! -d "$TARGET" ]; then
         mkdir -p "$TARGET"
-        echo "[+] Created $TARGET"
+        log_success "created $TARGET"
     else
-        echo "[-] $TARGET already exists, skipping creation."
+        log_warn "$TARGET already exists, skipping creation."
     fi
     ln -sfn "$TARGET" "$HOME/$NAME"
 done
 
-echo "[*] Symlinking configurations..."
+log_info "symlinking configurations..."
 ln -sf "$DOTFILES_DIR/zsh/.zshrc" "$HOME/.zshrc"
 ln -sf "$DOTFILES_DIR/colors/.dircolors" "$HOME/.dircolors"
 ln -sf "$DOTFILES_DIR/termux/colors.properties" "$HOME/.termux/colors.properties"
@@ -102,30 +119,33 @@ ln -sf "$DOTFILES_DIR/shortcuts/backup.sh" "$HOME/.shortcuts/backup.sh"
 chmod +x "$DOTFILES_DIR/shortcuts/backup.sh"
 
 if [ ! -f "$HOME/.termux/font.ttf" ]; then
-    echo "[*] Installing JetBrains Mono Nerd Font..."
+    log_info "installing jetbrains mono nerd font..."
     wget -q --show-progress -O "$HOME/.termux/font.ttf" "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf"
 else
-    echo "[*] JetBrains Mono Nerd Font already installed, skipping."
+    log_warn "jetbrains mono nerd font already installed, skipping."
 fi
 
 termux-reload-settings
 
 if [[ "$SHELL" != */zsh ]]; then
-    echo "[*] Changing default shell to zsh..."
+    log_info "changing default shell to zsh..."
     chsh -s zsh
 fi
 
-echo "[*] Setting up Gemini auto-correct..."
+log_info "setting up gemini auto-correct..."
 if [[ -f "$HOME/.gemini_ai_env" ]]; then
-    read -r -p "[?] Gemini config already exists. Overwrite? [y/N]: " reset_gemini
+    log_prompt "gemini config already exists. overwrite? [y/N]: "
+    read -r reset_gemini
 else
     reset_gemini="y"
 fi
 
 if [[ "${reset_gemini:-}" =~ ^[Yy]$ ]]; then
-    read -r -p "Set up Gemini auto-correct now? [y/N]: " ENABLE_AI
+    log_prompt "set up gemini auto-correct now? [y/N]: "
+    read -r ENABLE_AI
     if [[ "${ENABLE_AI:-}" =~ ^[Yy]$ ]]; then
-        read -r -p "Gemini API key: " -s GEMINI_KEY
+        log_prompt "gemini api key: "
+        read -r -s GEMINI_KEY
         echo
         {
             echo "GEMINI_API_KEY=\"$GEMINI_KEY\""
@@ -133,12 +153,13 @@ if [[ "${reset_gemini:-}" =~ ^[Yy]$ ]]; then
             echo "AI_AUTOCORRECT_ENABLED=1"
         } > "$HOME/.gemini_ai_env"
         chmod 600 "$HOME/.gemini_ai_env"
-        echo "[+] Gemini configuration saved."
+        log_success "gemini configuration saved."
     fi
 else
-    echo "[-] Keeping existing Gemini configuration."
+    log_warn "keeping existing gemini configuration."
 fi
 
 grep -qxF '.gemini_ai_env' "$DOTFILES_DIR/.gitignore" || echo '.gemini_ai_env' >> "$DOTFILES_DIR/.gitignore"
 
-echo "[+] Installation complete! Please restart your Termux session."
+log_success "installation complete! please restart your termux session."
+trap - EXIT

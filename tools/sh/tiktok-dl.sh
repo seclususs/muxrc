@@ -6,7 +6,7 @@
 set -euo pipefail
 export LC_ALL=C
 
-source "$(dirname "$(realpath "$0")")/_core/init.sh"
+source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 if [[ $# -lt 1 ]]; then
     log_error "usage: $(basename "$0") <live|post> [urls...]"
@@ -36,7 +36,7 @@ if [[ "$mode" == "live" ]]; then
     log_info "saving to: $base_dir"
     log_info "recording... (ctrl+c to stop)"
     
-    trap 'print ""; log_success "recording stopped by user."; exit 0' SIGINT
+    trap 'echo ""; log_success "recording stopped by user."; exit 0' SIGINT
     
     yt-dlp \
     --user-agent "$ua" \
@@ -50,6 +50,7 @@ if [[ "$mode" == "live" ]]; then
 fi
 
 if [[ "$mode" == "post" ]]; then
+    trap '[[ -n "${SPINNER_PID:-}" ]] && kill -0 "$SPINNER_PID" 2>/dev/null && kill -9 "$SPINNER_PID" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
     
     for cmd in curl jq sed grep awk touch ffmpeg exiftool; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -111,10 +112,10 @@ if [[ "$mode" == "post" ]]; then
         if [[ -z "$create_time" ]]; then
             if [[ "$video_id" =~ ^[0-9]+$ ]]; then
                 create_time=$(echo "$video_id" | awk '{printf "%d\n", $1 / 4294967296}')
-                log_info "extracted createTime: $create_time"
+                log_info "extracted createtime: $create_time"
             else
                 create_time=""
-                log_warn "could not find createTime"
+                log_warn "could not find createtime"
             fi
         fi
         
@@ -197,7 +198,7 @@ if [[ "$mode" == "post" ]]; then
             if [[ -n "$mp4_link" ]]; then
                 dl_links+=("$mp4_link")
             else
-                log_error "HD download link not found."
+                log_error "hd download link not found."
                 return
             fi
         fi
@@ -209,8 +210,9 @@ if [[ "$mode" == "post" ]]; then
             local target_file="$base_dir/${video_id}.mp4"
             local temp_raw="$base_dir/.temp_${video_id}.mp4"
             
-            log_info "downloading video..."
+            start_spinner "downloading video"
             if curl -s -L -o "$temp_raw" "${dl_links[0]}"; then
+                stop_spinner "success" "downloaded video"
                 if [[ -n "$create_time" ]]; then
                     log_info "applying metadata..."
                     if ffmpeg -y -i "$temp_raw" -c copy -metadata creation_time="$iso_time" -v error "$target_file"; then
@@ -229,7 +231,7 @@ if [[ "$mode" == "post" ]]; then
                     log_success "saved: $target_file"
                 fi
             else
-                log_error "failed to download video"
+                stop_spinner "error" "failed to download video"
                 rm -f "$temp_raw"
             fi
             
@@ -237,8 +239,9 @@ if [[ "$mode" == "post" ]]; then
             local idx=1
             for link in "${dl_links[@]}"; do
                 local target_file="$base_dir/${video_id}_s${idx}.jpg"
-                log_info "downloading photo $idx..."
+                start_spinner "downloading photo $idx"
                 if curl -s -L -o "$target_file" "$link"; then
+                    stop_spinner "success" "downloaded photo $idx"
                     if [[ -n "$create_time" ]]; then
                         local slide_time=$((create_time + idx - 1))
                         local slide_exif=""
@@ -252,7 +255,7 @@ if [[ "$mode" == "post" ]]; then
                     fi
                     log_success "saved: $target_file"
                 else
-                    log_error "failed to download photo $idx"
+                    stop_spinner "error" "failed to download photo $idx"
                 fi
                 idx=$((idx + 1))
             done

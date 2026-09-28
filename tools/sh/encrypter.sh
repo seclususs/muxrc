@@ -5,7 +5,7 @@
 ########################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/_core/init.sh"
+source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 target_file="${1:-}"
 if [[ -z "$target_file" ]]; then
@@ -25,10 +25,15 @@ touch "$vault_dir/.nomedia"
 base_name=$(basename "$target_file")
 out_file="$vault_dir/.${base_name}.enc"
 
-log_info "encrypting $base_name..."
+trap '[[ -n "${SPINNER_PID:-}" ]] && kill -0 "$SPINNER_PID" 2>/dev/null && kill -9 "$SPINNER_PID" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
 
-openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -salt -in "$target_file" -out "$out_file" -pass env:MUXRC_CRYPT_PASS
+start_spinner "encrypting $base_name"
 
-log_success "encrypted: $out_file"
+if openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -salt -in "$target_file" -out "$out_file" -pass env:MUXRC_CRYPT_PASS; then
+    stop_spinner "success" "encrypted: $out_file"
+else
+    stop_spinner "error" "encryption failed."
+    exit 1
+fi
 
 exit 0

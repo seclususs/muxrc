@@ -5,7 +5,7 @@
 ########################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/_core/init.sh"
+source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 target_dir="${1:-}"
 if [[ -z "$target_dir" ]]; then
@@ -18,12 +18,12 @@ if [[ ! -d "$target_dir" ]]; then
     exit 1
 fi
 
-log_info "scanning '$target_dir'..."
-
 tmp_dir=$(mktemp -d)
-trap 'rm -rf "$tmp_dir"' EXIT
+trap 'rm -rf "$tmp_dir"; [[ -n "${SPINNER_PID:-}" ]] && kill -0 "$SPINNER_PID" 2>/dev/null && kill -9 "$SPINNER_PID" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
 
+start_spinner "scanning '$target_dir'"
 find "$target_dir" -type f -print0 | xargs -0 stat -c '%s %n' > "$tmp_dir/all_files.txt"
+stop_spinner "success" "scanning complete."
 
 awk '{size=$1; count[size]++} END {for(s in count) if(count[s]>1) print s}' "$tmp_dir/all_files.txt" > "$tmp_dir/dup_sizes.txt"
 
@@ -32,10 +32,12 @@ if [[ ! -s "$tmp_dir/dup_sizes.txt" ]]; then
     exit 0
 fi
 
-log_info "hashing..."
+start_spinner "hashing duplicates"
 
 awk 'NR==FNR {dup[$1]; next} $1 in dup { print substr($0, length($1)+2) }' "$tmp_dir/dup_sizes.txt" "$tmp_dir/all_files.txt" | \
 tr '\n' '\0' | xargs -0 sha256sum > "$tmp_dir/hashed.txt"
+
+stop_spinner "success" "hashing complete."
 
 awk '{hash=$1; count[hash]++} END {for(h in count) if(count[h]>1) print h}' "$tmp_dir/hashed.txt" > "$tmp_dir/dup_hashes.txt"
 
@@ -70,7 +72,8 @@ done < "$tmp_dir/dup_hashes.txt"
 
 total_to_delete=$(wc -l < "$tmp_dir/to_delete.txt")
 
-read -r -p "delete $total_to_delete files? [y/N]: " confirm
+log_prompt "delete $total_to_delete files? [y/n]: "
+read -r confirm
 
 if [[ "${confirm:-}" =~ ^[Yy]$ ]]; then
     log_info "cleaning..."

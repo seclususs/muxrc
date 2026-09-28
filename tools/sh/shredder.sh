@@ -5,7 +5,7 @@
 ##########################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/_core/init.sh"
+source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 target_file="${1:-}"
 if [[ -z "$target_file" ]]; then
@@ -13,14 +13,16 @@ if [[ -z "$target_file" ]]; then
     exit 1
 fi
 
-log_warn "PERMANENTLY DESTROYING:"
+log_warn "permanently destroying:"
 log_warn "$target_file"
-read -r -p "type 'SHRED' to confirm (or anything else to exit): " confirm
+log_prompt "type 'shred' to confirm (or anything else to exit): "
+read -r confirm
 
 if [[ "$confirm" == "SHRED" ]]; then
-    log_info "shredding file..."
+    trap '[[ -n "${SPINNER_PID:-}" ]] && kill -0 "$SPINNER_PID" 2>/dev/null && kill -9 "$SPINNER_PID" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
+    start_spinner "shredding file"
     shred -u -z -n 3 "$target_file"
-    log_success "file destroyed."
+    stop_spinner "success" "file destroyed."
 else
     log_warn "aborted."
     exit 1

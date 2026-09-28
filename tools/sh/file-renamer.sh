@@ -5,7 +5,7 @@
 ##############
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/_core/init.sh"
+source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 if [[ $# -lt 2 ]]; then
     log_error "usage: file-renamer.sh <directory> <prefix>"
@@ -23,7 +23,9 @@ fi
 declare -a old_names=()
 declare -a new_names=()
 
-log_info "parsing dates..."
+trap '[[ -n "${SPINNER_PID:-}" ]] && kill -0 "$SPINNER_PID" 2>/dev/null && kill -9 "$SPINNER_PID" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
+
+start_spinner "parsing dates"
 
 while IFS= read -r -d '' file; do
     date_str=$(exiftool -s -s -s -d "%Y%m%d_%H%M%S" -DateTimeOriginal "$file" 2>/dev/null || true)
@@ -80,6 +82,9 @@ while IFS= read -r -d '' file; do
     fi
 done < <(find "$dir" -maxdepth 1 -type f -print0)
 
+stop_spinner "success" "parsing complete."
+trap - EXIT
+
 if [[ ${#old_names[@]} -eq 0 ]]; then
     log_info "no files to rename."
     exit 0
@@ -91,7 +96,8 @@ for i in "${!old_names[@]}"; do
     new_base=$(basename "${new_names[$i]}")
     printf "%-30s -> %s\n" "${old_base:0:30}" "$new_base"
 done
-read -r -p "confirm rename? [y/N]: " conf
+log_prompt "confirm rename? [y/n]: "
+read -r conf
 if [[ "$conf" =~ ^[Yy]$ ]]; then
     log_info "executing rename..."
     for i in "${!old_names[@]}"; do

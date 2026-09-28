@@ -2,10 +2,7 @@
 # Logging Functions
 ###################
 
-log_info() { print -P -n "%F{blue}[*]%f "; print -r -- "$*" }
-log_success() { print -P -n "%F{green}[+]%f "; print -r -- "$*" }
-log_warn() { print -P -n "%F{yellow}[-]%f "; print -r -- "$*" }
-log_error() { print -u2 -P -n "%F{red}[!]%f "; print -u2 -r -- "$*" }
+source "$HOME/muxrc/lib/init.sh"
 
 ########################
 # Duplicate File Cleaner
@@ -47,19 +44,19 @@ clean-meta() {
         return 1
     fi
     
-    log_info "cleaning metadata..."
+    start_spinner "cleaning metadata"
     local err_file
     err_file=$(mktemp)
     
     bash "$HOME/muxrc/tools/sh/exif-cleaner.sh" "$target_dir" 2> "$err_file"
+    
+    stop_spinner "success" "done. output saved to ~/muxrc/tools/output/stripped/"
     
     if [[ -s "$err_file" ]]; then
         log_warn "warning summary:"
         cat "$err_file"
     fi
     rm -f "$err_file"
-    
-    log_success "done. output saved to ~/muxrc/tools/output/stripped/"
 }
 
 #####################
@@ -137,9 +134,13 @@ media-crypt() {
     fi
     
     local pass1 pass2
-    read -rs "pass1?enter encryption password: "
+    log_prompt "enter encryption password: "
+    read -rs pass1
+    
     print -u2 ""
-    read -rs "pass2?confirm password: "
+    log_prompt "confirm password: "
+    read -rs pass2
+    
     print -u2 ""
     
     if [[ -z "$pass1" ]]; then
@@ -198,7 +199,9 @@ net-sweep() {
     
     if [[ -z "$cidr" ]]; then
         log_warn "could not auto-detect valid local subnet."
-        read -r "cidr?enter subnet manually (e.g. 192.168.1.0/24): "
+        log_prompt "enter subnet manually (e.g. 192.168.1.0/24): "
+        read -r cidr
+        
     fi
     
     if [[ -z "$cidr" ]]; then
@@ -275,4 +278,75 @@ ttdl-dl() {
     fi
     
     bash "$HOME/muxrc/tools/sh/tiktok-dl.sh" post "$@"
+}
+
+###############
+# Clean history
+###############
+clean-history() {
+    log_info "cleaning history..."
+    
+    local hfile="${HISTFILE:-$HOME/.zsh_history}"
+    rm -f "$hfile" "${hfile}.LOCK" 2>/dev/null
+    
+    log_success "history cleaned. reloading shell..."
+    exec zsh
+}
+
+############
+# Sync muxrc
+############
+muxrc-sync() {
+    log_info "syncing muxrc..."
+    
+    local muxrc_dir="$HOME/muxrc"
+    local install_script="$muxrc_dir/install.sh"
+    local plugins_dir="$HOME/.zsh/plugins"
+    local old_hash=""
+    local new_hash=""
+    
+    if [[ ! -d "$muxrc_dir" ]]; then
+        log_error "muxrc dir not found."
+        return 1
+    fi
+    
+    if [[ -f "$install_script" ]]; then
+        old_hash=$(sha256sum "$install_script" 2>/dev/null | awk '{print $1}')
+    fi
+    
+    start_spinner "pulling repository"
+    if git -C "$muxrc_dir" pull -q; then
+        stop_spinner "success" "repository updated."
+    else
+        stop_spinner "error" "failed to pull repository."
+        return 1
+    fi
+    
+    if [[ -d "$plugins_dir" ]]; then
+        log_info "syncing zsh plugins..."
+        local plugin
+        for plugin in "$plugins_dir"/*; do
+            if [[ -d "$plugin/.git" ]]; then
+                start_spinner "pulling ${plugin:t}"
+                if git -C "$plugin" pull -q --rebase; then
+                    stop_spinner "success" "updated ${plugin:t}."
+                else
+                    stop_spinner "error" "failed to update ${plugin:t}."
+                fi
+            fi
+        done
+    fi
+    
+    if [[ -f "$install_script" ]]; then
+        new_hash=$(sha256sum "$install_script" 2>/dev/null | awk '{print $1}')
+        if [[ "$old_hash" != "$new_hash" ]]; then
+            log_info "install.sh updated. executing..."
+            bash "$install_script"
+        else
+            log_warn "install.sh unchanged. skipping."
+        fi
+    fi
+    
+    log_success "sync complete. reloading shell..."
+    exec zsh
 }

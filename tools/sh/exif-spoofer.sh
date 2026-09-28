@@ -5,7 +5,7 @@
 ##############
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/_core/init.sh"
+source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 preset_file="${1:-}"
 image_file="${2:-}"
@@ -23,8 +23,10 @@ while IFS="=" read -r key val; do
     args+=("-$key=$val")
 done < <(jq -r 'to_entries | .[] | "\(.key)=\(.value)"' "$preset_file")
 
-log_info "injecting decoy from $(basename "$preset_file")..."
+trap '[[ -n "${SPINNER_PID:-}" ]] && kill -0 "$SPINNER_PID" 2>/dev/null && kill -9 "$SPINNER_PID" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
+start_spinner "injecting decoy from $(basename "$preset_file")"
 exiftool "${args[@]}" -o "$output_file" "$image_file" >/dev/null
-log_success "decoy at: $output_file"
+stop_spinner "success" "decoy at: $output_file"
+trap - EXIT
 
 exit 0
