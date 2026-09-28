@@ -42,7 +42,7 @@ fi
 ##############################
 # Completion & fzf-tab Configs
 ##############################
-zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+zstyle ':completion:*' list-colors ${(s.:.)${LS_COLORS-}}
 zstyle ':completion:*:descriptions' format '[%d]'
 zstyle ':fzf-tab:*' switch-group '<' '>'
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color=always -1 $realpath'

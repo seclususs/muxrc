@@ -33,7 +33,7 @@ if [[ -f "$HOME/.dircolors" ]]; then
     eval $(dircolors -b "$HOME/.dircolors")
 fi
 
-if [[ "$TERMUX_FAKEROOT" == "1" ]]; then
+if [[ "${TERMUX_FAKEROOT-}" == "1" ]]; then
     PROMPT='%F{196}root@termux%f:%F{39}%~%f# '
     
     magic_su_enter() {

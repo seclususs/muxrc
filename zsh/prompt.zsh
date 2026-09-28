@@ -43,7 +43,7 @@ COLOR_DIR="%F{39}"
 COLOR_ROOT="%F{196}"
 RESET="%f"
 
-if [[ -n "$SSH_CONNECTION" ]]; then
+if [[ -n "${SSH_CONNECTION-}" ]]; then
     COLOR_USR="%F{214}"
 fi
 
