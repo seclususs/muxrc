@@ -16,6 +16,10 @@ SPINNER_PID=""
 start_spinner() {
     local msg="$1"
     local frames=("\\" "|" "/" "-")
+    local monitor_state=0
+    if [[ $- == *m* ]]; then monitor_state=1; fi
+    set +m
+    
     (
         while true; do
             for frame in "${frames[@]}"; do
@@ -25,16 +29,25 @@ start_spinner() {
         done
     ) &
     SPINNER_PID=$!
-    disown "$SPINNER_PID" 2>/dev/null || true
+    
+    disown %% 2>/dev/null || disown "$SPINNER_PID" 2>/dev/null || true
+    
+    if [[ $monitor_state == 1 ]]; then set -m; fi
 }
 
 stop_spinner() {
     local spin_status="$1"
     local msg="$2"
+    local monitor_state=0
+    if [[ $- == *m* ]]; then monitor_state=1; fi
+    set +m
+    
     if [[ -n "$SPINNER_PID" ]] && kill -0 "$SPINNER_PID" 2>/dev/null; then
         kill "$SPINNER_PID" >/dev/null 2>&1
         wait "$SPINNER_PID" 2>/dev/null || true
     fi
+    
+    if [[ $monitor_state == 1 ]]; then set -m; fi
     echo -ne "\r\033[K"
     if [[ "$spin_status" == "success" ]]; then
         log_success "$msg"
