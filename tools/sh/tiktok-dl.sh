@@ -208,55 +208,91 @@ if [[ "$mode" == "post" ]]; then
         
         if [[ "$post_type" == "video" ]]; then
             local target_file="$base_dir/${video_id}.mp4"
-            local temp_raw="$base_dir/.temp_${video_id}.mp4"
             
-            start_spinner "downloading video"
-            if curl -s -L -o "$temp_raw" "${dl_links[0]}"; then
-                stop_spinner "success" "downloaded video"
-                if [[ -n "$create_time" ]]; then
-                    log_info "applying metadata..."
-                    if ffmpeg -y -i "$temp_raw" -c copy -metadata creation_time="$iso_time" -v error "$target_file"; then
-                        rm -f "$temp_raw"
-                        exiftool -overwrite_original -AllDates="$exif_time" "$target_file" >/dev/null 2>&1 || true
-                        touch -d "@$create_time" "$target_file" || true
-                        log_success "saved: $target_file"
-                    else
-                        log_error "failed to apply metadata, saving raw file"
-                        mv "$temp_raw" "$target_file"
-                        exiftool -overwrite_original -AllDates="$exif_time" "$target_file" >/dev/null 2>&1 || true
-                        touch -d "@$create_time" "$target_file" || true
-                    fi
-                else
-                    mv "$temp_raw" "$target_file"
-                    log_success "saved: $target_file"
-                fi
+            if [[ -f "$target_file" ]]; then
+                log_warn "video ${video_id} already exists, skipping."
             else
-                stop_spinner "error" "failed to download video"
-                rm -f "$temp_raw"
+                local temp_raw="$base_dir/.temp_${video_id}.mp4"
+                local dl_success=false
+                while [[ "$dl_success" == false ]]; do
+                    start_spinner "downloading video"
+                    if curl -s -L -o "$temp_raw" "${dl_links[0]}"; then
+                        stop_spinner "success" "downloaded video"
+                        dl_success=true
+                        if [[ -n "$create_time" ]]; then
+                            log_info "applying metadata..."
+                            if ffmpeg -y -i "$temp_raw" -c copy -metadata creation_time="$iso_time" -v error "$target_file"; then
+                                rm -f "$temp_raw"
+                                exiftool -overwrite_original -AllDates="$exif_time" "$target_file" >/dev/null 2>&1 || true
+                                touch -d "@$create_time" "$target_file" || true
+                                log_success "saved: $target_file"
+                            else
+                                log_error "failed to apply metadata, saving raw file"
+                                mv "$temp_raw" "$target_file"
+                                exiftool -overwrite_original -AllDates="$exif_time" "$target_file" >/dev/null 2>&1 || true
+                                touch -d "@$create_time" "$target_file" || true
+                            fi
+                        else
+                            mv "$temp_raw" "$target_file"
+                            log_success "saved: $target_file"
+                        fi
+                    else
+                        stop_spinner "error" "failed to download video"
+                        rm -f "$temp_raw"
+                        log_prompt "retry download video for ${video_id}? [Y/n]: "
+                        local retry
+                        read -r retry
+                        if [[ "${retry:-y}" =~ ^[Nn]$ ]]; then
+                            log_warn "skipping video ${video_id}"
+                            break
+                        fi
+                    fi
+                done
             fi
             
             elif [[ "$post_type" == "photo" ]]; then
             local idx=1
             for link in "${dl_links[@]}"; do
                 local target_file="$base_dir/${video_id}_s${idx}.jpg"
-                start_spinner "downloading photo $idx"
-                if curl -s -L -o "$target_file" "$link"; then
-                    stop_spinner "success" "downloaded photo $idx"
-                    if [[ -n "$create_time" ]]; then
-                        local slide_time=$((create_time + idx - 1))
-                        local slide_exif=""
-                        if date --version >/dev/null 2>&1; then
-                            slide_exif=$(date -d "@$slide_time" +"%Y:%m:%d %H:%M:%S")
-                        else
-                            slide_exif=$(date -r "$slide_time" +"%Y:%m:%d %H:%M:%S")
-                        fi
-                        exiftool -overwrite_original -AllDates="$slide_exif" "$target_file" >/dev/null 2>&1 || true
-                        touch -d "@$slide_time" "$target_file" || true
-                    fi
-                    log_success "saved: $target_file"
-                else
-                    stop_spinner "error" "failed to download photo $idx"
+                
+                if [[ -f "$target_file" ]]; then
+                    log_warn "photo ${idx} for ${video_id} already exists, skipping."
+                    idx=$((idx + 1))
+                    continue
                 fi
+                
+                local temp_raw="$base_dir/.temp_${video_id}_s${idx}.jpg"
+                local dl_success=false
+                while [[ "$dl_success" == false ]]; do
+                    start_spinner "downloading photo $idx"
+                    if curl -s -L -o "$temp_raw" "$link"; then
+                        stop_spinner "success" "downloaded photo $idx"
+                        dl_success=true
+                        mv "$temp_raw" "$target_file"
+                        if [[ -n "$create_time" ]]; then
+                            local slide_time=$((create_time + idx - 1))
+                            local slide_exif=""
+                            if date --version >/dev/null 2>&1; then
+                                slide_exif=$(date -d "@$slide_time" +"%Y:%m:%d %H:%M:%S")
+                            else
+                                slide_exif=$(date -r "$slide_time" +"%Y:%m:%d %H:%M:%S")
+                            fi
+                            exiftool -overwrite_original -AllDates="$slide_exif" "$target_file" >/dev/null 2>&1 || true
+                            touch -d "@$slide_time" "$target_file" || true
+                        fi
+                        log_success "saved: $target_file"
+                    else
+                        stop_spinner "error" "failed to download photo $idx"
+                        rm -f "$temp_raw"
+                        log_prompt "retry download photo $idx for ${video_id}? [Y/n]: "
+                        local retry
+                        read -r retry
+                        if [[ "${retry:-y}" =~ ^[Nn]$ ]]; then
+                            log_warn "skipping photo $idx"
+                            break
+                        fi
+                    fi
+                done
                 idx=$((idx + 1))
             done
         fi
