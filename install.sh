@@ -10,17 +10,22 @@ source "$SCRIPT_DIR/lib/init.sh"
 
 trap '[[ -n "${SPINNER_PID:-}" ]] && kill -0 "$SPINNER_PID" 2>/dev/null && kill -9 "$SPINNER_PID" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
 
-log_info "requesting android storage permission..."
-termux-setup-storage
-sleep 2
+if [[ ! -d "$HOME/storage" ]]; then
+    log_info "requesting storage permission..."
+    termux-setup-storage
+    sleep 2
+fi
 
-log_info "enabling extra repositories..."
-pkg update -y
-pkg install -y root-repo x11-repo
-pkg upgrade -y
+start_spinner "enabling extra repos"
+export DEBIAN_FRONTEND=noninteractive
+pkg update -y -o Dpkg::Options::="--force-confold" >/dev/null 2>&1 || true
+pkg install -y -o Dpkg::Options::="--force-confold" root-repo x11-repo >/dev/null 2>&1 || true
+pkg upgrade -y -o Dpkg::Options::="--force-confold" >/dev/null 2>&1 || true
+stop_spinner "success" "repos enabled."
 
-log_info "installing packages..."
-pkg install -y zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip unrar exiftool steghide openssl-tool nmap tor yt-dlp ffmpeg
+start_spinner "installing packages"
+pkg install -y -o Dpkg::Options::="--force-confold" zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip unrar exiftool steghide openssl-tool nmap tor yt-dlp ffmpeg >/dev/null 2>&1 || true
+stop_spinner "success" "packages installed."
 
 DOTFILES_DIR="$HOME/muxrc"
 ZSH_DIR="$HOME/.zsh"
@@ -30,12 +35,12 @@ mkdir -p "$ZSH_PLUGINS_DIR"
 mkdir -p "$HOME/.termux"
 mkdir -p "$DOTFILES_DIR/nano"
 
-log_info "muting default termux motd..."
+log_info "muting termux motd..."
 touch "$HOME/.hushlogin"
 
 log_info "setting up sudo wrapper..."
 if [[ -f "$HOME/.sudo_hash" ]]; then
-    log_prompt "sudo password already configured. overwrite? [y/N]: "
+    log_prompt "sudo pass configured. overwrite? [y/N]: "
     read -r reset_sudo
 else
     reset_sudo="y"
@@ -52,9 +57,9 @@ if [[ "${reset_sudo:-}" =~ ^[Yy]$ ]]; then
     if [[ "$SUDO_PASS" == "$SUDO_PASS_CONFIRM" ]]; then
         echo -n "$SUDO_PASS" | sha256sum | awk '{print $1}' > "$HOME/.sudo_hash"
         chmod 600 "$HOME/.sudo_hash"
-        log_success "sudo hash generated successfully."
+        log_success "sudo hash generated."
     else
-        log_error "passwords do not match. run installer again to fix."
+        log_error "passwords mismatch. please retry."
     fi
 else
     log_warn "keeping existing sudo password."
@@ -98,7 +103,7 @@ for NAME in "${!STORAGE_DIRS[@]}"; do
         mkdir -p "$TARGET"
         log_success "created $TARGET"
     else
-        log_warn "$TARGET already exists, skipping creation."
+        log_warn "$TARGET already exists, skipping."
     fi
     ln -sfn "$TARGET" "$HOME/$NAME"
 done
@@ -119,29 +124,29 @@ ln -sf "$DOTFILES_DIR/shortcuts/backup.sh" "$HOME/.shortcuts/backup.sh"
 chmod +x "$DOTFILES_DIR/shortcuts/backup.sh"
 
 if [ ! -f "$HOME/.termux/font.ttf" ]; then
-    log_info "installing jetbrains mono nerd font..."
+    log_info "installing jetbrains mono font..."
     wget -q --show-progress -O "$HOME/.termux/font.ttf" "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf"
 else
-    log_warn "jetbrains mono nerd font already installed, skipping."
+    log_warn "font already installed, skipping."
 fi
 
 termux-reload-settings
 
 if [[ "$SHELL" != */zsh ]]; then
-    log_info "changing default shell to zsh..."
+    log_info "changing default shell..."
     chsh -s zsh
 fi
 
 log_info "setting up gemini auto-correct..."
 if [[ -f "$HOME/.gemini_ai_env" ]]; then
-    log_prompt "gemini config already exists. overwrite? [y/N]: "
+    log_prompt "gemini config exists. overwrite? [y/N]: "
     read -r reset_gemini
 else
     reset_gemini="y"
 fi
 
 if [[ "${reset_gemini:-}" =~ ^[Yy]$ ]]; then
-    log_prompt "set up gemini auto-correct now? [y/N]: "
+    log_prompt "setup gemini auto-correct? [y/N]: "
     read -r ENABLE_AI
     if [[ "${ENABLE_AI:-}" =~ ^[Yy]$ ]]; then
         log_prompt "gemini api key: "
@@ -153,13 +158,13 @@ if [[ "${reset_gemini:-}" =~ ^[Yy]$ ]]; then
             echo "AI_AUTOCORRECT_ENABLED=1"
         } > "$HOME/.gemini_ai_env"
         chmod 600 "$HOME/.gemini_ai_env"
-        log_success "gemini configuration saved."
+        log_success "gemini config saved."
     fi
 else
-    log_warn "keeping existing gemini configuration."
+    log_warn "keeping existing gemini config."
 fi
 
 grep -qxF '.gemini_ai_env' "$DOTFILES_DIR/.gitignore" || echo '.gemini_ai_env' >> "$DOTFILES_DIR/.gitignore"
 
-log_success "installation complete! please restart your termux session."
+log_success "installation complete! please restart termux."
 trap - EXIT

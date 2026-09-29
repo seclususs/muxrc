@@ -25,6 +25,7 @@ start_spinner() {
         done
     ) &
     SPINNER_PID=$!
+    disown "$SPINNER_PID" 2>/dev/null || true
 }
 
 stop_spinner() {
