@@ -28,16 +28,16 @@ start_spinner() {
 }
 
 stop_spinner() {
-    local status="$1"
+    local spin_status="$1"
     local msg="$2"
     if [[ -n "$SPINNER_PID" ]] && kill -0 "$SPINNER_PID" 2>/dev/null; then
         kill "$SPINNER_PID" >/dev/null 2>&1
         wait "$SPINNER_PID" 2>/dev/null || true
     fi
     echo -ne "\r\033[K"
-    if [[ "$status" == "success" ]]; then
+    if [[ "$spin_status" == "success" ]]; then
         log_success "$msg"
-        elif [[ "$status" == "error" ]]; then
+        elif [[ "$spin_status" == "error" ]]; then
         log_error "$msg"
     else
         log_info "$msg"

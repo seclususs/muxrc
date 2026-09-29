@@ -273,11 +273,11 @@ notify-task() {
     "$@"
     local code=$?
     local secs=$(( $(date +%s) - start ))
-    local status="done in ${secs}s"
-    (( code != 0 )) && status="failed (exit ${code}) after ${secs}s"
+    local task_status="done in ${secs}s"
+    (( code != 0 )) && task_status="failed (exit ${code}) after ${secs}s"
     
     termux-vibrate -d 250 >/dev/null 2>&1
-    termux-notification --id notify-task --title "${label:0:40}" --content "$status"
+    termux-notification --id notify-task --title "${label:0:40}" --content "$task_status"
     return $code
 }
 
