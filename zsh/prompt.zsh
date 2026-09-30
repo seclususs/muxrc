@@ -6,12 +6,37 @@ setopt PROMPT_SUBST
 
 autoload -U colors && colors
 
-autoload -Uz vcs_info
-zstyle ':vcs_info:*' enable git
-zstyle ':vcs_info:git:*' formats ' %F{yellow}(%b)%f'
-zstyle ':vcs_info:git:*' actionformats ' %F{yellow}(%b|%a)%f'
+######################
+# Lightweight git info
+######################
+typeset -g _muxrc_git_info=""
 
-precmd_functions+=(vcs_info)
+_prompt_git_info() {
+    _muxrc_git_info=""
+    local raw
+    raw=$(git status --porcelain -b 2>/dev/null) || return
+    local header="${raw%%$'\n'*}"
+    local branch="${header#\#\# }"
+    
+    if [[ "$branch" == *"(no branch)"* ]]; then
+        branch="detached"
+        elif [[ "$branch" == "No commits yet on "* ]]; then
+        branch="${branch#No commits yet on }"
+    else
+        branch="${branch%%...*}"
+    fi
+    
+    local dirty=""
+    [[ "$raw" != "$header" ]] && dirty="✚"
+    
+    if [[ -n "$dirty" ]]; then
+        _muxrc_git_info=" %F{yellow}(${branch}"
+        _muxrc_git_info+=" %F{#e06c75}${dirty}%F{yellow})%f"
+    else
+        _muxrc_git_info=" %F{yellow}(${branch})%f"
+    fi
+}
+precmd_functions+=(_prompt_git_info)
 
 zmodload zsh/datetime
 
@@ -48,9 +73,9 @@ if [[ -n "${SSH_CONNECTION-}" ]]; then
 fi
 
 if [[ "$EUID" -eq 0 ]]; then
-    PROMPT="${COLOR_ROOT}root@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${vcs_info_msg_0_}# "
+    PROMPT='${COLOR_ROOT}root@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_muxrc_git_info}# '
 else
-    PROMPT="${COLOR_USR}${TERMUX_USER}@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${vcs_info_msg_0_}$ "
+    PROMPT='${COLOR_USR}${TERMUX_USER}@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_muxrc_git_info}$ '
 fi
 
 PS2="${COLOR_USR}>${RESET} "
@@ -80,12 +105,3 @@ _prompt_condense() {
 }
 autoload -Uz add-zle-hook-widget
 add-zle-hook-widget zle-line-finish _prompt_condense
-
-#################
-# Git dirty badge
-#################
-_prompt_git_dirty() {
-    git rev-parse --is-inside-work-tree &>/dev/null || return
-    [[ -n "$(git status --porcelain 2>/dev/null)" ]] && RPROMPT+=" %F{#e06c75}✚%f"
-}
-precmd_functions+=(_prompt_git_dirty)
