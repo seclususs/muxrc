@@ -350,3 +350,23 @@ muxrc-sync() {
     log_success "sync complete. reloading shell..."
     exec zsh
 }
+
+################
+# Meta Date Sync
+################
+date-sync() {
+    if [[ $# -eq 0 ]]; then
+        log_error "usage: date-sync <file_or_directory>"
+        return 1
+    fi
+    
+    local target="$1"
+    
+    if [[ ! -e "$target" ]]; then
+        log_error "target '$target' not found"
+        return 1
+    fi
+    
+    bash "$HOME/muxrc/tools/sh/date-sync.sh" "$target"
+    return 0
+}
