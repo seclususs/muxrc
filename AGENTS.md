@@ -1,45 +1,25 @@
-**ENVIRONMENT:** All files/code are exclusively developed for Termux.
-If testing or executing outside of a native Linux, `git bash` MUST be used.
+**ENV:** Termux exclusive (use `git bash` if outside native Linux).
 
-## 1. REQUIRED SKILLS
+**1. WORKFLOW (NO AUTOPILOT)**
 
-- MUST invoke **Superpowers plugin/skill**
-  (e.g., `brainstorming`, `systematic-debugging`, `writing-plans`)
-  before any action, coding, or answering.
+- NEVER auto-commit. PAUSE before `git add`.
+- Must output: 1) Changed files summary 2) Draft commit msg 3) Request manual approval.
 
-## 2. STRICT WORKFLOW (NO AUTOPILOT)
+**2. SHELL STANDARDS**
 
-- NEVER auto-commit. Execution MUST PAUSE before `git add`.
-- Before pausing, output:
-  1. Changed files summary.
-  2. Draft commit message.
-  3. Request for explicit manual approval.
+- **Rules:** `set -euo pipefail`, `$()` only (no backticks), `"$VAR"`, explicit `exit 0`.
+- **Naming:** `local` variables (lowercase), GLOBAL/ENV variables (UPPERCASE).
+- **Style:** Self-documenting code, single-purpose functions. No redundant comments
+  (explain "why", not "what").
 
-## 3. SHELL (bash/zsh) STANDARDS
+**3. LOGGING UI**
 
-- **Safety:** `set -euo pipefail` (If needed).
-- **Syntax:** `$()` (NO backticks), `"$VAR"`, `local` for function scope,
-  explicit `exit 0`.
-- **Naming:** Lowercase `local` vars, UPPERCASE global/env vars.
-- **Style:** Modular, self-documenting code. NO redundant comments.
+- Strictly flat (0-indent) and lowercase. `zsh/functions.zsh` is READ-ONLY.
+- Prefixes: `[*]` info, `[+]` success, `[-]` warn/skip, `[!]` error, `[?]` prompt.
 
-## 4. LOGGING UI (bash/zsh)
+**4. COMMENTING**
 
-- STRICTLY flat (zero-indent) and completely lowercase.
-- Prefixes:
-  - `[*]` info
-  - `[+]` success
-  - `[-]` warn/skip
-  - `[!]` error
-  - `[?]` prompt
-- Example: `echo "[+] configuration loaded."`
-- **Exceptions:**
-  - `zsh/functions.zsh` is READ-ONLY.
-
-## 5. COMMENTING (bash/zsh)
-
-- Use exact-length hash borders for structural/block comments.
-  NO inline `#` for blocks.
+- Block comments MUST use exact-length hash borders. No inline `#` for blocks.
 
 ```text
 #######
@@ -47,9 +27,8 @@ If testing or executing outside of a native Linux, `git bash` MUST be used.
 #######
 ```
 
-## 6. COMMIT FORMAT
+**5. COMMIT MSG FORMAT**
 
-- NO prefixes (e.g., DO NOT use `feat:`, `fix:`).
-- **Subject:** Imperative mood (`Add`, `Update`, `Refactor`, `Drop`, `Fix`),
-  max 52 chars, NO trailing period.
-- **Body:** Leave one blank line after subject; wrap text at 72 chars.
+- NO conventional prefixes (e.g., `feat:`, `fix:`).
+- **Subject:** Imperative mood (`Add`, `Fix`, `Drop`), ≤52 chars, no trailing period.
+- **Body:** 1 blank line after subject, wrap at 72 chars.
