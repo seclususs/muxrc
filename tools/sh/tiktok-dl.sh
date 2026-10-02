@@ -109,7 +109,7 @@ if [[ "$mode" == "post" ]]; then
             create_time=$(echo "$tk_page" | grep -o '"createTime":"\?[0-9]*"\?' | sed 's/[^0-9]//g' | head -n 1 || true)
         fi
         
-        if [[ -z "$create_time" ]]; then
+        if [[ -z "$create_time" ]] || [[ "$create_time" == "0" ]]; then
             if [[ "$video_id" =~ ^[0-9]+$ ]]; then
                 create_time=$(echo "$video_id" | awk '{printf "%d\n", $1 / 4294967296}')
                 log_info "extracted createtime: $create_time"
