@@ -301,9 +301,9 @@ if [[ "$mode" == "post" ]]; then
     
     for arg in "$@"; do
         if [[ -f "$arg" ]]; then
-            while IFS= read -r line; do
+            while IFS= read -u 3 -r line || [[ -n "$line" ]]; do
                 [[ -n "$line" ]] && process_url "$line"
-            done < "$arg"
+            done 3< "$arg"
         else
             process_url "$arg"
         fi
