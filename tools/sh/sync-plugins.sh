@@ -52,7 +52,7 @@ sync_plugins() {
   trap 'cleanup_spinner' EXIT
 
   for plugin_name in "${official_keys[@]}"; do
-    ((idx++))
+    idx=$((idx + 1))
     plugin_url="${official_plugins[${plugin_name}]}"
     target_dir="${plugins_dir}/${plugin_name}"
 
@@ -74,7 +74,7 @@ sync_plugins() {
   done
 
   for plugin_name in "${custom_plugins[@]}"; do
-    ((idx++))
+    idx=$((idx + 1))
     target_dir="${plugins_dir}/${plugin_name}"
     start_spinner "updating ${plugin_name} (${idx}/${total})"
     if git -C "${target_dir}" pull -q --rebase; then

@@ -54,7 +54,7 @@ hash_potential_duplicates() {
   : > "${tmp_dir}/hashed.txt"
 
   for file in "${candidates[@]}"; do
-    ((idx++))
+    idx=$((idx + 1))
     log_progress "${idx}" "${total}" "hashing duplicates"
     sha256sum "${file}" >> "${tmp_dir}/hashed.txt"
   done

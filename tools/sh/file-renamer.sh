@@ -143,7 +143,7 @@ main() {
   fi
 
   for file in "${file_list[@]}"; do
-    ((idx++))
+    idx=$((idx + 1))
     log_progress "${idx}" "${total}" "parsing dates"
 
     date_str=$(extract_timestamp "${file}")
