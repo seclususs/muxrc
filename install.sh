@@ -24,7 +24,7 @@ pkg upgrade -y -o Dpkg::Options::="--force-confold" >/dev/null 2>&1 || true
 stop_spinner "success" "repos enabled."
 
 start_spinner "installing packages"
-pkg install -y -o Dpkg::Options::="--force-confold" zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip unrar exiftool steghide openssl-tool nmap tor yt-dlp ffmpeg >/dev/null 2>&1 || true
+pkg install -y -o Dpkg::Options::="--force-confold" zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip unrar exiftool steghide openssl-tool nmap tor >/dev/null 2>&1 || true
 stop_spinner "success" "packages installed."
 
 DOTFILES_DIR="$HOME/muxrc"
@@ -118,10 +118,6 @@ ln -sf "$DOTFILES_DIR/nano/.nanorc" "$HOME/.nanorc"
 mkdir -p "$HOME/.termux/boot"
 ln -sf "$DOTFILES_DIR/boot/start-sshd" "$HOME/.termux/boot/start-sshd"
 chmod +x "$DOTFILES_DIR/boot/start-sshd"
-
-mkdir -p "$HOME/.shortcuts"
-ln -sf "$DOTFILES_DIR/shortcuts/backup.sh" "$HOME/.shortcuts/backup.sh"
-chmod +x "$DOTFILES_DIR/shortcuts/backup.sh"
 
 if [ ! -f "$HOME/.termux/font.ttf" ]; then
     log_info "installing jetbrains mono font..."
