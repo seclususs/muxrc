@@ -23,8 +23,10 @@ start_tor() {
   fi
 
   local tpid=""
+  local i=0
 
   mkdir -p "${tor_data}"
+  rm -f "${pid_file}"
 
   log_info "generating config..."
   cat << EOF > "${torrc}"
@@ -39,18 +41,22 @@ EOF
 
   trap 'cleanup_spinner' EXIT
   start_spinner "waiting for tor"
-  sleep 2
 
-  if [[ -f "${pid_file}" ]]; then
-    tpid=$(cat "${pid_file}")
-    stop_spinner "success" "tor spawned (pid: ${tpid}). proxy: 127.0.0.1:9050"
-    trap - EXIT
-    return 0
-  else
-    stop_spinner "error" "failed to spawn tor. check log"
-    trap - EXIT
-    return 1
-  fi
+  for ((i = 0; i < 50; i++)); do
+    if [[ -f "${pid_file}" ]]; then
+      tpid=$(cat "${pid_file}" 2> /dev/null || true)
+      if [[ -n "${tpid}" ]] && kill -0 "${tpid}" 2> /dev/null; then
+        stop_spinner "success" "tor spawned (pid: ${tpid}). proxy: 127.0.0.1:9050"
+        trap - EXIT
+        return 0
+      fi
+    fi
+    sleep 0.1
+  done
+
+  stop_spinner "error" "failed to spawn tor. check log"
+  trap - EXIT
+  return 1
 }
 
 terminate_tor_process() {
@@ -60,7 +66,7 @@ terminate_tor_process() {
     return 1
   fi
 
-  local i
+  local i=0
 
   if ! kill -0 "${tpid}" 2> /dev/null; then
     log_warn "tor ${tpid} no longer running."
@@ -71,11 +77,11 @@ terminate_tor_process() {
   start_spinner "terminating tor (pid: ${tpid})"
   kill -INT "${tpid}"
 
-  for i in {1..10}; do
+  for ((i = 0; i < 30; i++)); do
     if ! kill -0 "${tpid}" 2> /dev/null; then
       break
     fi
-    sleep 1
+    sleep 0.1
   done
 
   if kill -0 "${tpid}" 2> /dev/null; then

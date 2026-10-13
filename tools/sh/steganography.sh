@@ -63,9 +63,12 @@ embed_data() {
   read -r embed_opt
 
   if [[ "${embed_opt}" == "1" ]]; then
+    embed_file="${opsec_dir}/secret-payload.txt"
+    trap 'shred -u "${embed_file}" 2>/dev/null || true; cleanup_spinner' EXIT INT TERM
     log_prompt "text to hide: "
     read -r secret_text
-    embed_file="${opsec_dir}/secret-payload.txt"
+    touch "${embed_file}"
+    chmod 600 "${embed_file}"
     echo "${secret_text}" > "${embed_file}"
   elif [[ "${embed_opt}" == "2" ]]; then
     log_prompt "path to file to hide: "

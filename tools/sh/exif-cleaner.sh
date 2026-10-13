@@ -35,7 +35,11 @@ clean_metadata() {
     mkdir -p "${output_dir}"
   fi
 
-  exiftool -all= -o "${output_dir}/" "${target_dir}" || true
+  trap 'cleanup_spinner' EXIT
+  start_spinner "cleaning metadata"
+  exiftool -all= -o "${output_dir}/" "${target_dir}" > /dev/null 2>&1 || true
+  stop_spinner "success" "done. output saved to ${output_dir}/"
+  trap - EXIT
 }
 
 main() {

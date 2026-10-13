@@ -9,6 +9,26 @@ log_warn() { echo -e "${C_YELLOW:-}[-]${C_RESET:-} $*" >&2; }
 log_error() { echo -e "${C_RED:-}[!]${C_RESET:-} $*" >&2; }
 log_prompt() { echo -ne "${C_CYAN:-}[?]${C_RESET:-} $*" >&2; }
 
+##################
+# progress display
+##################
+log_progress() {
+  local current="${1:-0}"
+  local total="${2:-1}"
+  local msg="${3:-processing}"
+  local percent=0
+
+  if ((total > 0)); then
+    percent=$((current * 100 / total))
+  fi
+
+  printf "\r\033[K${C_BLUE:-}[*]${C_RESET:-} %s... %d%% (%d/%d)" "${msg}" "${percent}" "${current}" "${total}" >&2
+}
+
+clear_progress() {
+  echo -ne "\r\033[K" >&2
+}
+
 #########
 # spinner
 #########
@@ -23,7 +43,7 @@ cleanup_spinner() {
 
 start_spinner() {
   local msg="${1:-}"
-  local -a frames=("\\" "|" "/" "-")
+  local -a frames=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
   local monitor_state=0
   [[ $- == *m* ]] && monitor_state=1
   set +m
@@ -32,7 +52,7 @@ start_spinner() {
     while true; do
       for frame in "${frames[@]}"; do
         echo -ne "\r${C_BLUE:-}[*]${C_RESET:-} ${msg}... ${frame}" >&2
-        sleep 0.1
+        sleep 0.08
       done
     done
   ) &

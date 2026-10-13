@@ -17,6 +17,12 @@ setup_storage() {
 }
 
 enable_repos() {
+  local sources_dir="${PREFIX:-/data/data/com.termux/files/usr}/etc/apt/sources.list.d"
+  if [[ -f "${sources_dir}/root.list" && -f "${sources_dir}/x11.list" ]]; then
+    log_info "extra repos already enabled, skipping."
+    return 0
+  fi
+
   start_spinner "enabling extra repos"
   export DEBIAN_FRONTEND=noninteractive
   pkg update -y -o Dpkg::Options::="--force-confold" > /dev/null 2>&1 || true
@@ -26,11 +32,27 @@ enable_repos() {
 }
 
 install_packages() {
-  start_spinner "installing packages"
-  pkg install -y -o Dpkg::Options::="--force-confold" \
-    zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq \
-    termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip \
-    unrar exiftool steghide openssl-tool nmap tor > /dev/null 2>&1 || true
+  local -a pkgs=(
+    zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq
+    termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip
+    unrar exiftool steghide openssl-tool nmap tor
+  )
+  local -a missing_pkgs=()
+  local pkg
+
+  for pkg in "${pkgs[@]}"; do
+    if ! dpkg -s "${pkg}" > /dev/null 2>&1; then
+      missing_pkgs+=("${pkg}")
+    fi
+  done
+
+  if [[ ${#missing_pkgs[@]} -eq 0 ]]; then
+    log_info "all packages already installed, skipping."
+    return 0
+  fi
+
+  start_spinner "installing missing packages"
+  pkg install -y -o Dpkg::Options::="--force-confold" "${missing_pkgs[@]}" > /dev/null 2>&1 || true
   stop_spinner "success" "packages installed."
 }
 
@@ -103,19 +125,24 @@ setup_zsh_plugins() {
     ["zsh-completions"]="https://github.com/zsh-users/zsh-completions.git"
     ["zsh-history-substring-search"]="https://github.com/zsh-users/zsh-history-substring-search.git"
     ["fzf-tab"]="https://github.com/Aloxaf/fzf-tab.git"
+    ["zsh-autopair"]="https://github.com/hlissner/zsh-autopair.git"
   )
 
+  local idx=0
+  local total=${#plugins[@]}
+
   for plugin_name in "${!plugins[@]}"; do
+    ((idx++))
     plugin_url="${plugins[${plugin_name}]}"
     if [[ ! -d "${zsh_plugins_dir}/${plugin_name}" ]]; then
-      start_spinner "cloning ${plugin_name}"
+      start_spinner "cloning ${plugin_name} (${idx}/${total})"
       if git clone -q --depth 1 "${plugin_url}" "${zsh_plugins_dir}/${plugin_name}"; then
         stop_spinner "success" "cloned ${plugin_name}"
       else
         stop_spinner "error" "failed to clone ${plugin_name}"
       fi
     else
-      start_spinner "updating ${plugin_name}"
+      start_spinner "updating ${plugin_name} (${idx}/${total})"
       if git -C "${zsh_plugins_dir}/${plugin_name}" pull -q --rebase; then
         stop_spinner "success" "updated ${plugin_name}"
       else

@@ -39,6 +39,11 @@ if [[ -f "$ZSH_PLUGINS_DIR/fzf-tab/fzf-tab.plugin.zsh" ]]; then
   source "$ZSH_PLUGINS_DIR/fzf-tab/fzf-tab.plugin.zsh"
 fi
 
+if [[ -f "$ZSH_PLUGINS_DIR/zsh-autopair/autopair.zsh" ]]; then
+  source "$ZSH_PLUGINS_DIR/zsh-autopair/autopair.zsh"
+  autopair-init
+fi
+
 ##############################
 # Completion & fzf-tab Configs
 ##############################

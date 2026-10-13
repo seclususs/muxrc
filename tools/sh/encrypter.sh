@@ -15,7 +15,7 @@ validate_target_file() {
   local target_file="${1:-}"
 
   if [[ -z "${target_file}" ]]; then
-    log_error "usage: $(basename "$0") <target_file>"
+    log_error "usage: $(basename "$0") [--encrypt|--decrypt] <target_file> [output_file]"
     return 1
   fi
 
@@ -66,6 +66,7 @@ encrypt_target_file() {
   start_spinner "encrypting ${base_name}"
 
   if openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -salt -in "${target_file}" -out "${out_file}" -pass env:MUXRC_CRYPT_PASS; then
+    chmod 600 "${out_file}"
     stop_spinner "success" "encrypted: ${out_file}"
     trap - EXIT
     return 0
@@ -76,16 +77,77 @@ encrypt_target_file() {
   fi
 }
 
-main() {
+decrypt_target_file() {
   local target_file="${1:-}"
+  local out_file="${2:-}"
+
+  if [[ -z "${target_file}" ]]; then
+    log_error "missing target file for decryption."
+    return 1
+  fi
+
+  if [[ -z "${out_file}" ]]; then
+    local base_name
+    base_name=$(basename "${target_file}")
+    base_name="${base_name#.}"
+    base_name="${base_name%.enc}"
+    out_file="./${base_name}"
+  fi
+
+  if [[ -e "${out_file}" ]]; then
+    local overwrite=""
+    log_prompt "output '${out_file}' already exists. overwrite? [y/N]: "
+    read -r overwrite
+    if [[ ! "${overwrite:-}" =~ ^[Yy]$ ]]; then
+      log_warn "aborted."
+      return 1
+    fi
+  fi
+
+  trap 'cleanup_spinner' EXIT
+  start_spinner "decrypting $(basename "${target_file}")"
+
+  if openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -in "${target_file}" -out "${out_file}" -pass env:MUXRC_CRYPT_PASS; then
+    stop_spinner "success" "decrypted: ${out_file}"
+    trap - EXIT
+    return 0
+  else
+    stop_spinner "error" "decryption failed. invalid password or corrupt file."
+    trap - EXIT
+    rm -f "${out_file}" 2> /dev/null || true
+    return 1
+  fi
+}
+
+main() {
+  local mode="--encrypt"
+  local target_file=""
+  local output_file=""
   local vault_dir="${HOME}/.vault"
+
+  if [[ "${1:-}" == "--decrypt" || "${1:-}" == "-d" ]]; then
+    mode="--decrypt"
+    shift
+  elif [[ "${1:-}" == "--encrypt" || "${1:-}" == "-e" ]]; then
+    mode="--encrypt"
+    shift
+  fi
+
+  target_file="${1:-}"
+  output_file="${2:-}"
 
   validate_target_file "${target_file}" || exit 1
   validate_password || exit 1
   check_dependencies || exit 1
 
-  ensure_vault_dir "${vault_dir}"
-  encrypt_target_file "${target_file}" "${vault_dir}" || exit 1
+  if [[ "${mode}" == "--encrypt" ]]; then
+    ensure_vault_dir "${vault_dir}"
+    encrypt_target_file "${target_file}" "${vault_dir}" || exit 1
+  else
+    decrypt_target_file "${target_file}" "${output_file}" || exit 1
+  fi
+
+  unset MUXRC_CRYPT_PASS || true
 }
 
 main "$@"

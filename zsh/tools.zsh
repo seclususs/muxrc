@@ -45,19 +45,7 @@ clean-meta() {
     return 1
   fi
 
-  start_spinner "cleaning metadata"
-  local err_file
-  err_file=$(mktemp)
-
-  bash "${MUXRC_DIR}/tools/sh/exif-cleaner.sh" "$target_dir" 2> "$err_file"
-
-  stop_spinner "success" "done. output saved to ~/muxrc-out/stripped/"
-
-  if [[ -s "$err_file" ]]; then
-    log_warn "warning summary:"
-    cat "$err_file"
-  fi
-  rm -f "$err_file"
+  bash "${MUXRC_DIR}/tools/sh/exif-cleaner.sh" "$target_dir"
 }
 
 #####################
@@ -157,6 +145,36 @@ media-crypt() {
   MUXRC_CRYPT_PASS="$pass1" bash "${MUXRC_DIR}/tools/sh/encrypter.sh" "$target_file"
 }
 
+########################
+# Binary Media Decrypter
+########################
+media-decrypt() {
+  if [[ $# -eq 0 ]]; then
+    log_error "usage: media-decrypt <encrypted_file> [output_file]"
+    return 1
+  fi
+
+  local target_file="$1"
+  local output_file="${2:-}"
+
+  if [[ ! -f "$target_file" ]]; then
+    log_error "file '$target_file' not found"
+    return 1
+  fi
+
+  local pass
+  log_prompt "enter decryption password: "
+  read -rs pass
+  print -u2 ""
+
+  if [[ -z "$pass" ]]; then
+    log_error "password cannot be empty"
+    return 1
+  fi
+
+  MUXRC_CRYPT_PASS="$pass" bash "${MUXRC_DIR}/tools/sh/encrypter.sh" --decrypt "$target_file" "$output_file"
+}
+
 ##########################
 # Permanent Media Shredder
 ##########################
@@ -196,6 +214,15 @@ net-sweep() {
   if [[ -z "$cidr" ]] && command -v sudo > /dev/null 2>&1; then
     log_info "auto-detecting subnet requires root..."
     cidr=$(sudo ip route show | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1)
+  fi
+
+  if [[ -z "$cidr" ]] && command -v termux-wifi-connectioninfo > /dev/null 2>&1; then
+    local wifi_ip
+    wifi_ip=$(termux-wifi-connectioninfo 2> /dev/null | jq -r '.ip // empty' 2> /dev/null)
+    if [[ -n "$wifi_ip" && "$wifi_ip" != "null" ]]; then
+      cidr="${wifi_ip%.*}.0/24"
+      log_info "detected wifi subnet: $cidr"
+    fi
   fi
 
   if [[ -z "$cidr" ]]; then
@@ -292,9 +319,13 @@ muxrc-sync() {
   if [[ -d "$plugins_dir" ]]; then
     log_info "syncing zsh plugins..."
     local plugin
-    for plugin in "$plugins_dir"/*; do
+    local -a p_list=("$plugins_dir"/*)
+    local p_total=${#p_list[@]}
+    local p_idx=0
+    for plugin in "${p_list[@]}"; do
       if [[ -d "$plugin/.git" ]]; then
-        start_spinner "pulling ${plugin:t}"
+        ((p_idx++))
+        start_spinner "pulling ${plugin:t} (${p_idx}/${p_total})"
         if git -C "$plugin" pull -q --rebase; then
           stop_spinner "success" "updated ${plugin:t}."
         else

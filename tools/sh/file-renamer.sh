@@ -24,14 +24,11 @@ validate_inputs() {
 }
 
 extract_timestamp() {
-  local file="$1"
+  local file="${1}"
   local date_str=""
   local birth_epoch="0"
 
-  date_str=$(exiftool -s -s -s -d "%Y%m%d_%H%M%S" -DateTimeOriginal "${file}" 2> /dev/null || true)
-  if [[ -z "${date_str}" ]]; then
-    date_str=$(exiftool -s -s -s -d "%Y%m%d_%H%M%S" -CreateDate "${file}" 2> /dev/null || true)
-  fi
+  date_str=$(exiftool -s3 -d "%Y%m%d_%H%M%S" -DateTimeOriginal -CreateDate "${file}" 2> /dev/null | head -n 1 || true)
 
   if [[ -z "${date_str}" ]]; then
     birth_epoch=$(stat -c %W "${file}" 2> /dev/null || echo 0)
@@ -50,10 +47,11 @@ extract_timestamp() {
 }
 
 build_unique_target_path() {
-  local file="$1"
-  local prefix="$2"
-  local date_str="$3"
-  local existing_new_names="$4"
+  local file="${1}"
+  local prefix="${2}"
+  local date_str="${3}"
+  local -n _out_ref="${4}"
+  local -n _seen_ref="${5}"
   local ext=""
   local base_dir
   local new_name
@@ -71,7 +69,7 @@ build_unique_target_path() {
 
   new_path="${base_dir}/${new_name}"
 
-  while [[ -e "${new_path}" || " ${existing_new_names} " == *" ${new_path} "* ]]; do
+  while [[ -e "${new_path}" || -n "${_seen_ref[${new_path}]:-}" ]]; do
     if [[ -n "${ext}" ]]; then
       new_name="${prefix}_${date_str}_${counter}.${ext}"
     else
@@ -81,7 +79,8 @@ build_unique_target_path() {
     ((counter++))
   done
 
-  echo "${new_path}"
+  _seen_ref["${new_path}"]=1
+  _out_ref="${new_path}"
 }
 
 display_proposed_changes() {
@@ -124,32 +123,44 @@ main() {
   local prefix="${2:-}"
   local file
   local date_str
-  local new_path
+  local new_path=""
+  local -a file_list=()
   local -a old_names=()
   local -a new_names=()
+  local -A seen_targets=()
+  local idx=0
+  local total=0
 
   validate_inputs "${dir}" "${prefix}" || exit 1
   check_dependencies || exit 1
 
-  trap 'cleanup_spinner' EXIT
-  start_spinner "parsing dates"
+  mapfile -d '' file_list < <(find "${dir}" -maxdepth 1 -type f -print0)
+  total=${#file_list[@]}
 
-  while IFS= read -r -d '' file; do
+  if [[ "${total}" -eq 0 ]]; then
+    log_info "no files to rename."
+    exit 0
+  fi
+
+  for file in "${file_list[@]}"; do
+    ((idx++))
+    log_progress "${idx}" "${total}" "parsing dates"
+
     date_str=$(extract_timestamp "${file}")
     if [[ "${date_str}" == "UNKNOWN" || -z "${date_str}" ]]; then
       continue
     fi
 
-    new_path=$(build_unique_target_path "${file}" "${prefix}" "${date_str}" "${new_names[*]:-}")
+    build_unique_target_path "${file}" "${prefix}" "${date_str}" new_path seen_targets
 
     if [[ "${file}" != "${new_path}" ]]; then
       old_names+=("${file}")
       new_names+=("${new_path}")
     fi
-  done < <(find "${dir}" -maxdepth 1 -type f -print0)
+  done
 
-  stop_spinner "success" "parsing complete."
-  trap - EXIT
+  clear_progress
+  log_success "parsing complete."
 
   if [[ ${#old_names[@]} -eq 0 ]]; then
     log_info "no files to rename."

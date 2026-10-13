@@ -21,15 +21,30 @@ bash install.sh
 
 Restart Termux after installation to apply changes.
 
-- Enter fake shell root mode: `su`
-- Run single root command: `sudo <command>`
-- Safe file deletion: `trash <file>` and `untrash`
-- Long-running task wrapper: `notify-task <command>`
-- SSH network connection helper: `net-info`
-- Clipboard history picker: `clip-pick` (requires running `clip-watch`)
-- Toggle Gemini auto-correct hook: `ai-toggle`
-- Storage shortcuts: `~/Workspace`
-- Extra-keys macros: Swipe up on `ESC` (cd Workspace) and `END` (wakelock)
+### Daily Workflow & System
+
+- `su` and `sudo <command>` — Run commands with simulated or root privileges.
+- `trash <file>` and `untrash` — Delete files safely and restore them anytime.
+- `notify-task <command>` — Run a task in the background and get notified when it finishes.
+- `net-info` — Show your local IP and ready-to-use SSH connection command.
+- `clip-pick` — Search and paste from your clipboard history (requires `clip-watch`).
+- `ex <file>` — Extract any archive format (.zip, .tar, .7z, etc.) with a single command.
+- `ai-toggle` — Turn automatic AI typo correction on or off.
+- `muxrc-sync` — Update dotfiles and plugins to the latest version.
+- Keyboard macros — Swipe up on `ESC` to jump to `~/Workspace` and `END` to toggle wakelock.
+
+### Privacy & Media Tools
+
+- `media-crypt <file>` and `media-decrypt <file>` — Encrypt and decrypt private files.
+- `clean-meta <dir>` — Remove camera and location metadata from photos.
+- `spoof-meta <preset> <file>` — Replace photo metadata with dummy device info.
+- `date-sync <target>` — Sync photo metadata dates with file timestamps.
+- `rename-by-date <dir> <prefix>` — Organize photos by their capture date.
+- `clean-dupes <dir>` — Find and clean up duplicate files.
+- `shred-file <file>` — Permanently destroy sensitive files beyond recovery.
+- `stego-vault` — Hide or extract secret text and files inside pictures.
+- `net-sweep` — Discover devices connected to your local network.
+- `tor-start` and `tor-stop` — Start or stop an anonymous Tor proxy session.
 
 ## Disclaimer
 

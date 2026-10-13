@@ -13,16 +13,23 @@ check_dependencies() {
 
 validate_cidr() {
   local target_cidr="${1:-}"
+  local cidr_regex='^([0-9]{1,3}\.){3}[0-9]{1,3}/([0-9]|[1-2][0-9]|3[0-2])$'
 
   if [[ -z "${target_cidr}" ]]; then
     log_error "usage: $(basename "$0") <cidr>"
     return 1
   fi
+
+  if [[ ! "${target_cidr}" =~ ${cidr_regex} ]]; then
+    log_error "invalid cidr format: ${target_cidr}"
+    return 1
+  fi
+
   return 0
 }
 
 execute_arp_sweep() {
-  local target_cidr="$1"
+  local target_cidr="${1}"
 
   log_info "target subnet: ${target_cidr}" >&2
   log_info "initiating sweep..." >&2

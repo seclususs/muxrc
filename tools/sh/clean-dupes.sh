@@ -8,7 +8,7 @@ set -euo pipefail
 source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 check_dependencies() {
-  require_cmd find stat sha256sum awk
+  require_cmd find stat sha256sum awk sort xargs
 }
 
 validate_target_dir() {
@@ -31,7 +31,7 @@ scan_file_sizes() {
   fi
 
   start_spinner "scanning '${target_dir}'"
-  find "${target_dir}" -type f -print0 | xargs -0 stat -c '%s %n' > "${tmp_dir}/all_files.txt"
+  find "${target_dir}" -type f -size +0c -print0 | xargs -r0 stat -c '%s %n' > "${tmp_dir}/all_files.txt"
   stop_spinner "success" "scanning complete."
 
   awk '{size=$1; count[size]++} END {for(s in count) if(count[s]>1) print s}' "${tmp_dir}/all_files.txt" > "${tmp_dir}/dup_sizes.txt"
@@ -44,10 +44,23 @@ hash_potential_duplicates() {
     return 1
   fi
 
-  start_spinner "hashing duplicates"
-  awk 'NR==FNR {dup[$1]; next} $1 in dup { print substr($0, length($1)+2) }' "${tmp_dir}/dup_sizes.txt" "${tmp_dir}/all_files.txt" \
-    | tr '\n' '\0' | xargs -0 sha256sum > "${tmp_dir}/hashed.txt"
-  stop_spinner "success" "hashing complete."
+  local -a candidates=()
+  mapfile -t candidates < <(awk 'NR==FNR {dup[$1]; next} $1 in dup { print substr($0, length($1)+2) }' "${tmp_dir}/dup_sizes.txt" "${tmp_dir}/all_files.txt")
+
+  local total=${#candidates[@]}
+  local idx=0
+  local file
+
+  : > "${tmp_dir}/hashed.txt"
+
+  for file in "${candidates[@]}"; do
+    ((idx++))
+    log_progress "${idx}" "${total}" "hashing duplicates"
+    sha256sum "${file}" >> "${tmp_dir}/hashed.txt"
+  done
+
+  clear_progress
+  log_success "hashing complete."
 
   awk '{hash=$1; count[hash]++} END {for(h in count) if(count[h]>1) print h}' "${tmp_dir}/hashed.txt" > "${tmp_dir}/dup_hashes.txt"
 }
@@ -60,29 +73,31 @@ display_duplicates_and_collect_deletions() {
   fi
 
   local total_dupe_sets=0
+  local current_hash=""
   local hash
-  local -a files=()
-  local i
+  local file
+  local line
 
   : > "${tmp_dir}/to_delete.txt"
   log_warn "duplicates:"
 
-  while read -r hash; do
-    total_dupe_sets=$((total_dupe_sets + 1))
-    log_info "[group ${total_dupe_sets}] hash: ${hash:0:8}..."
+  awk 'NR==FNR { dup[$1]; next } $1 in dup { print }' "${tmp_dir}/dup_hashes.txt" "${tmp_dir}/hashed.txt" \
+    | sort -k1,1 > "${tmp_dir}/dup_files.txt"
 
-    awk -v h="${hash}" '$1==h { print substr($0, length($1)+3) }' "${tmp_dir}/hashed.txt" > "${tmp_dir}/current_set.txt"
-    mapfile -t files < "${tmp_dir}/current_set.txt"
+  while IFS= read -r line; do
+    hash="${line:0:64}"
+    file="${line:66}"
 
-    log_success "keep: ${files[0]}"
-
-    for i in "${!files[@]}"; do
-      if [[ ${i} -ne 0 ]]; then
-        log_warn "del : ${files[${i}]}"
-        echo "${files[${i}]}" >> "${tmp_dir}/to_delete.txt"
-      fi
-    done
-  done < "${tmp_dir}/dup_hashes.txt"
+    if [[ "${hash}" != "${current_hash}" ]]; then
+      current_hash="${hash}"
+      total_dupe_sets=$((total_dupe_sets + 1))
+      log_info "[group ${total_dupe_sets}] hash: ${hash:0:8}..."
+      log_success "keep: ${file}"
+    else
+      log_warn "del : ${file}"
+      echo "${file}" >> "${tmp_dir}/to_delete.txt"
+    fi
+  done < "${tmp_dir}/dup_files.txt"
 }
 
 confirm_and_delete() {
@@ -94,7 +109,6 @@ confirm_and_delete() {
 
   local total_to_delete
   local confirm=""
-  local file
 
   total_to_delete=$(wc -l < "${delete_list}")
   if [[ "${total_to_delete}" -eq 0 ]]; then
@@ -106,9 +120,7 @@ confirm_and_delete() {
 
   if [[ "${confirm:-}" =~ ^[Yy]$ ]]; then
     log_info "cleaning..."
-    while IFS= read -r file; do
-      rm -f "${file}"
-    done < "${delete_list}"
+    xargs -r -d '\n' rm -f < "${delete_list}"
     log_success "deleted ${total_to_delete} files."
   else
     log_warn "aborted."

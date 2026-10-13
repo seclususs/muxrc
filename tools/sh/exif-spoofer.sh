@@ -61,12 +61,17 @@ execute_spoof() {
   elif [[ -f "${target_path}" ]]; then
     output_target="${output_dir}/$(basename "${target_path}")"
     msg_target="file $(basename "${target_path}")"
+    [[ -f "${output_target}" ]] && rm -f "${output_target}"
   else
     log_error "unsupported target type: ${target_path}"
     return 1
   fi
 
   while IFS="=" read -r key val; do
+    if [[ ! "${key}" =~ ^[A-Za-z0-9_]+$ ]]; then
+      log_warn "skipping invalid metadata key: ${key}"
+      continue
+    fi
     args+=("-${key}=${val}")
   done < <(jq -r 'to_entries | .[] | "\(.key)=\(.value)"' "${preset_file}")
 
