@@ -6,7 +6,12 @@ ZSH_CONFIG_DIR="${ZSH_CONFIG_DIR:-$HOME/muxrc/zsh}"
 
 source "$ZSH_CONFIG_DIR/env.zsh"
 
-HISTFILE="$HOME/.zsh_history"
+if [[ "$EUID" -eq 0 ]]; then
+  HISTFILE="$HOME/.zsh_history_root"
+else
+  HISTFILE="$HOME/.zsh_history"
+fi
+
 HISTSIZE=10000
 SAVEHIST=10000
 setopt APPEND_HISTORY
@@ -29,7 +34,7 @@ if [[ -f "$HOME/.dircolors" ]]; then
   eval "$(dircolors -b "$HOME/.dircolors")"
 fi
 
-if [[ "${TERMUX_FAKEROOT-}" == "1" ]]; then
+if [[ "${TERMUX_FAKEROOT-}" == "1" && "$EUID" -ne 0 ]]; then
   magic_su_enter() {
     local cmd="${BUFFER%% *}"
 

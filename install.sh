@@ -36,6 +36,7 @@ install_packages() {
     zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq
     termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip
     unrar exiftool steghide openssl-tool nmap tor proxychains-ng ffmpeg
+    sudo
   )
   local -a missing_pkgs=()
   local pkg
@@ -105,6 +106,26 @@ setup_sudo_wrapper() {
     fi
   else
     log_warn "keeping existing sudo password."
+  fi
+}
+
+setup_sudo_config() {
+  local config_dir="${HOME}/.config/sudo"
+  local config_file="${config_dir}/sudo.config"
+
+  log_info "configuring sudo environment..."
+  mkdir -p "${config_dir}"
+  if [[ ! -f "${config_file}" ]]; then
+    cat << 'EOF' > "${config_file}"
+SUDO__SHELL_HOME="$SUDO__TERMUX_HOME"
+SUDO__SHELLS_AUTOMATICALLY_CREATE_RC_FILES=0
+SUDO__SHELLS_AUTOMATICALLY_CREATE_HISTORY_FILES=0
+SUDO__SHELLS_HISTORY_ENABLED=0
+EOF
+    chmod 600 "${config_file}"
+    log_success "sudo environment configured."
+  else
+    log_warn "keeping existing sudo.config."
   fi
 }
 
@@ -230,6 +251,7 @@ main() {
   install_packages
   setup_directories "${dotfiles_dir}" "${zsh_plugins_dir}"
   setup_sudo_wrapper
+  setup_sudo_config
   setup_zsh_plugins "${zsh_plugins_dir}"
   setup_storage_symlinks
   symlink_configurations "${dotfiles_dir}"

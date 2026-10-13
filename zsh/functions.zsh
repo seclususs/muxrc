@@ -7,20 +7,46 @@
 #####################
 sudo() {
   setopt localoptions nomonitor
+  zmodload zsh/datetime 2> /dev/null
 
-  local HASH_FILE="$HOME/.sudo_hash"
-  local SUDO_HASH=""
-  [ -f "$HASH_FILE" ] && SUDO_HASH=$(cat "$HASH_FILE" 2> /dev/null)
-
-  if [[ -z "$SUDO_HASH" ]]; then
-    echo "sudo: /etc/sudoers is world writable"
-    return 1
-  fi
-
-  if [[ $# -eq 0 ]]; then
+  if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    if whence -p sudo > /dev/null 2>&1; then
+      command sudo "$@"
+      return $?
+    fi
     echo "usage: sudo -h | -K | -k | -V"
     echo "usage: sudo -v [-AknS] [-g group] [-h host] [-p prompt] [-u user]"
     echo "usage: sudo -l [-AknS] [-g group] [-h host] [-p prompt] [-U user] [-u user] [command]"
+    return 0
+  fi
+
+  if [[ "$1" == "-V" || "$1" == "--version" ]]; then
+    if whence -p sudo > /dev/null 2>&1; then
+      command sudo "$@"
+      return $?
+    fi
+    echo "Sudo version 1.9.15p5"
+    return 0
+  fi
+
+  local _sudo_cache_dir="$HOME/.cache/muxrc"
+  local _sudo_ts_file="$_sudo_cache_dir/sudo_ts"
+
+  if [[ "$1" == "-k" || "$1" == "-K" ]]; then
+    rm -f "$_sudo_ts_file" 2> /dev/null
+    if whence -p sudo > /dev/null 2>&1; then
+      command sudo "$1" 2> /dev/null
+    fi
+    if [[ $# -eq 1 ]]; then
+      return 0
+    fi
+    shift
+  fi
+
+  if [[ $# -eq 0 ]]; then
+    print -u2 "usage: sudo -h | -K | -k | -V"
+    print -u2 "usage: sudo -v [-AknS] [-g group] [-h host] [-p prompt] [-u user]"
+    print -u2 "usage: sudo -l [-AknS] [-g group] [-h host] [-p prompt] [-U user] [-u user] [command]"
     return 1
   fi
 
@@ -29,65 +55,108 @@ sudo() {
     return $?
   fi
 
-  local termux_prefix="/data/data/com.termux/files/usr"
-  local env_vars="export PATH=/system/bin:/system/xbin:$PATH:$termux_prefix/bin; export HOME=\"$HOME\"; export TERM=\"$TERM\"; export LANG=\"$LANG\"; unset LD_LIBRARY_PATH LD_PRELOAD; cd \"$PWD\";"
+  local HASH_FILE="$HOME/.sudo_hash"
+  local SUDO_HASH=""
+  [[ -f "$HASH_FILE" ]] && SUDO_HASH=$(< "$HASH_FILE" 2> /dev/null)
+
+  if [[ -z "$SUDO_HASH" ]]; then
+    print -u2 "sudo: /etc/sudoers is world writable"
+    return 1
+  fi
 
   local attempts=0
   local max_attempts=3
-  local success=0
+  local authenticated=0
   local current_user="${USER:-$(whoami)}"
   local user_pass
 
   if [[ "${TERMUX_FAKEROOT-}" == "1" || "$EUID" -eq 0 ]]; then
-    success=1
-  else
+    authenticated=1
+  elif [[ -f "$_sudo_ts_file" ]]; then
+    local last_auth
+    last_auth=$(< "$_sudo_ts_file" 2> /dev/null)
+    if [[ -n "$last_auth" && "$last_auth" =~ ^[0-9]+$ ]]; then
+      local now=${EPOCHSECONDS:-0}
+      if ((now >= last_auth && now - last_auth <= 900)); then
+        authenticated=1
+      fi
+    fi
+  fi
+
+  if ((authenticated == 0)); then
     while ((attempts < max_attempts)); do
-      read -rs "user_pass?[sudo] password for $current_user: "
+      if ! read -rs "user_pass?[sudo] password for $current_user: "; then
+        print -u2 ""
+        return 1
+      fi
       print -u2 ""
 
-      local input_hash=$(echo -n "$user_pass" | sha256sum | awk '{print $1}')
+      local input_hash
+      input_hash=$(echo -n "$user_pass" | sha256sum | awk '{print $1}')
       if [[ "$input_hash" == "$SUDO_HASH" ]]; then
-        success=1
+        authenticated=1
+        if [[ "$EUID" -ne 0 ]]; then
+          mkdir -p "$_sudo_cache_dir" 2> /dev/null
+          print "$EPOCHSECONDS" > "$_sudo_ts_file" 2> /dev/null
+          chmod 600 "$_sudo_ts_file" 2> /dev/null
+        fi
         break
       else
-        echo "Sorry, try again."
+        print -u2 "Sorry, try again."
         ((attempts++))
       fi
     done
   fi
 
-  if ((success == 0)); then
-    echo "sudo: $max_attempts incorrect password attempts"
+  if ((authenticated == 0)); then
+    print -u2 "sudo: $max_attempts incorrect password attempts"
     return 1
   fi
 
-  if [[ "$1" =~ ^(pm|cmd|am|svc|settings|content|input|dpm)$ ]]; then
-    print -r "$env_vars ${(q)@}" | command su
+  if [[ "$1" == "-v" ]]; then
+    return 0
+  fi
+
+  if whence -p sudo > /dev/null 2>&1; then
+    command sudo "$@"
+    return $?
+  fi
+
+  local termux_prefix="/data/data/com.termux/files/usr"
+  local env_vars="export PATH=/system/bin:/system/xbin:$PATH:$termux_prefix/bin; export HOME=\"$HOME\"; export TERM=\"$TERM\"; export LANG=\"$LANG\"; unset LD_LIBRARY_PATH LD_PRELOAD; cd \"$PWD\";"
+
+  if command -v su > /dev/null 2>&1; then
+    if [[ "$1" =~ ^(pm|cmd|am|svc|settings|content|input|dpm)$ ]]; then
+      print -r "$env_vars ${(q)@}" | command su
+    else
+      local su_pid
+
+      command su -c "$env_vars exec ${(q)@}" &
+      su_pid=$!
+
+      trap '
+        local child line entry ppid
+        for child in /proc/<1->; do
+          line=$(<"$child/status") 2>/dev/null || continue
+          for entry in "${(f)line}"; do
+            if [[ "$entry" == PPid:* ]]; then
+              ppid="${entry#PPid:}"
+              ppid="${ppid//[[:space:]]/}"
+              [[ "$ppid" == "$su_pid" ]] && kill -INT "${child:t}" 2>/dev/null
+              break
+            fi
+          done
+        done
+      ' INT
+
+      wait "$su_pid"
+      local exit_code=$?
+      trap - INT
+      return $exit_code
+    fi
   else
-    local su_pid
-
-    command su -c "$env_vars exec ${(q)@}" &
-    su_pid=$!
-
-    trap '
-            local child line entry ppid
-            for child in /proc/<1->; do
-                line=$(<"$child/status") 2>/dev/null || continue
-                for entry in "${(f)line}"; do
-                    if [[ "$entry" == PPid:* ]]; then
-                        ppid="${entry#PPid:}"
-                        ppid="${ppid//[[:space:]]/}"
-                        [[ "$ppid" == "$su_pid" ]] && kill -INT "${child:t}" 2>/dev/null
-                        break
-                    fi
-                done
-            done
-        ' INT
-
-    wait "$su_pid"
-    local exit_code=$?
-    trap - INT
-    return $exit_code
+    command "$@"
+    return $?
   fi
 }
 
@@ -101,30 +170,52 @@ su() {
   fi
 
   if [[ "${TERMUX_FAKEROOT-}" == "1" || "$EUID" -eq 0 ]]; then
-    echo "su: already running as root (type 'exit' to return)"
+    print -u2 "su: already running as root (type 'exit' to return)"
     return 0
   fi
 
   local HASH_FILE="$HOME/.sudo_hash"
   local SUDO_HASH=""
-  [ -f "$HASH_FILE" ] && SUDO_HASH=$(cat "$HASH_FILE" 2> /dev/null)
+  [[ -f "$HASH_FILE" ]] && SUDO_HASH=$(< "$HASH_FILE" 2> /dev/null)
 
   if [[ -z "$SUDO_HASH" ]]; then
-    echo "su: Authentication service cannot retrieve authentication info"
+    print -u2 "su: Authentication service cannot retrieve authentication info"
     return 1
   fi
 
   local user_pass
-  read -rs "user_pass?Password: "
+  if ! read -rs "user_pass?Password: "; then
+    print -u2 ""
+    return 1
+  fi
   print -u2 ""
 
-  local input_hash=$(echo -n "$user_pass" | sha256sum | awk '{print $1}')
+  local input_hash
+  input_hash=$(echo -n "$user_pass" | sha256sum | awk '{print $1}')
   if [[ "$input_hash" != "$SUDO_HASH" ]]; then
-    echo "su: Authentication failure"
+    print -u2 "su: Authentication failure"
     return 1
   fi
 
-  TERMUX_FAKEROOT=1 zsh
+  local _sudo_cache_dir="$HOME/.cache/muxrc"
+  local _sudo_ts_file="$_sudo_cache_dir/sudo_ts"
+  if [[ "$EUID" -ne 0 ]]; then
+    mkdir -p "$_sudo_cache_dir" 2> /dev/null
+    print "$EPOCHSECONDS" > "$_sudo_ts_file" 2> /dev/null
+    chmod 600 "$_sudo_ts_file" 2> /dev/null
+  fi
+
+  if whence -p sudo > /dev/null 2>&1; then
+    TERMUX_FAKEROOT=1 command sudo --shell=zsh
+    return $?
+  elif command -v su > /dev/null 2>&1; then
+    command su -c "export TERMUX_FAKEROOT=1; exec zsh"
+    return $?
+  else
+    print -u2 "su: device is not rooted, entering virtual fake root mode"
+    TERMUX_FAKEROOT=1 zsh
+    return $?
+  fi
 }
 
 #########################
