@@ -30,8 +30,6 @@ if [[ -f "$HOME/.dircolors" ]]; then
 fi
 
 if [[ "${TERMUX_FAKEROOT-}" == "1" ]]; then
-  PROMPT='%F{196}root@termux%f:%F{39}%~%f# '
-
   magic_su_enter() {
     local cmd="${BUFFER%% *}"
 

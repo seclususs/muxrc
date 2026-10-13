@@ -72,13 +72,13 @@ if [[ -n "${SSH_CONNECTION-}" ]]; then
   COLOR_USR="%F{214}"
 fi
 
-if [[ "$EUID" -eq 0 ]]; then
+if [[ "$EUID" -eq 0 || "${TERMUX_FAKEROOT-}" == "1" ]]; then
   PROMPT='${COLOR_ROOT}root@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_muxrc_git_info}# '
+  PS2="${COLOR_ROOT}>${RESET} "
 else
   PROMPT='${COLOR_USR}${TERMUX_USER}@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_muxrc_git_info}$ '
+  PS2="${COLOR_USR}>${RESET} "
 fi
-
-PS2="${COLOR_USR}>${RESET} "
 
 precmd_set_title() {
   print -Pn "\e]2;%~\a"
@@ -94,7 +94,14 @@ preexec_functions+=(preexec_set_title)
 # Transient Prompt (condense)
 #############################
 typeset -g _PROMPT_FULL="$PROMPT"
-_prompt_restore() { PROMPT="$_PROMPT_FULL"; }
+_prompt_restore() {
+  if [[ "$EUID" -eq 0 || "${TERMUX_FAKEROOT-}" == "1" ]]; then
+    _PROMPT_FULL='${COLOR_ROOT}root@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_muxrc_git_info}# '
+  else
+    _PROMPT_FULL='${COLOR_USR}${TERMUX_USER}@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_muxrc_git_info}$ '
+  fi
+  PROMPT="$_PROMPT_FULL"
+}
 precmd_functions+=(_prompt_restore)
 
 _prompt_condense() {

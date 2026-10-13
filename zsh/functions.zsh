@@ -38,7 +38,7 @@ sudo() {
   local current_user="${USER:-$(whoami)}"
   local user_pass
 
-  if [[ "$TERMUX_FAKEROOT" == "1" ]]; then
+  if [[ "${TERMUX_FAKEROOT-}" == "1" || "$EUID" -eq 0 ]]; then
     success=1
   else
     while ((attempts < max_attempts)); do
@@ -100,8 +100,8 @@ su() {
     return $?
   fi
 
-  if [[ "$TERMUX_FAKEROOT" == "1" ]]; then
-    TERMUX_FAKEROOT=1 zsh
+  if [[ "${TERMUX_FAKEROOT-}" == "1" || "$EUID" -eq 0 ]]; then
+    echo "su: already running as root (type 'exit' to return)"
     return 0
   fi
 
@@ -403,6 +403,7 @@ command_not_found_handler() {
       return $?
     fi
     echo
+    return 127
   fi
 
   if (($+functions[_cnf_original])); then
