@@ -2,7 +2,7 @@
 # Message of the Day Banner
 ###########################
 () {
-  if [[ -o interactive && "$TERMUX_FAKEROOT" != "1" ]]; then
+  if [[ -o interactive && "$EUID" -ne 0 ]]; then
     local android_ver
     local device
 

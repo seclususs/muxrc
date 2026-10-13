@@ -23,7 +23,7 @@ Restart Termux after installation to apply changes.
 
 ### Daily Workflow & System
 
-- `su` and `sudo <command>` — Run commands with simulated or root privileges.
+- `su` and `sudo <command>` — Run commands or open an interactive root shell.
 - `trash <file>` and `untrash` — Delete files safely and restore them anytime.
 - `notify-task <command>` — Run a task in the background and get notified when it finishes.
 - `net-info` — Show your local IP and ready-to-use SSH connection command.
