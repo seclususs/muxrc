@@ -12,7 +12,8 @@ if [[ -z "$target_dir" ]]; then
     log_error "usage: $(basename "$0") <target_directory>"
     exit 1
 fi
-output_dir="$HOME/muxrc/tools/output/stripped"
+output_dir="$HOME/muxrc-out/stripped"
+mkdir -p "$output_dir"
 
 exiftool -all= -o "$output_dir/" "$target_dir" || true
 

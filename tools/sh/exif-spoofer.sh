@@ -13,7 +13,7 @@ if [[ -z "$preset_file" || -z "$target_path" ]]; then
     log_error "usage: $(basename "$0") <preset_json_file> <target_image_or_directory>"
     exit 1
 fi
-output_dir="$HOME/muxrc/tools/output/decoys"
+output_dir="$HOME/muxrc-out/decoys"
 
 mkdir -p "$output_dir"
 

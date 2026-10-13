@@ -50,7 +50,7 @@ clean-meta() {
     
     bash "$HOME/muxrc/tools/sh/exif-cleaner.sh" "$target_dir" 2> "$err_file"
     
-    stop_spinner "success" "done. output saved to ~/muxrc/tools/output/stripped/"
+    stop_spinner "success" "done. output saved to ~/muxrc-out/stripped/"
     
     if [[ -s "$err_file" ]]; then
         log_warn "warning summary:"

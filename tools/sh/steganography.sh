@@ -8,7 +8,7 @@ set -euo pipefail
 source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 OPSEC_DIR="$HOME/.muxrc/run"
-EXTRACT_DIR="$HOME/muxrc/tools/output/extracted"
+EXTRACT_DIR="$HOME/muxrc-out/extracted"
 
 mkdir -p "$OPSEC_DIR"
 mkdir -p "$EXTRACT_DIR"
