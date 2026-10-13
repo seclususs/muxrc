@@ -199,6 +199,25 @@ shred-file() {
   bash "${MUXRC_DIR}/tools/sh/shredder.sh" "$target_file"
 }
 
+##########################
+# HEVC Video Re-compressor
+##########################
+video-compress() {
+  if [[ $# -eq 0 ]]; then
+    log_error "usage: video-compress <video_file>"
+    return 1
+  fi
+
+  local target_file="$1"
+
+  if [[ ! -f "$target_file" ]]; then
+    log_error "file '$target_file' not found"
+    return 1
+  fi
+
+  bash "${MUXRC_DIR}/tools/sh/video-compress.sh" "$target_file"
+}
+
 ###########################
 # Local Network ARP Sweeper
 ###########################
@@ -248,30 +267,24 @@ net-sweep() {
 # Tor Privacy Setup
 ###################
 tor-start() {
-  local pid_file="$HOME/.muxrc/run/tor.pid"
-
-  if ! command -v tor > /dev/null 2>&1; then
-    log_error "tor not installed. run: pkg install tor"
-    return 1
-  fi
-
-  if [[ -f "$pid_file" ]]; then
-    local tpid
-    tpid=$(cat "$pid_file" 2> /dev/null)
-    if kill -0 "$tpid" 2> /dev/null; then
-      log_error "tor already running pid: $tpid. use tor-stop first"
-      return 1
-    else
-      log_warn "found stale pid file. cleaning up..."
-      bash "${MUXRC_DIR}/tools/sh/tor-setup.sh" stop
-    fi
-  fi
-
   bash "${MUXRC_DIR}/tools/sh/tor-setup.sh" start
 }
 
 tor-stop() {
   bash "${MUXRC_DIR}/tools/sh/tor-setup.sh" stop
+}
+
+tor-run() {
+  if [[ $# -eq 0 ]]; then
+    log_error "usage: tor-run <command> [args...]"
+    return 1
+  fi
+
+  bash "${MUXRC_DIR}/tools/sh/tor-setup.sh" run "$@"
+}
+
+tor-check() {
+  bash "${MUXRC_DIR}/tools/sh/tor-setup.sh" check
 }
 
 ###############

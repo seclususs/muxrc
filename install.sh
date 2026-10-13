@@ -35,7 +35,7 @@ install_packages() {
   local -a pkgs=(
     zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq
     termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip
-    unrar exiftool steghide openssl-tool nmap tor
+    unrar exiftool steghide openssl-tool nmap tor proxychains-ng ffmpeg
   )
   local -a missing_pkgs=()
   local pkg

@@ -36,6 +36,7 @@ Restart Termux after installation to apply changes.
 ### Privacy & Media Tools
 
 - `media-crypt <file>` and `media-decrypt <file>` — Encrypt and decrypt private files.
+- `video-compress <file>` — Compress video to HEVC with full metadata preservation.
 - `clean-meta <dir>` — Remove camera and location metadata from photos.
 - `spoof-meta <preset> <file>` — Replace photo metadata with dummy device info.
 - `date-sync <target>` — Sync photo metadata dates with file timestamps.
@@ -45,6 +46,8 @@ Restart Termux after installation to apply changes.
 - `stego-vault` — Hide or extract secret text and files inside pictures.
 - `net-sweep` — Discover devices connected to your local network.
 - `tor-start` and `tor-stop` — Start or stop an anonymous Tor proxy session.
+- `tor-run <command>` — Run any command anonymously through Tor via ProxyChains.
+- `tor-check` — Verify Tor network connectivity and inspect active exit IP.
 
 ## Disclaimer
 
