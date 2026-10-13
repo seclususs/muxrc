@@ -1,25 +1,25 @@
-**ENV:** Termux exclusive (use `git bash` if outside native Linux).
+**ENV:** Termux (Android).
 
 **1. WORKFLOW (NO AUTOPILOT)**
 
-- NEVER auto-commit. PAUSE before `git add`.
-- Must output: 1) Changed files summary 2) Draft commit msg 3) Request manual approval.
+- Never assume: search the web if lacking data or knowledge.
+- Never auto-commit. Pause before `git add`.
+- Output: 1) Changed files 2) Draft commit 3) Approval request.
 
-**2. SHELL STANDARDS**
+**2. SHELL LINT & FORMAT**
 
-- **Rules:** `set -euo pipefail`, `$()` only (no backticks), `"$VAR"`, explicit `exit 0`.
-- **Naming:** `local` variables (lowercase), GLOBAL/ENV variables (UPPERCASE).
-- **Style:** Self-documenting code, single-purpose functions. No redundant comments
-  (explain "why", not "what").
+- Lint `sh`/`bash` via `shellcheck` (use `.shellcheckrc`). Skip native `zsh`.
+- Format shell scripts with `shfmt`.
 
 **3. LOGGING UI**
 
-- Strictly flat (0-indent) and lowercase. `zsh/functions.zsh` is READ-ONLY.
+- Log output: flat (0-indent), lowercase.
+- `zsh/functions.zsh` is READ-ONLY: do not modify log msg to lowercase.
 - Prefixes: `[*]` info, `[+]` success, `[-]` warn/skip, `[!]` error, `[?]` prompt.
 
 **4. COMMENTING**
 
-- Block comments MUST use exact-length hash borders. No inline `#` for blocks.
+- Block comments require exact-length hash borders:
 
 ```text
 #######
@@ -29,6 +29,8 @@
 
 **5. COMMIT MSG FORMAT**
 
-- NO conventional prefixes (e.g., `feat:`, `fix:`).
-- **Subject:** Imperative mood (`Add`, `Fix`, `Drop`), ≤52 chars, no trailing period.
-- **Body:** 1 blank line after subject, wrap at 72 chars.
+- No conventional prefixes (`feat:`, `fix:`).
+- **Subject:** Imperative (`Add`, `Fix`, `Drop`), ≤52 chars, no trailing period.
+- **Body:** Blank line after subject, wrap 72 chars.
+- Flat single-level bullets (`-`) only; no nested indents.
+- Explain what changed and rationale ("why") concisely.
