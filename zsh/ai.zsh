@@ -37,6 +37,54 @@ _gemini_load() {
   _ai_load
 }
 
+#################
+# Key mask helper
+#################
+_ai_mask_key() {
+  local raw="${1:-}"
+  if [[ -z "$raw" ]]; then
+    print "not configured"
+    return 0
+  fi
+  if ((${#raw} > 10)); then
+    print "${raw[1,6]}...${raw[-4,-1]}"
+  else
+    print "configured"
+  fi
+}
+
+###################
+# Key verify helper
+###################
+_ai_verify_key() {
+  local test_key="$1"
+  if ! command -v curl > /dev/null 2>&1 || ! command -v jq > /dev/null 2>&1; then
+    print -u2 "curl or jq not installed. run: pkg install curl jq"
+    return 1
+  fi
+
+  local resp
+  resp=$(curl -s --max-time 8 -H "x-goog-api-key: $test_key" \
+    "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1" 2> /dev/null)
+
+  if [[ -z "$resp" ]]; then
+    return 2
+  fi
+
+  local err_msg
+  err_msg=$(jq -r '.error.message // empty' <<< "$resp" 2> /dev/null)
+  if [[ -n "$err_msg" ]]; then
+    print -u2 "gemini api error: $err_msg"
+    return 1
+  fi
+
+  if jq -e '.models // empty' <<< "$resp" > /dev/null 2>&1; then
+    return 0
+  fi
+
+  return 1
+}
+
 ####################
 # Central gate check
 ####################
@@ -151,6 +199,89 @@ ai-model() {
   print -u2 "gemini model: $target"
 }
 
+################
+# AI key manager
+################
+ai-key() {
+  if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    print -u2 "usage: ai-key [-c|--check]"
+    return 0
+  fi
+
+  _ai_load
+
+  if [[ "$1" == "-c" || "$1" == "--check" ]]; then
+    print -u2 "current gemini api key: $(_ai_mask_key "${GEMINI_API_KEY-}")"
+    if [[ -z "${GEMINI_API_KEY-}" ]]; then
+      return 1
+    fi
+    if _ai_verify_key "$GEMINI_API_KEY"; then
+      print -u2 "gemini api key: valid"
+      return 0
+    else
+      print -u2 "gemini api key: invalid"
+      return 1
+    fi
+  fi
+
+  if [[ $# -gt 0 ]]; then
+    print -u2 "do not pass api key as an argument (leaks to shell history)"
+    print -u2 "usage: ai-key [-c|--check]"
+    return 1
+  fi
+
+  print -u2 "current gemini api key: $(_ai_mask_key "${GEMINI_API_KEY-}")"
+
+  local new_key
+  if ! read -rs "new_key?enter gemini api key: "; then
+    print -u2 ""
+    return 1
+  fi
+  print -u2 ""
+
+  new_key="${new_key#"${new_key%%[![:space:]]*}"}"
+  new_key="${new_key%"${new_key##*[![:space:]]}"}"
+  new_key="${new_key#[\'\"]}"
+  new_key="${new_key%[\'\"]}"
+
+  if [[ -z "$new_key" ]]; then
+    print -u2 "api key cannot be empty"
+    return 1
+  fi
+
+  local verify_status=0
+  _ai_verify_key "$new_key" || verify_status=$?
+
+  if ((verify_status == 1)); then
+    return 1
+  elif ((verify_status == 2)); then
+    if ! read -q "?network verification failed. save anyway? [y/N] "; then
+      print -u2 ""
+      return 1
+    fi
+    print -u2 ""
+  fi
+
+  mkdir -p "${_ai_env:h}" 2> /dev/null
+  touch "$_ai_env" 2> /dev/null
+
+  local escaped_key="${new_key//\\/\\\\}"
+  escaped_key="${escaped_key//\//\\/}"
+  escaped_key="${escaped_key//&/\\&}"
+
+  if grep -q "^[[:space:]]*GEMINI_API_KEY=" "$_ai_env" 2> /dev/null; then
+    sed -i "s|^[[:space:]]*GEMINI_API_KEY=.*|GEMINI_API_KEY=\"${escaped_key}\"|" "$_ai_env"
+  else
+    print "GEMINI_API_KEY=\"${escaped_key}\"" >> "$_ai_env"
+  fi
+
+  chmod 600 "$_ai_env" 2> /dev/null
+  export GEMINI_API_KEY="$new_key"
+  print -u2 "gemini api key: updated ($(_ai_mask_key "$GEMINI_API_KEY"))"
+
+  unset new_key escaped_key
+}
+
 ##################
 # Spinner feedback
 ##################
@@ -217,7 +348,7 @@ _ai_preexec_hook() {
   local base_cmd="${trimmed%% *}"
 
   case "$base_cmd" in
-    cmd-do | cmd-fix | cmd-ask | ai-toggle | ai-model | '\?\?' | '??')
+    cmd-do | cmd-fix | cmd-ask | ai-toggle | ai-model | ai-key | '\?\?' | '??')
       _AI_SKIP_STATUS_RECORD=1
       return 0
       ;;
@@ -497,7 +628,7 @@ _ai_postcmd_check() {
   local trimmed="${lastcmd#"${lastcmd%%[![:space:]]*}"}"
   local base_cmd="${trimmed%% *}"
   case "$base_cmd" in
-    cmd-do | cmd-fix | cmd-ask | ai-toggle | ai-model | '\?\?' | '??') return ;;
+    cmd-do | cmd-fix | cmd-ask | ai-toggle | ai-model | ai-key | '\?\?' | '??') return ;;
   esac
 
   local suggestion=$(_gemini_query "$lastcmd")

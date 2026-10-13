@@ -34,6 +34,7 @@ Restart Termux after installation to apply changes.
 - `cmd-ask [question]` — Ask technical questions with auto file inspection, piped STDIN, and Google search.
 - `ai-toggle` — Turn Gemini AI assistant and auto-correction on or off.
 - `ai-model [name]` — View or switch the active Gemini AI model.
+- `ai-key` — Set or verify Gemini API key securely with masked input.
 - `muxrc-sync` — Update dotfiles and plugins to the latest version.
 - Keyboard macros — Swipe up on `ESC` to jump to `~/Workspace` and `END` to toggle wakelock.
 
