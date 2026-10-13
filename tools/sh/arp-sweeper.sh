@@ -7,17 +7,28 @@ set -euo pipefail
 
 source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
-cidr="${1:-}"
-if [[ -z "${cidr}" ]]; then
-	log_error "usage: arp-sweeper.sh <cidr>"
-	exit 1
-fi
+check_dependencies() {
+  require_cmd nmap awk
+}
 
-log_info "target subnet: ${cidr}"
-log_info "initiating sweep..."
-printf "%-15s | %-17s | %s\n" "ip" "mac" "vendor (host)"
+validate_cidr() {
+  local target_cidr="${1:-}"
 
-nmap -sn "${cidr}" | awk '
+  if [[ -z "${target_cidr}" ]]; then
+    log_error "usage: $(basename "$0") <cidr>"
+    return 1
+  fi
+  return 0
+}
+
+execute_arp_sweep() {
+  local target_cidr="$1"
+
+  log_info "target subnet: ${target_cidr}" >&2
+  log_info "initiating sweep..." >&2
+  printf "%-15s | %-17s | %s\n" "ip" "mac" "vendor (host)"
+
+  nmap -sn "${target_cidr}" | awk '
 /^Nmap scan report for/ {
     ip = $5
     if (ip ~ /\(/) {
@@ -47,6 +58,15 @@ nmap -sn "${cidr}" | awk '
     }
 }'
 
-log_success "sweep complete."
+  log_success "sweep complete." >&2
+}
 
-exit 0
+main() {
+  local cidr="${1:-}"
+
+  validate_cidr "${cidr}" || exit 1
+  check_dependencies || exit 1
+  execute_arp_sweep "${cidr}"
+}
+
+main "$@"

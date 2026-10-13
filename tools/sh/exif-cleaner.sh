@@ -7,14 +7,45 @@ set -euo pipefail
 
 source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
-target_dir="${1:-}"
-if [[ -z "${target_dir}" ]]; then
-	log_error "usage: $(basename "$0") <target_directory>"
-	exit 1
-fi
-output_dir="${HOME}/muxrc-out/stripped"
-mkdir -p "${output_dir}"
+check_dependencies() {
+  require_cmd exiftool
+}
 
-exiftool -all= -o "${output_dir}/" "${target_dir}" || true
+validate_target_dir() {
+  local target_dir="${1:-}"
 
-exit 0
+  if [[ -z "${target_dir}" ]]; then
+    log_error "usage: $(basename "$0") <target_directory>"
+    return 1
+  fi
+
+  validate_dir_readable "${target_dir}"
+}
+
+clean_metadata() {
+  local target_dir="${1:-}"
+  local output_dir="${2:-}"
+
+  if [[ -z "${target_dir}" || -z "${output_dir}" ]]; then
+    log_error "missing parameters for metadata cleaning."
+    return 1
+  fi
+
+  if [[ ! -d "${output_dir}" ]]; then
+    mkdir -p "${output_dir}"
+  fi
+
+  exiftool -all= -o "${output_dir}/" "${target_dir}" || true
+}
+
+main() {
+  local target_dir="${1:-}"
+  local output_dir="${HOME}/muxrc-out/stripped"
+
+  validate_target_dir "${target_dir}" || exit 1
+  check_dependencies || exit 1
+
+  clean_metadata "${target_dir}" "${output_dir}"
+}
+
+main "$@"

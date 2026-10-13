@@ -7,34 +7,56 @@ set -euo pipefail
 
 source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
-target="${1:-}"
+check_dependencies() {
+  require_cmd exiftool
+}
 
-if [[ -z "${target}" ]]; then
-	log_error "usage: date-sync.sh <file_or_directory>"
-	exit 1
-fi
+validate_target() {
+  local target="${1:-}"
 
-if [[ ! -e "${target}" ]]; then
-	log_error "target '${target}' not found"
-	exit 1
-fi
+  if [[ -z "${target}" ]]; then
+    log_error "usage: $(basename "$0") <file_or_directory>"
+    return 1
+  fi
 
-if ! command -v exiftool >/dev/null 2>&1; then
-	log_error "exiftool not installed. run: pkg install exiftool"
-	exit 1
-fi
+  if [[ ! -e "${target}" ]]; then
+    log_error "target '${target}' not found."
+    return 1
+  fi
 
-start_spinner "syncing metadata dates"
+  if [[ ! -r "${target}" ]]; then
+    log_error "target '${target}' is not readable."
+    return 1
+  fi
 
-exiftool -r -P -overwrite_original_in_place -d "%Y:%m:%d %H:%M:%S" -m -q \
-	"-AllDates<FileModifyDate" \
-	"-TrackCreateDate<FileModifyDate" \
-	"-TrackModifyDate<FileModifyDate" \
-	"-MediaCreateDate<FileModifyDate" \
-	"-MediaModifyDate<FileModifyDate" \
-	"-CreationTime<FileModifyDate" \
-	"${target}" >/dev/null 2>&1 || true
+  return 0
+}
 
-stop_spinner "success" "metadata dates synced."
+sync_metadata_dates() {
+  local target="$1"
 
-exit 0
+  trap 'cleanup_spinner' EXIT
+  start_spinner "syncing metadata dates"
+
+  exiftool -r -P -overwrite_original_in_place -d "%Y:%m:%d %H:%M:%S" -m -q \
+    "-AllDates<FileModifyDate" \
+    "-TrackCreateDate<FileModifyDate" \
+    "-TrackModifyDate<FileModifyDate" \
+    "-MediaCreateDate<FileModifyDate" \
+    "-MediaModifyDate<FileModifyDate" \
+    "-CreationTime<FileModifyDate" \
+    "${target}" > /dev/null 2>&1 || true
+
+  stop_spinner "success" "metadata dates synced."
+  trap - EXIT
+}
+
+main() {
+  local target="${1:-}"
+
+  validate_target "${target}" || exit 1
+  check_dependencies || exit 1
+  sync_metadata_dates "${target}"
+}
+
+main "$@"

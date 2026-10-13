@@ -1,170 +1,249 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 ##################
-# Termux installer
+# Termux Installer
 ##################
 set -euo pipefail
 
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 source "${SCRIPT_DIR}/lib/init.sh"
 
-SPINNER_PID="${SPINNER_PID:-}"
-trap '[[ -n "${SPINNER_PID:-}" ]] && kill -0 "${SPINNER_PID}" 2>/dev/null && kill -9 "${SPINNER_PID}" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
+setup_storage() {
+  if [[ ! -d "${HOME}/storage" ]]; then
+    log_info "requesting storage permission..."
+    termux-setup-storage
+    sleep 2
+  fi
+}
 
-if [[ ! -d "${HOME}/storage" ]]; then
-	log_info "requesting storage permission..."
-	termux-setup-storage
-	sleep 2
-fi
+enable_repos() {
+  start_spinner "enabling extra repos"
+  export DEBIAN_FRONTEND=noninteractive
+  pkg update -y -o Dpkg::Options::="--force-confold" > /dev/null 2>&1 || true
+  pkg install -y -o Dpkg::Options::="--force-confold" root-repo x11-repo > /dev/null 2>&1 || true
+  pkg upgrade -y -o Dpkg::Options::="--force-confold" > /dev/null 2>&1 || true
+  stop_spinner "success" "repos enabled."
+}
 
-start_spinner "enabling extra repos"
-export DEBIAN_FRONTEND=noninteractive
-pkg update -y -o Dpkg::Options::="--force-confold" >/dev/null 2>&1 || true
-pkg install -y -o Dpkg::Options::="--force-confold" root-repo x11-repo >/dev/null 2>&1 || true
-pkg upgrade -y -o Dpkg::Options::="--force-confold" >/dev/null 2>&1 || true
-stop_spinner "success" "repos enabled."
+install_packages() {
+  start_spinner "installing packages"
+  pkg install -y -o Dpkg::Options::="--force-confold" \
+    zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq \
+    termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip \
+    unrar exiftool steghide openssl-tool nmap tor > /dev/null 2>&1 || true
+  stop_spinner "success" "packages installed."
+}
 
-start_spinner "installing packages"
-pkg install -y -o Dpkg::Options::="--force-confold" zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip unrar exiftool steghide openssl-tool nmap tor >/dev/null 2>&1 || true
-stop_spinner "success" "packages installed."
+setup_directories() {
+  local dotfiles_dir="${1:-}"
+  local zsh_plugins_dir="${2:-}"
 
-DOTFILES_DIR="${HOME}/muxrc"
-ZSH_DIR="${HOME}/.zsh"
-ZSH_PLUGINS_DIR="${ZSH_DIR}/plugins"
+  if [[ -z "${dotfiles_dir}" || -z "${zsh_plugins_dir}" ]]; then
+    log_error "missing directory parameters."
+    return 1
+  fi
 
-mkdir -p "${ZSH_PLUGINS_DIR}"
-mkdir -p "${HOME}/.termux"
-mkdir -p "${DOTFILES_DIR}/nano"
-mkdir -p "${HOME}/muxrc-out/stripped"
-mkdir -p "${HOME}/muxrc-out/decoys"
-mkdir -p "${HOME}/muxrc-out/extracted"
+  mkdir -p "${zsh_plugins_dir}"
+  mkdir -p "${HOME}/.termux"
+  mkdir -p "${dotfiles_dir}/nano"
+  mkdir -p "${HOME}/muxrc-out/stripped"
+  mkdir -p "${HOME}/muxrc-out/decoys"
+  mkdir -p "${HOME}/muxrc-out/extracted"
+  mkdir -p "${HOME}/.termux/boot"
 
-log_info "muting termux motd..."
-touch "${HOME}/.hushlogin"
+  log_info "muting termux motd..."
+  touch "${HOME}/.hushlogin"
+}
 
-log_info "setting up sudo wrapper..."
-if [[ -f "${HOME}/.sudo_hash" ]]; then
-	log_prompt "sudo pass configured. overwrite? [y/N]: "
-	read -r reset_sudo
-else
-	reset_sudo="y"
-fi
+setup_sudo_wrapper() {
+  local reset_sudo="y"
+  local sudo_pass=""
+  local sudo_pass_confirm=""
 
-if [[ "${reset_sudo:-}" =~ ^[Yy]$ ]]; then
-	log_prompt "create your sudo password: "
-	read -r -s SUDO_PASS
-	echo ""
-	log_prompt "confirm sudo password: "
-	read -r -s SUDO_PASS_CONFIRM
-	echo ""
+  log_info "setting up sudo wrapper..."
+  if [[ -f "${HOME}/.sudo_hash" ]]; then
+    log_prompt "sudo pass configured. overwrite? [y/N]: "
+    read -r reset_sudo
+  fi
 
-	if [[ "${SUDO_PASS}" == "${SUDO_PASS_CONFIRM}" ]]; then
-		echo -n "${SUDO_PASS}" | sha256sum | awk '{print $1}' >"${HOME}/.sudo_hash"
-		chmod 600 "${HOME}/.sudo_hash"
-		log_success "sudo hash generated."
-	else
-		log_error "passwords mismatch. please retry."
-	fi
-else
-	log_warn "keeping existing sudo password."
-fi
+  if [[ "${reset_sudo:-}" =~ ^[Yy]$ ]]; then
+    log_prompt "create your sudo password: "
+    read -r -s sudo_pass
+    echo ""
+    log_prompt "confirm sudo password: "
+    read -r -s sudo_pass_confirm
+    echo ""
 
-log_info "fetching zsh plugins..."
-declare -A PLUGINS=(
-	["zsh-syntax-highlighting"]="https://github.com/zsh-users/zsh-syntax-highlighting.git"
-	["zsh-autosuggestions"]="https://github.com/zsh-users/zsh-autosuggestions.git"
-	["zsh-completions"]="https://github.com/zsh-users/zsh-completions.git"
-	["zsh-history-substring-search"]="https://github.com/zsh-users/zsh-history-substring-search.git"
-	["fzf-tab"]="https://github.com/Aloxaf/fzf-tab.git"
-)
+    if [[ "${sudo_pass}" == "${sudo_pass_confirm}" ]]; then
+      echo -n "${sudo_pass}" | sha256sum | awk '{print $1}' > "${HOME}/.sudo_hash"
+      chmod 600 "${HOME}/.sudo_hash"
+      log_success "sudo hash generated."
+    else
+      log_error "passwords mismatch. please retry."
+    fi
+  else
+    log_warn "keeping existing sudo password."
+  fi
+}
 
-for PLUGIN in "${!PLUGINS[@]}"; do
-	if [ ! -d "${ZSH_PLUGINS_DIR}/${PLUGIN}" ]; then
-		start_spinner "cloning ${PLUGIN}"
-		if git clone -q --depth 1 "${PLUGINS[${PLUGIN}]}" "${ZSH_PLUGINS_DIR}/${PLUGIN}"; then
-			stop_spinner "success" "cloned ${PLUGIN}"
-		else
-			stop_spinner "error" "failed to clone ${PLUGIN}"
-		fi
-	else
-		start_spinner "updating ${PLUGIN}"
-		if git -C "${ZSH_PLUGINS_DIR}/${PLUGIN}" pull -q --rebase; then
-			stop_spinner "success" "updated ${PLUGIN}"
-		else
-			stop_spinner "error" "failed to update ${PLUGIN}"
-		fi
-	fi
-done
+setup_zsh_plugins() {
+  local zsh_plugins_dir="${1:-}"
+  local plugin_name
+  local plugin_url
 
-log_info "creating storage symlinks..."
-declare -A STORAGE_DIRS=(
-	["Workspace"]="/storage/emulated/0/Workspace"
-)
+  if [[ -z "${zsh_plugins_dir}" ]]; then
+    log_error "plugins directory not specified."
+    return 1
+  fi
 
-for NAME in "${!STORAGE_DIRS[@]}"; do
-	TARGET="${STORAGE_DIRS[${NAME}]}"
-	if [ ! -d "${TARGET}" ]; then
-		mkdir -p "${TARGET}"
-		log_success "created ${TARGET}"
-	else
-		log_warn "${TARGET} already exists, skipping."
-	fi
-	ln -sfn "${TARGET}" "${HOME}/${NAME}"
-done
+  log_info "fetching zsh plugins..."
+  local -A plugins=(
+    ["zsh-syntax-highlighting"]="https://github.com/zsh-users/zsh-syntax-highlighting.git"
+    ["zsh-autosuggestions"]="https://github.com/zsh-users/zsh-autosuggestions.git"
+    ["zsh-completions"]="https://github.com/zsh-users/zsh-completions.git"
+    ["zsh-history-substring-search"]="https://github.com/zsh-users/zsh-history-substring-search.git"
+    ["fzf-tab"]="https://github.com/Aloxaf/fzf-tab.git"
+  )
 
-log_info "symlinking configurations..."
-ln -sf "${DOTFILES_DIR}/zsh/.zshrc" "${HOME}/.zshrc"
-ln -sf "${DOTFILES_DIR}/colors/.dircolors" "${HOME}/.dircolors"
-ln -sf "${DOTFILES_DIR}/termux/colors.properties" "${HOME}/.termux/colors.properties"
-ln -sf "${DOTFILES_DIR}/termux/termux.properties" "${HOME}/.termux/termux.properties"
-ln -sf "${DOTFILES_DIR}/nano/.nanorc" "${HOME}/.nanorc"
+  for plugin_name in "${!plugins[@]}"; do
+    plugin_url="${plugins[${plugin_name}]}"
+    if [[ ! -d "${zsh_plugins_dir}/${plugin_name}" ]]; then
+      start_spinner "cloning ${plugin_name}"
+      if git clone -q --depth 1 "${plugin_url}" "${zsh_plugins_dir}/${plugin_name}"; then
+        stop_spinner "success" "cloned ${plugin_name}"
+      else
+        stop_spinner "error" "failed to clone ${plugin_name}"
+      fi
+    else
+      start_spinner "updating ${plugin_name}"
+      if git -C "${zsh_plugins_dir}/${plugin_name}" pull -q --rebase; then
+        stop_spinner "success" "updated ${plugin_name}"
+      else
+        stop_spinner "error" "failed to update ${plugin_name}"
+      fi
+    fi
+  done
+}
 
-mkdir -p "${HOME}/.termux/boot"
-ln -sf "${DOTFILES_DIR}/boot/start-sshd" "${HOME}/.termux/boot/start-sshd"
-chmod +x "${DOTFILES_DIR}/boot/start-sshd"
+setup_storage_symlinks() {
+  local dir_name
+  local target_path
 
-if [ ! -f "${HOME}/.termux/font.ttf" ]; then
-	log_info "installing jetbrains mono font..."
-	wget -q --show-progress -O "${HOME}/.termux/font.ttf" "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf"
-else
-	log_warn "font already installed, skipping."
-fi
+  log_info "creating storage symlinks..."
+  local -A storage_dirs=(
+    ["Workspace"]="/storage/emulated/0/Workspace"
+  )
 
-termux-reload-settings
+  for dir_name in "${!storage_dirs[@]}"; do
+    target_path="${storage_dirs[${dir_name}]}"
+    if [[ ! -d "${target_path}" ]]; then
+      mkdir -p "${target_path}"
+      log_success "created ${target_path}"
+    else
+      log_warn "${target_path} already exists, skipping."
+    fi
+    ln -sfn "${target_path}" "${HOME}/${dir_name}"
+  done
+}
 
-if [[ "${SHELL}" != */zsh ]]; then
-	log_info "changing default shell..."
-	chsh -s zsh
-fi
+symlink_configurations() {
+  local dotfiles_dir="${1:-}"
 
-log_info "setting up gemini auto-correct..."
-if [[ -f "${HOME}/.gemini_ai_env" ]]; then
-	log_prompt "gemini config exists. overwrite? [y/N]: "
-	read -r reset_gemini
-else
-	reset_gemini="y"
-fi
+  if [[ -z "${dotfiles_dir}" ]]; then
+    log_error "dotfiles directory not specified."
+    return 1
+  fi
 
-if [[ "${reset_gemini:-}" =~ ^[Yy]$ ]]; then
-	log_prompt "setup gemini auto-correct? [y/N]: "
-	read -r ENABLE_AI
-	if [[ "${ENABLE_AI:-}" =~ ^[Yy]$ ]]; then
-		log_prompt "gemini api key: "
-		read -r -s GEMINI_KEY
-		echo
-		{
-			echo "GEMINI_API_KEY=\"${GEMINI_KEY}\""
-			echo "GEMINI_MODEL=\"gemini-3.5-flash-lite\""
-			echo "AI_AUTOCORRECT_ENABLED=1"
-		} >"${HOME}/.gemini_ai_env"
-		chmod 600 "${HOME}/.gemini_ai_env"
-		log_success "gemini config saved."
-	fi
-else
-	log_warn "keeping existing gemini config."
-fi
+  log_info "symlinking configurations..."
+  ln -sf "${dotfiles_dir}/zsh/.zshrc" "${HOME}/.zshrc"
+  ln -sf "${dotfiles_dir}/colors/.dircolors" "${HOME}/.dircolors"
+  ln -sf "${dotfiles_dir}/termux/colors.properties" "${HOME}/.termux/colors.properties"
+  ln -sf "${dotfiles_dir}/termux/termux.properties" "${HOME}/.termux/termux.properties"
+  ln -sf "${dotfiles_dir}/nano/.nanorc" "${HOME}/.nanorc"
 
-grep -qxF '.gemini_ai_env' "${DOTFILES_DIR}/.gitignore" || echo '.gemini_ai_env' >>"${DOTFILES_DIR}/.gitignore"
+  ln -sf "${dotfiles_dir}/boot/start-sshd" "${HOME}/.termux/boot/start-sshd"
+  chmod +x "${dotfiles_dir}/boot/start-sshd"
+}
 
-log_success "installation complete! please restart termux."
-trap - EXIT
+setup_nerd_font() {
+  if [[ ! -f "${HOME}/.termux/font.ttf" ]]; then
+    log_info "installing jetbrains mono font..."
+    wget -q --show-progress -O "${HOME}/.termux/font.ttf" \
+      "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf"
+  else
+    log_warn "font already installed, skipping."
+  fi
+
+  termux-reload-settings
+}
+
+setup_default_shell() {
+  if [[ "${SHELL}" != */zsh ]]; then
+    log_info "changing default shell..."
+    chsh -s zsh
+  fi
+}
+
+setup_gemini_env() {
+  local dotfiles_dir="${1:-}"
+  local reset_gemini="y"
+  local enable_ai=""
+  local gemini_key=""
+
+  if [[ -z "${dotfiles_dir}" ]]; then
+    log_error "dotfiles directory not specified."
+    return 1
+  fi
+
+  log_info "setting up gemini auto-correct..."
+  if [[ -f "${HOME}/.gemini_ai_env" ]]; then
+    log_prompt "gemini config exists. overwrite? [y/N]: "
+    read -r reset_gemini
+  fi
+
+  if [[ "${reset_gemini:-}" =~ ^[Yy]$ ]]; then
+    log_prompt "setup gemini auto-correct? [y/N]: "
+    read -r enable_ai
+    if [[ "${enable_ai:-}" =~ ^[Yy]$ ]]; then
+      log_prompt "gemini api key: "
+      read -r -s gemini_key
+      echo
+      {
+        echo "GEMINI_API_KEY=\"${gemini_key}\""
+        echo "GEMINI_MODEL=\"gemini-3.5-flash-lite\""
+        echo "AI_AUTOCORRECT_ENABLED=1"
+      } > "${HOME}/.gemini_ai_env"
+      chmod 600 "${HOME}/.gemini_ai_env"
+      log_success "gemini config saved."
+    fi
+  else
+    log_warn "keeping existing gemini config."
+  fi
+
+  grep -qxF '.gemini_ai_env' "${dotfiles_dir}/.gitignore" || echo '.gemini_ai_env' >> "${dotfiles_dir}/.gitignore"
+}
+
+main() {
+  local dotfiles_dir="${HOME}/muxrc"
+  local zsh_dir="${HOME}/.zsh"
+  local zsh_plugins_dir="${zsh_dir}/plugins"
+
+  trap 'cleanup_spinner' EXIT
+
+  setup_storage
+  enable_repos
+  install_packages
+  setup_directories "${dotfiles_dir}" "${zsh_plugins_dir}"
+  setup_sudo_wrapper
+  setup_zsh_plugins "${zsh_plugins_dir}"
+  setup_storage_symlinks
+  symlink_configurations "${dotfiles_dir}"
+  setup_nerd_font
+  setup_default_shell
+  setup_gemini_env "${dotfiles_dir}"
+
+  log_success "installation complete! please restart termux."
+  trap - EXIT
+}
+
+main "$@"

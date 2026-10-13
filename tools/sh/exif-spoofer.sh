@@ -7,37 +7,85 @@ set -euo pipefail
 
 source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
-preset_file="${1:-}"
-target_path="${2:-}"
-if [[ -z "${preset_file}" || -z "${target_path}" ]]; then
-	log_error "usage: $(basename "$0") <preset_json_file> <target_image_or_directory>"
-	exit 1
-fi
-output_dir="${HOME}/muxrc-out/decoys"
+check_dependencies() {
+  require_cmd exiftool jq
+}
 
-mkdir -p "${output_dir}"
+validate_inputs() {
+  local preset_file="${1:-}"
+  local target_path="${2:-}"
 
-if [[ -d "${target_path}" ]]; then
-	output_target="${output_dir}/"
-	msg_target="directory $(basename "${target_path}")"
-elif [[ -f "${target_path}" ]]; then
-	output_target="${output_dir}/$(basename "${target_path}")"
-	msg_target="file $(basename "${target_path}")"
-else
-	log_error "target not found: ${target_path}"
-	exit 1
-fi
+  if [[ -z "${preset_file}" || -z "${target_path}" ]]; then
+    log_error "usage: $(basename "$0") <preset_json_file> <target_image_or_directory>"
+    return 1
+  fi
 
-declare -a args=()
-while IFS="=" read -r key val; do
-	args+=("-${key}=${val}")
-done < <(jq -r 'to_entries | .[] | "\(.key)=\(.value)"' "${preset_file}")
+  validate_file_readable "${preset_file}" || return 1
 
-SPINNER_PID="${SPINNER_PID:-}"
-trap '[[ -n "${SPINNER_PID:-}" ]] && kill -0 "${SPINNER_PID}" 2>/dev/null && kill -9 "${SPINNER_PID}" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
-start_spinner "injecting decoy into ${msg_target}"
-exiftool "${args[@]}" -o "${output_target}" "${target_path}" >/dev/null
-stop_spinner "success" "decoy at: ${output_target}"
-trap - EXIT
+  if [[ ! -e "${target_path}" ]]; then
+    log_error "target not found: ${target_path}"
+    return 1
+  fi
 
-exit 0
+  if [[ ! -r "${target_path}" ]]; then
+    log_error "target is not readable: ${target_path}"
+    return 1
+  fi
+
+  return 0
+}
+
+execute_spoof() {
+  local preset_file="${1:-}"
+  local target_path="${2:-}"
+  local output_dir="${3:-}"
+
+  if [[ -z "${preset_file}" || -z "${target_path}" || -z "${output_dir}" ]]; then
+    log_error "missing parameters for spoof execution."
+    return 1
+  fi
+
+  local output_target
+  local msg_target
+  local key
+  local val
+  local -a args=()
+
+  if [[ ! -d "${output_dir}" ]]; then
+    mkdir -p "${output_dir}"
+  fi
+
+  if [[ -d "${target_path}" ]]; then
+    output_target="${output_dir}/"
+    msg_target="directory $(basename "${target_path}")"
+  elif [[ -f "${target_path}" ]]; then
+    output_target="${output_dir}/$(basename "${target_path}")"
+    msg_target="file $(basename "${target_path}")"
+  else
+    log_error "unsupported target type: ${target_path}"
+    return 1
+  fi
+
+  while IFS="=" read -r key val; do
+    args+=("-${key}=${val}")
+  done < <(jq -r 'to_entries | .[] | "\(.key)=\(.value)"' "${preset_file}")
+
+  trap 'cleanup_spinner' EXIT
+  start_spinner "injecting decoy into ${msg_target}"
+  exiftool "${args[@]}" -o "${output_target}" "${target_path}" > /dev/null
+  stop_spinner "success" "decoy at: ${output_target}"
+  trap - EXIT
+}
+
+main() {
+  local preset_file="${1:-}"
+  local target_path="${2:-}"
+  local output_dir="${HOME}/muxrc-out/decoys"
+
+  validate_inputs "${preset_file}" "${target_path}" || exit 1
+  check_dependencies || exit 1
+
+  execute_spoof "${preset_file}" "${target_path}" "${output_dir}"
+}
+
+main "$@"

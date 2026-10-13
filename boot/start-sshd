@@ -1,3 +1,12 @@
 #!/data/data/com.termux/files/usr/bin/bash
+
+############
+# Start SSHD
+############
+set -euo pipefail
+
 termux-wake-lock
-sshd
+
+if ! pgrep -x sshd > /dev/null 2>&1; then
+  sshd
+fi
