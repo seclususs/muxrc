@@ -10,10 +10,6 @@ sudo() {
   zmodload zsh/datetime 2> /dev/null
 
   if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-    if whence -p sudo > /dev/null 2>&1; then
-      command sudo "$@"
-      return $?
-    fi
     echo "usage: sudo -h | -K | -k | -V"
     echo "usage: sudo -v [-AknS] [-g group] [-h host] [-p prompt] [-u user]"
     echo "usage: sudo -l [-AknS] [-g group] [-h host] [-p prompt] [-U user] [-u user] [command]"
@@ -21,10 +17,6 @@ sudo() {
   fi
 
   if [[ "$1" == "-V" || "$1" == "--version" ]]; then
-    if whence -p sudo > /dev/null 2>&1; then
-      command sudo "$@"
-      return $?
-    fi
     echo "Sudo version 1.9.15p5"
     return 0
   fi
@@ -34,9 +26,6 @@ sudo() {
 
   if [[ "$1" == "-k" || "$1" == "-K" ]]; then
     rm -f "$_sudo_ts_file" 2> /dev/null
-    if whence -p sudo > /dev/null 2>&1; then
-      command sudo "$1" 2> /dev/null
-    fi
     if [[ $# -eq 1 ]]; then
       return 0
     fi
@@ -70,7 +59,7 @@ sudo() {
   local current_user="${USER:-$(whoami)}"
   local user_pass
 
-  if [[ "${TERMUX_FAKEROOT-}" == "1" || "$EUID" -eq 0 ]]; then
+  if [[ "$EUID" -eq 0 ]]; then
     authenticated=1
   elif [[ -f "$_sudo_ts_file" ]]; then
     local last_auth
@@ -117,6 +106,23 @@ sudo() {
     return 0
   fi
 
+  if [[ "$1" == "su" || "$1" == "-s" || "$1" == "-i" ]]; then
+    if [[ "$EUID" -eq 0 ]]; then
+      print -u2 "sudo: already running as root (type 'exit' to return)"
+      return 0
+    fi
+    if whence -p sudo > /dev/null 2>&1; then
+      command sudo --shell=zsh su
+      return $?
+    elif command -v su > /dev/null 2>&1; then
+      command su -c "exec zsh"
+      return $?
+    else
+      print -u2 "su: device is not rooted"
+      return 1
+    fi
+  fi
+
   if whence -p sudo > /dev/null 2>&1; then
     command sudo "$@"
     return $?
@@ -155,23 +161,28 @@ sudo() {
       return $exit_code
     fi
   else
-    command "$@"
-    return $?
+    print -u2 "sudo: no root provider available on this device"
+    return 1
   fi
 }
 
-########################
-# Fake Root Mode Wrapper
-########################
+#####################
+# Root switch wrapper
+#####################
 su() {
+  if [[ "$EUID" -eq 0 ]]; then
+    if [[ $# -eq 0 || "$1" == "root" || "$1" == "-" || "$1" == "-l" ]]; then
+      print -u2 "su: already running as root (type 'exit' to return)"
+      return 0
+    else
+      command su "$@"
+      return $?
+    fi
+  fi
+
   if [[ $# -gt 0 ]]; then
     command su "$@"
     return $?
-  fi
-
-  if [[ "${TERMUX_FAKEROOT-}" == "1" || "$EUID" -eq 0 ]]; then
-    print -u2 "su: already running as root (type 'exit' to return)"
-    return 0
   fi
 
   local HASH_FILE="$HOME/.sudo_hash"
@@ -206,15 +217,14 @@ su() {
   fi
 
   if whence -p sudo > /dev/null 2>&1; then
-    TERMUX_FAKEROOT=1 command sudo --shell=zsh
+    command sudo --shell=zsh su
     return $?
   elif command -v su > /dev/null 2>&1; then
-    command su -c "export TERMUX_FAKEROOT=1; exec zsh"
+    command su -c "exec zsh"
     return $?
   else
-    print -u2 "su: device is not rooted, entering virtual fake root mode"
-    TERMUX_FAKEROOT=1 zsh
-    return $?
+    print -u2 "su: device is not rooted"
+    return 1
   fi
 }
 
