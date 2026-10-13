@@ -329,23 +329,9 @@ muxrc-sync() {
     return 1
   fi
 
-  if [[ -d "$plugins_dir" ]]; then
+  if [[ -f "$muxrc_dir/tools/sh/sync-plugins.sh" ]]; then
     log_info "syncing zsh plugins..."
-    local plugin
-    local -a p_list=("$plugins_dir"/*)
-    local p_total=${#p_list[@]}
-    local p_idx=0
-    for plugin in "${p_list[@]}"; do
-      if [[ -d "$plugin/.git" ]]; then
-        ((p_idx++))
-        start_spinner "pulling ${plugin:t} (${p_idx}/${p_total})"
-        if git -C "$plugin" pull -q --rebase; then
-          stop_spinner "success" "updated ${plugin:t}."
-        else
-          stop_spinner "error" "failed to update ${plugin:t}."
-        fi
-      fi
-    done
+    bash "$muxrc_dir/tools/sh/sync-plugins.sh" "$plugins_dir"
   fi
 
   if [[ -f "$install_script" ]]; then

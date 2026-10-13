@@ -110,8 +110,6 @@ setup_sudo_wrapper() {
 
 setup_zsh_plugins() {
   local zsh_plugins_dir="${1:-}"
-  local plugin_name
-  local plugin_url
 
   if [[ -z "${zsh_plugins_dir}" ]]; then
     log_error "plugins directory not specified."
@@ -119,37 +117,7 @@ setup_zsh_plugins() {
   fi
 
   log_info "fetching zsh plugins..."
-  local -A plugins=(
-    ["zsh-syntax-highlighting"]="https://github.com/zsh-users/zsh-syntax-highlighting.git"
-    ["zsh-autosuggestions"]="https://github.com/zsh-users/zsh-autosuggestions.git"
-    ["zsh-completions"]="https://github.com/zsh-users/zsh-completions.git"
-    ["zsh-history-substring-search"]="https://github.com/zsh-users/zsh-history-substring-search.git"
-    ["fzf-tab"]="https://github.com/Aloxaf/fzf-tab.git"
-    ["zsh-autopair"]="https://github.com/hlissner/zsh-autopair.git"
-  )
-
-  local idx=0
-  local total=${#plugins[@]}
-
-  for plugin_name in "${!plugins[@]}"; do
-    ((idx++))
-    plugin_url="${plugins[${plugin_name}]}"
-    if [[ ! -d "${zsh_plugins_dir}/${plugin_name}" ]]; then
-      start_spinner "cloning ${plugin_name} (${idx}/${total})"
-      if git clone -q --depth 1 "${plugin_url}" "${zsh_plugins_dir}/${plugin_name}"; then
-        stop_spinner "success" "cloned ${plugin_name}"
-      else
-        stop_spinner "error" "failed to clone ${plugin_name}"
-      fi
-    else
-      start_spinner "updating ${plugin_name} (${idx}/${total})"
-      if git -C "${zsh_plugins_dir}/${plugin_name}" pull -q --rebase; then
-        stop_spinner "success" "updated ${plugin_name}"
-      else
-        stop_spinner "error" "failed to update ${plugin_name}"
-      fi
-    fi
-  done
+  bash "${SCRIPT_DIR}/tools/sh/sync-plugins.sh" "${zsh_plugins_dir}"
 }
 
 setup_storage_symlinks() {
