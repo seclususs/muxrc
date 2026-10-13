@@ -8,13 +8,13 @@ set -euo pipefail
 source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 target_dir="${1:-}"
-if [[ -z "$target_dir" ]]; then
-    log_error "usage: $(basename "$0") <target_directory>"
-    exit 1
+if [[ -z "${target_dir}" ]]; then
+	log_error "usage: $(basename "$0") <target_directory>"
+	exit 1
 fi
-output_dir="$HOME/muxrc-out/stripped"
-mkdir -p "$output_dir"
+output_dir="${HOME}/muxrc-out/stripped"
+mkdir -p "${output_dir}"
 
-exiftool -all= -o "$output_dir/" "$target_dir" || true
+exiftool -all= -o "${output_dir}/" "${target_dir}" || true
 
 exit 0

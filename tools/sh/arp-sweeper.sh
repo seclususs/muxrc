@@ -8,16 +8,16 @@ set -euo pipefail
 source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 cidr="${1:-}"
-if [[ -z "$cidr" ]]; then
-    log_error "usage: arp-sweeper.sh <cidr>"
-    exit 1
+if [[ -z "${cidr}" ]]; then
+	log_error "usage: arp-sweeper.sh <cidr>"
+	exit 1
 fi
 
-log_info "target subnet: $cidr"
+log_info "target subnet: ${cidr}"
 log_info "initiating sweep..."
 printf "%-15s | %-17s | %s\n" "ip" "mac" "vendor (host)"
 
-nmap -sn "$cidr" | awk '
+nmap -sn "${cidr}" | awk '
 /^Nmap scan report for/ {
     ip = $5
     if (ip ~ /\(/) {

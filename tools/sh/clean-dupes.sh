@@ -8,81 +8,82 @@ set -euo pipefail
 source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
 
 target_dir="${1:-}"
-if [[ -z "$target_dir" ]]; then
-    log_error "usage: $(basename "$0") <directory>"
-    exit 1
+if [[ -z "${target_dir}" ]]; then
+	log_error "usage: $(basename "$0") <directory>"
+	exit 1
 fi
 
-if [[ ! -d "$target_dir" ]]; then
-    log_error "directory '$target_dir' not found."
-    exit 1
+if [[ ! -d "${target_dir}" ]]; then
+	log_error "directory '${target_dir}' not found."
+	exit 1
 fi
 
 tmp_dir=$(mktemp -d)
-trap 'rm -rf "$tmp_dir"; [[ -n "${SPINNER_PID:-}" ]] && kill -0 "$SPINNER_PID" 2>/dev/null && kill -9 "$SPINNER_PID" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
+SPINNER_PID="${SPINNER_PID:-}"
+trap 'rm -rf "${tmp_dir}"; [[ -n "${SPINNER_PID:-}" ]] && kill -0 "${SPINNER_PID}" 2>/dev/null && kill -9 "${SPINNER_PID}" 2>/dev/null || true; echo -ne "\r\033[K"' EXIT
 
-start_spinner "scanning '$target_dir'"
-find "$target_dir" -type f -print0 | xargs -0 stat -c '%s %n' > "$tmp_dir/all_files.txt"
+start_spinner "scanning '${target_dir}'"
+find "${target_dir}" -type f -print0 | xargs -0 stat -c '%s %n' >"${tmp_dir}/all_files.txt"
 stop_spinner "success" "scanning complete."
 
-awk '{size=$1; count[size]++} END {for(s in count) if(count[s]>1) print s}' "$tmp_dir/all_files.txt" > "$tmp_dir/dup_sizes.txt"
+awk '{size=$1; count[size]++} END {for(s in count) if(count[s]>1) print s}' "${tmp_dir}/all_files.txt" >"${tmp_dir}/dup_sizes.txt"
 
-if [[ ! -s "$tmp_dir/dup_sizes.txt" ]]; then
-    log_success "no duplicates found."
-    exit 0
+if [[ ! -s "${tmp_dir}/dup_sizes.txt" ]]; then
+	log_success "no duplicates found."
+	exit 0
 fi
 
 start_spinner "hashing duplicates"
 
-awk 'NR==FNR {dup[$1]; next} $1 in dup { print substr($0, length($1)+2) }' "$tmp_dir/dup_sizes.txt" "$tmp_dir/all_files.txt" | \
-tr '\n' '\0' | xargs -0 sha256sum > "$tmp_dir/hashed.txt"
+awk 'NR==FNR {dup[$1]; next} $1 in dup { print substr($0, length($1)+2) }' "${tmp_dir}/dup_sizes.txt" "${tmp_dir}/all_files.txt" |
+	tr '\n' '\0' | xargs -0 sha256sum >"${tmp_dir}/hashed.txt"
 
 stop_spinner "success" "hashing complete."
 
-awk '{hash=$1; count[hash]++} END {for(h in count) if(count[h]>1) print h}' "$tmp_dir/hashed.txt" > "$tmp_dir/dup_hashes.txt"
+awk '{hash=$1; count[hash]++} END {for(h in count) if(count[h]>1) print h}' "${tmp_dir}/hashed.txt" >"${tmp_dir}/dup_hashes.txt"
 
-if [[ ! -s "$tmp_dir/dup_hashes.txt" ]]; then
-    log_success "no exact duplicates found."
-    exit 0
+if [[ ! -s "${tmp_dir}/dup_hashes.txt" ]]; then
+	log_success "no exact duplicates found."
+	exit 0
 fi
 
 log_warn "duplicates:"
 
-> "$tmp_dir/to_delete.txt"
+: >"${tmp_dir}/to_delete.txt"
 total_dupe_sets=0
 
 while read -r hash; do
-    total_dupe_sets=$((total_dupe_sets + 1))
-    echo "[group $total_dupe_sets] Hash: ${hash:0:8}..."
-    
-    awk -v h="$hash" '$1==h { print substr($0, length($1)+3) }' "$tmp_dir/hashed.txt" > "$tmp_dir/current_set.txt"
-    
-    mapfile -t files < "$tmp_dir/current_set.txt"
-    
-    log_success "keep: ${files[0]}"
-    
-    for i in "${!files[@]}"; do
-        if [[ $i -ne 0 ]]; then
-            log_warn "del : ${files[$i]}"
-            echo "${files[$i]}" >> "$tmp_dir/to_delete.txt"
-        fi
-    done
-    echo ""
-done < "$tmp_dir/dup_hashes.txt"
+	total_dupe_sets=$((total_dupe_sets + 1))
+	echo "[group ${total_dupe_sets}] Hash: ${hash:0:8}..."
 
-total_to_delete=$(wc -l < "$tmp_dir/to_delete.txt")
+	awk -v h="${hash}" '$1==h { print substr($0, length($1)+3) }' "${tmp_dir}/hashed.txt" >"${tmp_dir}/current_set.txt"
 
-log_prompt "delete $total_to_delete files? [y/n]: "
+	mapfile -t files <"${tmp_dir}/current_set.txt"
+
+	log_success "keep: ${files[0]}"
+
+	for i in "${!files[@]}"; do
+		if [[ ${i} -ne 0 ]]; then
+			log_warn "del : ${files[${i}]}"
+			echo "${files[${i}]}" >>"${tmp_dir}/to_delete.txt"
+		fi
+	done
+	echo ""
+done <"${tmp_dir}/dup_hashes.txt"
+
+total_to_delete=$(wc -l <"${tmp_dir}/to_delete.txt")
+
+log_prompt "delete ${total_to_delete} files? [y/n]: "
 read -r confirm
 
 if [[ "${confirm:-}" =~ ^[Yy]$ ]]; then
-    log_info "cleaning..."
-    while IFS= read -r file; do
-        rm -f "$file"
-    done < "$tmp_dir/to_delete.txt"
-    log_success "deleted $total_to_delete files."
+	log_info "cleaning..."
+	while IFS= read -r file; do
+		rm -f "${file}"
+	done <"${tmp_dir}/to_delete.txt"
+	log_success "deleted ${total_to_delete} files."
 else
-    log_warn "aborted."
+	log_warn "aborted."
 fi
 
 exit 0
