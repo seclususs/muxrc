@@ -175,14 +175,24 @@ su() {
       print -u2 "su: already running as root (type 'exit' to return)"
       return 0
     else
-      command su "$@"
-      return $?
+      if command -v su > /dev/null 2>&1; then
+        command su "$@"
+        return $?
+      else
+        print -u2 "su: device is not rooted"
+        return 1
+      fi
     fi
   fi
 
   if [[ $# -gt 0 ]]; then
-    command su "$@"
-    return $?
+    if command -v su > /dev/null 2>&1; then
+      command su "$@"
+      return $?
+    else
+      print -u2 "su: device is not rooted"
+      return 1
+    fi
   fi
 
   local HASH_FILE="$HOME/.sudo_hash"
