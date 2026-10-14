@@ -396,19 +396,21 @@ _ai_render() {
   ((term_cols < 30)) && term_cols=80
 
   local compact_flag="${AI_RENDER_COMPACT:-0}"
+  local card_flag="${AI_RENDER_CARD:-1}"
   local term_lines="${LINES:-$(tput lines 2> /dev/null || echo 24)}"
 
   local formatted
-  formatted=$(awk -v width="$term_cols" -v compact_mode="$compact_flag" '
+  formatted=$(awk -v width="$term_cols" -v compact_mode="$compact_flag" -v card_mode="$card_flag" '
     function strip_ansi(str,   tmp) {
       tmp = str
       gsub(/\033\[[0-9;]*[a-zA-Z]/, "", tmp)
       return length(tmp)
     }
 
-    function format_inline(s,   out, idx, in_bold, in_code, c) {
+    function format_inline(s,   out, idx, in_bold, in_italic, in_code, c) {
       out = ""
       in_bold = 0
+      in_italic = 0
       in_code = 0
       idx = 1
       while (idx <= length(s)) {
@@ -422,6 +424,17 @@ _ai_render() {
             in_bold = 0
           }
           idx += 2
+          continue
+        }
+        if (c == "*") {
+          if (in_italic == 0) {
+            out = out "\033[3m"
+            in_italic = 1
+          } else {
+            out = out "\033[0m"
+            in_italic = 0
+          }
+          idx += 1
           continue
         }
         if (c == "`") {
@@ -438,27 +451,48 @@ _ai_render() {
         out = out c
         idx += 1
       }
-      if (in_bold || in_code) out = out "\033[0m"
+      if (in_bold || in_italic || in_code) out = out "\033[0m"
       return out
+    }
+
+    function color_urls(w) {
+      if (w ~ /^https?:\/\//) {
+        return "\033[4;36m" w "\033[0m"
+      }
+      return w
+    }
+
+    function print_card_line(content) {
+      if (use_card) {
+        if (length(content) == 0) {
+          print border_color "│\033[0m"
+        } else {
+          print border_color "│\033[0m " content
+        }
+      } else {
+        print content
+      }
     }
 
     function print_wrapped(text, prefix1, prefix2, max_w,   words, n, i, line, word, line_len, w_len) {
       text = format_inline(text)
       n = split(text, words, /[ \t]+/)
       if (n == 0) {
-        if (length(prefix1) > 0) print prefix1
+        if (length(prefix1) > 0) print_card_line(prefix1)
         return
       }
 
+      words[1] = color_urls(words[1])
       line = prefix1 words[1]
       line_len = strip_ansi(line)
 
       for (i = 2; i <= n; i++) {
         word = words[i]
         if (word == "") continue
+        word = color_urls(word)
         w_len = strip_ansi(word)
         if (line_len + 1 + w_len > max_w) {
-          print line
+          print_card_line(line)
           line = prefix2 word
           line_len = strip_ansi(line)
         } else {
@@ -467,58 +501,85 @@ _ai_render() {
         }
       }
       if (length(line) > 0) {
-        print line
+        print_card_line(line)
       }
     }
 
     BEGIN {
       cols = (width > 0 ? width : 60)
       compact = (compact_mode > 0 ? 1 : 0)
-      max_w = cols - 2
+      use_card = (card_mode != "0" ? 1 : 0)
+
+      border_color = "\033[2;37m"
+      bar_len = cols - 2
+      if (bar_len < 10) bar_len = 10
+
+      card_top = border_color "┌"
+      card_bot = border_color "└"
+      for (b = 1; b <= bar_len; b++) {
+        card_top = card_top "─"
+        card_bot = card_bot "─"
+      }
+      card_top = card_top "\033[0m"
+      card_bot = card_bot "\033[0m"
+
+      max_w = (use_card ? cols - 4 : cols - 2)
+      if (max_w < 20) max_w = 20
+
       in_code = 0
       prev_line_empty = 0
       is_first = 1
+      prev_was_cmd = 0
+
+      if (use_card) {
+        print card_top
+        print border_color "│\033[0m"
+      }
     }
 
     /^```/ {
       if (in_code == 0) {
         in_code = 1
-        printf "\033[32m"
+        print_card_line("   \033[32m")
         prev_line_empty = 0
       } else {
         in_code = 0
-        printf "\033[0m\n"
+        print_card_line("\033[0m")
         prev_line_empty = 1
       }
       is_first = 0
+      prev_was_cmd = 0
       next
     }
 
     in_code == 1 {
-      print "   " $0
+      print_card_line("   " $0)
       prev_line_empty = 0
+      prev_was_cmd = 0
       next
     }
 
-    /^#{1,3} / {
+    /^(#{2,3} |# [A-Z0-9])/ {
       sub(/^#{1,3} /, "")
       h = format_inline($0)
-      if (!is_first && prev_line_empty == 0) print ""
-      print "\033[1;36m" h "\033[0m"
+      if (!is_first && prev_line_empty == 0) print_card_line("")
+      print_card_line("\033[1;36m" h "\033[0m")
       is_first = 0
       prev_line_empty = 0
+      prev_was_cmd = 0
       next
     }
 
     /^---SOURCES---/ {
-      if (!is_first && prev_line_empty == 0) print ""
-      print " \033[2;37m─── sources ───\033[0m"
+      if (!is_first && prev_line_empty == 0) print_card_line("")
+      print_card_line(" \033[2;37m─── sources ───\033[0m")
       is_first = 0
       prev_line_empty = 0
+      prev_was_cmd = 0
       next
     }
 
-    /^[ \t]*([-*•]|[0-9]+\.) / {
+    /^[ \t]*(-|\*|•|[0-9]+\.) / {
       body = $0
       prefix1 = ""
       prefix2 = ""
@@ -532,14 +593,15 @@ _ai_render() {
       } else {
         prefix1 = " \033[33m•\033[0m "
         prefix2 = "   "
-        sub(/^[ \t]*([-*•]) /, "", body)
+        sub(/^[ \t]*(-|\*|•) /, "", body)
       }
 
       if (!is_first && compact == 0 && prev_line_empty == 0) {
-        print ""
+        print_card_line("")
       }
       is_first = 0
       prev_line_empty = 0
+      prev_was_cmd = 0
 
       print_wrapped(body, prefix1, prefix2, max_w)
       next
@@ -549,7 +611,18 @@ _ai_render() {
       cmd = $0
       sub(/^[ \t]*\$ /, "", cmd)
       cmd = format_inline(cmd)
-      print "   \033[1;32m$\033[0m \033[1m" cmd "\033[0m"
+      print_card_line("   \033[1;32m$\033[0m \033[1m" cmd "\033[0m")
+      is_first = 0
+      prev_line_empty = 0
+      prev_was_cmd = 1
+      next
+    }
+
+    /^[ \t]*# / {
+      cmt = $0
+      sub(/^[ \t]*# /, "", cmt)
+      cmt = format_inline(cmt)
+      print_card_line("   \033[2;3m# " cmt "\033[0m")
       is_first = 0
       prev_line_empty = 0
       next
@@ -557,21 +630,27 @@ _ai_render() {
 
     /^[ \t]*$/ {
       if (!is_first && prev_line_empty == 0) {
-        print ""
+        print_card_line("")
         prev_line_empty = 1
       }
+      prev_was_cmd = 0
       next
     }
 
     {
       is_first = 0
       prev_line_empty = 0
+      prev_was_cmd = 0
       print_wrapped($0, "", "", max_w)
     }
 
     END {
       if (in_code == 1) {
-        printf "\033[0m\n"
+        print_card_line("\033[0m")
+      }
+      if (use_card) {
+        print border_color "│\033[0m"
+        print card_bot
       }
     }
   ' <<< "$text")
