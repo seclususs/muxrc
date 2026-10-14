@@ -300,10 +300,10 @@ _ai_start_phased_spinner() {
   (
     local -a frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
     local curr_phase=""
+    local new_phase=""
     local phase_start=$SECONDS
     local i=1
     while [[ -f "$_AI_PHASE_FILE" ]]; do
-      local new_phase
       new_phase=$(< "$_AI_PHASE_FILE" 2> /dev/null)
       if [[ -n "$new_phase" && "$new_phase" != "$curr_phase" ]]; then
         curr_phase="$new_phase"
@@ -314,7 +314,7 @@ _ai_start_phased_spinner() {
       ((i = (i % 10) + 1))
       sleep 0.1
     done
-  ) &
+  ) > /dev/null &
   _AI_SPINNER_PID=$!
 }
 
@@ -330,7 +330,7 @@ _ai_stop_phased_spinner() {
   fi
   rm -f "$HOME/.cache/ai_phase_$$" 2> /dev/null
   if [[ -n "$_AI_SPINNER_PID" ]]; then
-    kill "$_AI_SPINNER_PID" 2> /dev/null
+    kill -9 "$_AI_SPINNER_PID" 2> /dev/null
     wait "$_AI_SPINNER_PID" 2> /dev/null
     _AI_SPINNER_PID=""
   fi
@@ -505,6 +505,10 @@ _ai_query_api() {
   if [[ -n "$err_msg" ]]; then
     _ai_stop_phased_spinner
     trap - INT
+    if ((enable_search == 1)) && [[ "$err_msg" == *"quota"* || "$err_msg" == *"rate"* || "$err_msg" == *"RESOURCE_EXHAUSTED"* ]]; then
+      _ai_query_api "$prompt_text" 0 "$silent"
+      return $?
+    fi
     ((silent == 0)) && print -u2 "gemini api error: $err_msg"
     return 1
   fi
@@ -780,7 +784,7 @@ CAUSE: <1-sentence factual cause>
 FIX: <single-line shell command using 'pkg' if package is needed>"
 
   local response
-  response=$(_ai_query_api "$prompt_text" 1)
+  response=$(_ai_query_api "$prompt_text" 0)
 
   if [[ -z "$response" ]]; then
     return 1
