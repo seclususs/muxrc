@@ -19,8 +19,6 @@ alias rm='rm -i'
 alias cp='cp -i'
 alias mv='mv -i'
 
-alias open='xdg-open'
-
 alias xclip='termux-clipboard-set'
 alias xsel='termux-clipboard-set'
 alias pbcopy='termux-clipboard-set'
@@ -31,3 +29,26 @@ alias wakelock-off='termux-wake-unlock && echo "Wakelock released."'
 
 alias ssh-start='sshd && echo "SSH daemon started on port 8022."'
 alias ssh-stop='pkill sshd && echo "SSH daemon stopped."'
+
+##################################
+# Android file handlers & suffixes
+##################################
+if (( $+commands[termux-open] )); then
+  alias open='termux-open'
+  alias share='termux-open --send'
+  alias pick='termux-open --chooser'
+
+  alias -s {png,jpg,jpeg,gif,webp,svg}=termux-open
+  alias -s {mp4,mkv,webm,mov}=termux-open
+  alias -s {mp3,wav,flac,ogg,m4a}=termux-open
+  alias -s {pdf,epub,docx,xlsx,pptx}=termux-open
+  alias -s {html,htm}=termux-open
+elif (( $+commands[xdg-open] )); then
+  alias open='xdg-open'
+
+  alias -s {png,jpg,jpeg,gif,webp,svg}=xdg-open
+  alias -s {mp4,mkv,webm,mov}=xdg-open
+  alias -s {mp3,wav,flac,ogg,m4a}=xdg-open
+  alias -s {pdf,epub,docx,xlsx,pptx}=xdg-open
+  alias -s {html,htm}=xdg-open
+fi
