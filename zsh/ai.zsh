@@ -511,7 +511,7 @@ _ai_render() {
       use_card = (card_mode != "0" ? 1 : 0)
 
       border_color = "\033[2;37m"
-      bar_len = cols - 2
+      bar_len = cols - 4
       if (bar_len < 10) bar_len = 10
 
       card_top = border_color "┌"
@@ -523,13 +523,14 @@ _ai_render() {
       card_top = card_top "\033[0m"
       card_bot = card_bot "\033[0m"
 
-      max_w = (use_card ? cols - 4 : cols - 2)
+      max_w = (use_card ? cols - 6 : cols - 2)
       if (max_w < 20) max_w = 20
 
       in_code = 0
       prev_line_empty = 0
       is_first = 1
       prev_was_cmd = 0
+      prev_bullet_colon = 0
 
       if (use_card) {
         print card_top
@@ -549,6 +550,7 @@ _ai_render() {
       }
       is_first = 0
       prev_was_cmd = 0
+      prev_bullet_colon = 0
       next
     }
 
@@ -556,6 +558,7 @@ _ai_render() {
       print_card_line("   " $0)
       prev_line_empty = 0
       prev_was_cmd = 0
+      prev_bullet_colon = 0
       next
     }
 
@@ -567,6 +570,7 @@ _ai_render() {
       is_first = 0
       prev_line_empty = 0
       prev_was_cmd = 0
+      prev_bullet_colon = 0
       next
     }
 
@@ -576,6 +580,7 @@ _ai_render() {
       is_first = 0
       prev_line_empty = 0
       prev_was_cmd = 0
+      prev_bullet_colon = 0
       next
     }
 
@@ -603,18 +608,25 @@ _ai_render() {
       prev_line_empty = 0
       prev_was_cmd = 0
 
+      if (body ~ /:[ \t]*$/) {
+        prev_bullet_colon = 1
+      } else {
+        prev_bullet_colon = 0
+      }
+
       print_wrapped(body, prefix1, prefix2, max_w)
       next
     }
 
-    /^[ \t]*\$ / {
+    /^[ \t]*(\$|(source|pkg|apt|git|tar|du|find|grep|cat|echo|log_[a-z]+|start_[a-z]+|stop_[a-z]+|clear_[a-z]+|mkdir|rm|chmod|chown|ss|netstat|ping|curl|wget)\b)/ || (prev_bullet_colon == 1 && $0 ~ /^[ \t]*[a-zA-Z0-9_\-\.\/]+/) {
       cmd = $0
-      sub(/^[ \t]*\$ /, "", cmd)
+      sub(/^[ \t]*\$?[ \t]*/, "", cmd)
       cmd = format_inline(cmd)
       print_card_line("   \033[1;32m$\033[0m \033[1m" cmd "\033[0m")
       is_first = 0
       prev_line_empty = 0
       prev_was_cmd = 1
+      prev_bullet_colon = 1
       next
     }
 
@@ -625,6 +637,7 @@ _ai_render() {
       print_card_line("   \033[2;3m# " cmt "\033[0m")
       is_first = 0
       prev_line_empty = 0
+      prev_was_cmd = 1
       next
     }
 
@@ -634,6 +647,7 @@ _ai_render() {
         prev_line_empty = 1
       }
       prev_was_cmd = 0
+      prev_bullet_colon = 0
       next
     }
 
@@ -641,6 +655,7 @@ _ai_render() {
       is_first = 0
       prev_line_empty = 0
       prev_was_cmd = 0
+      prev_bullet_colon = 0
       print_wrapped($0, "", "", max_w)
     }
 
@@ -658,7 +673,7 @@ _ai_render() {
   local line_count
   line_count=$(wc -l <<< "$formatted")
 
-  if ((line_count > term_lines)) && [[ -t 1 && "${AI_RENDER_PAGER:-1}" == "1" ]] && command -v less > /dev/null 2>&1; then
+  if ((line_count > term_lines)) && [[ -t 1 && "${AI_RENDER_PAGER:-0}" == "1" ]] && command -v less > /dev/null 2>&1; then
     print -r -- "$formatted" | less -R -F -X
   else
     print -r -- "$formatted"
