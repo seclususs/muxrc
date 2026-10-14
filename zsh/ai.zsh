@@ -826,7 +826,7 @@ FIX: <single-line shell command using 'pkg' if package is needed>"
   fi
 }
 
-alias ??='cmd-fix'
+alias '??'='cmd-fix'
 
 #####################
 # Context file reader
