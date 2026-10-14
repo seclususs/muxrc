@@ -47,7 +47,7 @@ _ai_mask_key() {
     return 0
   fi
   if ((${#raw} > 10)); then
-    print "${raw[1,6]}...${raw[-4,-1]}"
+    print -r -- "${raw[1,6]}...${raw[-4,-1]}"
   else
     print "configured"
   fi
@@ -169,7 +169,7 @@ ai-toggle() {
 
   export AI_ENABLED="$target"
   export AI_AUTOCORRECT_ENABLED="$target"
-  print -u2 "$msg"
+  print -u2 -- "$msg"
 }
 
 ###################
@@ -429,9 +429,9 @@ _ai_render() {
   line_count=$(wc -l <<< "$formatted")
 
   if ((line_count > lines)) && [[ -t 1 ]] && command -v less > /dev/null 2>&1; then
-    print -r "$formatted" | less -R -F -X
+    print -r -- "$formatted" | less -R -F -X
   else
-    print -r "$formatted"
+    print -r -- "$formatted"
   fi
 }
 
@@ -444,9 +444,9 @@ _ai_query_api() {
   local enable_search="${2:-0}"
   local silent="${3:-0}"
   local model="${GEMINI_MODEL:-$_ai_default_model}"
-  local timeout=15
+  local timeout=35
   ((silent == 1)) && timeout=6
-  ((enable_search == 1)) && timeout=30
+  ((enable_search == 1)) && timeout=45
 
   local payload
   if ((enable_search == 1)); then
@@ -537,7 +537,7 @@ _ai_query_api() {
     return 1
   fi
 
-  print -r "$parsed_output"
+  print -r -- "$parsed_output"
 }
 
 ####################
@@ -575,7 +575,7 @@ Rules: Single-line plain text only. No markdown, no quotes, no explanation."
 
   local upper_sugg="${(U)suggestion}"
   if [[ -n "$suggestion" && "$suggestion" != "$failed" && "$upper_sugg" != IGNORE* ]]; then
-    print -r "$suggestion"
+    print -r -- "$suggestion"
   fi
 }
 
@@ -869,16 +869,16 @@ _ai_read_file_content() {
     if ((total_lines > 50)); then
       local offset=$((total_lines - 50))
       tail_content=$(tail -n 50 "$target" 2> /dev/null | awk -v offset="$offset" '{if (length($0) > 500) $0 = substr($0, 1, 500) "... [truncated]"; printf "%4d: %s\n", offset + NR, $0}')
-      print -r "File: $target (truncated: ${size} bytes, ${total_lines} lines)"$'\n'"--- HEAD (lines 1-50) ---"$'\n'"${head_content}"$'\n'"... [middle content skipped for context efficiency] ..."$'\n'"--- TAIL (last 50 lines) ---"$'\n'"${tail_content}"$'\n'"--- END ---"
+      print -r -- "File: $target (truncated: ${size} bytes, ${total_lines} lines)"$'\n'"--- HEAD (lines 1-50) ---"$'\n'"${head_content}"$'\n'"... [middle content skipped for context efficiency] ..."$'\n'"--- TAIL (last 50 lines) ---"$'\n'"${tail_content}"$'\n'"--- END ---"
     else
-      print -r "File: $target (truncated: ${size} bytes, ${total_lines} lines)"$'\n'"--- CONTENT (first 50 lines) ---"$'\n'"${head_content}"$'\n'"--- END ---"
+      print -r -- "File: $target (truncated: ${size} bytes, ${total_lines} lines)"$'\n'"--- CONTENT (first 50 lines) ---"$'\n'"${head_content}"$'\n'"--- END ---"
     fi
     return 0
   fi
 
   local full_content
   full_content=$(awk '{if (length($0) > 500) $0 = substr($0, 1, 500) "... [truncated]"; printf "%4d: %s\n", NR, $0}' "$target" 2> /dev/null)
-  print -r "File: $target (full content, ${size} bytes):"$'\n'"---"$'\n'"${full_content}"$'\n'"---"
+  print -r -- "File: $target (full content, ${size} bytes):"$'\n'"---"$'\n'"${full_content}"$'\n'"---"
   return 0
 }
 
@@ -960,8 +960,11 @@ Rules:
 2. Tone: Actionable, factual, strictly concise. Flat bullets (-), raw commands ($ ...).
 3. Output: No markdown tables, no conversational filler or greetings."
 
+  local enable_search=1
+  [[ -n "$attached_context" ]] && enable_search=0
+
   local response
-  response=$(_ai_query_api "$prompt_text" 1)
+  response=$(_ai_query_api "$prompt_text" "$enable_search")
 
   if [[ -z "$response" ]]; then
     return 1
