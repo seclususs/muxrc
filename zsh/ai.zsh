@@ -921,9 +921,9 @@ cmd-ask() {
   if command -v git > /dev/null 2>&1 && git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
     local branch
     branch=$(git branch --show-current 2> /dev/null)
-    local status
-    status=$(git status -s 2> /dev/null | head -n 8 | tr '\n' '; ')
-    git_info="Git branch: ${branch:-detached}; Modified: ${status:-clean}"
+    local git_status
+    git_status=$(git status -s 2> /dev/null | head -n 8 | tr '\n' '; ')
+    git_info="Git branch: ${branch:-detached}; Modified: ${git_status:-clean}"
   fi
 
   local attached_context=""
