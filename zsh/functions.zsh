@@ -258,7 +258,7 @@ systemctl() {
     enable)
       if [ -d "$PREFIX/share/termux-services/$service" ]; then
         ln -sf "$PREFIX/share/termux-services/$service" "$PREFIX/var/service/"
-        echo "Created symlink /etc/systemd/system/multi-user.target.wants/${service}.service â†’ /lib/systemd/system/${service}.service."
+        echo "Created symlink /etc/systemd/system/multi-user.target.wants/${service}.service → /lib/systemd/system/${service}.service."
       else
         echo "Failed to enable unit: Unit file ${service}.service does not exist."
       fi
