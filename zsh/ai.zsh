@@ -505,6 +505,34 @@ _ai_render() {
       }
     }
 
+    function print_wrapped_cmd(cmd, max_w,   tokens, n, i, line, tok, line_len, tok_len, prefix1, prefix2) {
+      n = split(cmd, tokens, /[ \t]+/)
+      if (n == 0) return
+
+      prefix1 = "   \033[1;32m$\033[0m \033[1m"
+      prefix2 = "       \033[1m"
+
+      line = prefix1 tokens[1]
+      line_len = strip_ansi(line)
+
+      for (i = 2; i <= n; i++) {
+        tok = tokens[i]
+        if (tok == "") continue
+        tok_len = strip_ansi(tok)
+        if (line_len + 1 + tok_len + 2 > max_w) {
+          print_card_line(line " \\" "\033[0m")
+          line = prefix2 tok
+          line_len = strip_ansi(line)
+        } else {
+          line = line " " tok
+          line_len += 1 + tok_len
+        }
+      }
+      if (length(line) > 0) {
+        print_card_line(line "\033[0m")
+      }
+    }
+
     BEGIN {
       cols = (width > 0 ? width : 60)
       compact = (compact_mode > 0 ? 1 : 0)
@@ -618,11 +646,16 @@ _ai_render() {
       next
     }
 
+    # Filter out bare language lines like "bash", "sh", "zsh"
+    prev_bullet_colon == 1 && /^[ \t]*(bash|sh|zsh)[ \t]*$/ {
+      next
+    }
+
     /^[ \t]*(\$|(source|pkg|apt|git|tar|du|find|grep|cat|echo|log_[a-z]+|start_[a-z]+|stop_[a-z]+|clear_[a-z]+|mkdir|rm|chmod|chown|ss|netstat|ping|curl|wget)\b)/ || (prev_bullet_colon == 1 && $0 ~ /^[ \t]*[a-zA-Z0-9_\-\.\/]+/) {
       cmd = $0
       sub(/^[ \t]*\$?[ \t]*/, "", cmd)
       cmd = format_inline(cmd)
-      print_card_line("   \033[1;32m$\033[0m \033[1m" cmd "\033[0m")
+      print_wrapped_cmd(cmd, max_w)
       is_first = 0
       prev_line_empty = 0
       prev_was_cmd = 1
@@ -1202,7 +1235,7 @@ Files: ${project_files:-none}
 ${attached_context}Question: ${query:-Analyze or explain the attached input}
 Rules:
 1. Compatibility: Answers MUST work in Termux (Android). Use 'pkg' (not apt-get), no systemd/systemctl.
-2. Tone: Actionable, factual, strictly concise. Flat bullets (-), raw commands ($ ...).
+2. Tone: Actionable, factual, strictly concise. Flat bullets (-), commands formatted with '$ ...'. Break long commands with backslash (\).
 3. Output: No markdown tables, no conversational filler or greetings."
 
   local enable_search=1
