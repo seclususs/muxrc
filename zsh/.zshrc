@@ -26,6 +26,7 @@ setopt PUSHD_SILENT
 
 source "$ZSH_CONFIG_DIR/functions.zsh"
 source "$ZSH_CONFIG_DIR/tools.zsh"
+source "$ZSH_CONFIG_DIR/ai.zsh"
 source "$ZSH_CONFIG_DIR/aliases.zsh"
 source "$ZSH_CONFIG_DIR/prompt.zsh"
 source "$ZSH_CONFIG_DIR/plugins.zsh"

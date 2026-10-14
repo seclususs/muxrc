@@ -211,14 +211,14 @@ setup_gemini_env() {
     return 1
   fi
 
-  log_info "setting up gemini auto-correct..."
+  log_info "setting up gemini ai assistant..."
   if [[ -f "${HOME}/.gemini_ai_env" ]]; then
     log_prompt "gemini config exists. overwrite? [y/N]: "
     read -r reset_gemini
   fi
 
   if [[ "${reset_gemini:-}" =~ ^[Yy]$ ]]; then
-    log_prompt "setup gemini auto-correct? [y/N]: "
+    log_prompt "setup gemini ai assistant? [y/N]: "
     read -r enable_ai
     if [[ "${enable_ai:-}" =~ ^[Yy]$ ]]; then
       log_prompt "gemini api key: "
@@ -227,6 +227,7 @@ setup_gemini_env() {
       {
         echo "GEMINI_API_KEY=\"${gemini_key}\""
         echo "GEMINI_MODEL=\"gemini-3.5-flash-lite\""
+        echo "AI_ENABLED=1"
         echo "AI_AUTOCORRECT_ENABLED=1"
       } > "${HOME}/.gemini_ai_env"
       chmod 600 "${HOME}/.gemini_ai_env"

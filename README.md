@@ -29,7 +29,12 @@ Restart Termux after installation to apply changes.
 - `net-info` — Show your local IP and ready-to-use SSH connection command.
 - `clip-pick` — Search and paste from your clipboard history (requires `clip-watch`).
 - `ex <file>` — Extract any archive format (.zip, .tar, .7z, etc.) with a single command.
-- `ai-toggle` — Turn automatic AI typo correction on or off.
+- `cmd-do <intent>` — Convert natural language intent into shell commands.
+- `cmd-fix` (or `??`) — Diagnose previous runtime error (or piped error log) and suggest the fix.
+- `cmd-ask [question]` — Ask technical questions with auto file inspection, piped STDIN, and Google search.
+- `ai-toggle` — Turn Gemini AI assistant and auto-correction on or off.
+- `ai-model [name]` — View or switch the active Gemini AI model.
+- `ai-key` — Set or verify Gemini API key securely with masked input.
 - `muxrc-sync` — Update dotfiles and plugins to the latest version.
 - Keyboard macros — Swipe up on `ESC` to jump to `~/Workspace` and `END` to toggle wakelock.
 
