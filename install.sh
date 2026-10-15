@@ -263,12 +263,12 @@ main() {
   setup_storage
   enable_repos
   install_packages
-  setup_directories "${dotfiles_dir}" "${zsh_plugins_dir}"
 
   if [[ -f "${SCRIPT_DIR}/tools/sh/migrate.sh" ]]; then
     bash "${SCRIPT_DIR}/tools/sh/migrate.sh"
   fi
 
+  setup_directories "${dotfiles_dir}" "${zsh_plugins_dir}"
   setup_sudo_wrapper
   setup_sudo_config
   setup_zsh_plugins "${zsh_plugins_dir}"
