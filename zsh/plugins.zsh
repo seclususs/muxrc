@@ -2,7 +2,8 @@
 # Zsh extensions loader
 #######################
 
-ZSH_PLUGINS_DIR="$HOME/.zsh/plugins"
+ZSH_PLUGINS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins"
+[[ ! -d "$ZSH_PLUGINS_DIR" && -d "$HOME/.zsh/plugins" ]] && ZSH_PLUGINS_DIR="$HOME/.zsh/plugins"
 
 fpath=($ZSH_PLUGINS_DIR/zsh-completions/src $fpath)
 

@@ -80,16 +80,28 @@ rename-by-date() {
 ##############
 spoof-meta() {
   if [[ $# -lt 2 ]]; then
-    log_error "usage: spoof-meta <preset_name> <image_file>"
+    log_error "usage: spoof-meta <preset_name_or_path> <image_file>"
     return 1
   fi
 
-  local preset_name="$1"
+  local preset_input="$1"
   local image_file="$2"
-  local preset_file="${MUXRC_DIR}/tools/presets/${preset_name}.json"
+  local preset_file=""
 
-  if [[ ! -f "$preset_file" ]]; then
-    log_error "preset '$preset_name' not found"
+  local clean_name="${preset_input%.json}"
+  local user_preset="${XDG_CONFIG_HOME:-$HOME/.config}/muxrc/presets/${clean_name}.json"
+  local repo_preset="${MUXRC_DIR}/tools/presets/${clean_name}.json"
+
+  if [[ -f "$preset_input" ]]; then
+    preset_file="$preset_input"
+  elif [[ -f "$user_preset" ]]; then
+    preset_file="$user_preset"
+  elif [[ -f "$repo_preset" ]]; then
+    preset_file="$repo_preset"
+  fi
+
+  if [[ -z "$preset_file" || ! -f "$preset_file" ]]; then
+    log_error "preset '$preset_input' not found in presets or local path"
     return 1
   fi
 
@@ -293,8 +305,8 @@ tor-check() {
 clean-history() {
   log_info "cleaning history..."
 
-  local hfile="${HISTFILE:-$HOME/.zsh_history}"
-  rm -f "$hfile" "${hfile}.LOCK" 2> /dev/null
+  local hfile="${HISTFILE:-${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history}"
+  rm -f "$hfile" "${hfile}.LOCK" "$HOME/.zsh_history" "$HOME/.zsh_history.LOCK" "$HOME/.zsh_history_root" "$HOME/.zsh_history_root.LOCK" 2> /dev/null
 
   log_success "history cleaned. reloading shell..."
   exec zsh
@@ -307,8 +319,8 @@ muxrc-sync() {
   log_info "syncing muxrc..."
 
   local muxrc_dir="${MUXRC_DIR}"
-  local install_script="$muxrc_dir/install.sh"
-  local plugins_dir="$HOME/.zsh/plugins"
+  local plugins_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins"
+  [[ ! -d "$plugins_dir" && -d "$HOME/.zsh/plugins" ]] && plugins_dir="$HOME/.zsh/plugins"
   local old_hash=""
   local new_hash=""
 
@@ -327,6 +339,11 @@ muxrc-sync() {
   else
     stop_spinner "error" "failed to pull repository."
     return 1
+  fi
+
+  if [[ -f "$muxrc_dir/tools/sh/migrate.sh" ]]; then
+    log_info "checking migrations..."
+    bash "$muxrc_dir/tools/sh/migrate.sh"
   fi
 
   if [[ -f "$muxrc_dir/tools/sh/sync-plugins.sh" ]]; then

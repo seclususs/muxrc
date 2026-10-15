@@ -12,7 +12,8 @@ check_dependencies() {
 }
 
 ensure_proxychains_config() {
-  local opsec_dir="${1:-${HOME}/.muxrc/run}"
+  local cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/muxrc"
+  local opsec_dir="${1:-${cache_dir}/run}"
   local run_pconf="${opsec_dir}/proxychains.conf"
   local user_pconf_dir="${HOME}/.proxychains"
   local user_pconf="${user_pconf_dir}/proxychains.conf"
@@ -278,7 +279,8 @@ check_tor_connection() {
 
 main() {
   local action="${1:-start}"
-  local opsec_dir="${HOME}/.muxrc/run"
+  local cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/muxrc"
+  local opsec_dir="${cache_dir}/run"
   local torrc="${opsec_dir}/torrc"
   local tor_data="${opsec_dir}/tor_data"
   local pid_file="${opsec_dir}/tor.pid"

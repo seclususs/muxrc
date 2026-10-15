@@ -21,7 +21,7 @@ sudo() {
     return 0
   fi
 
-  local _sudo_cache_dir="$HOME/.cache/muxrc"
+  local _sudo_cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/muxrc"
   local _sudo_ts_file="$_sudo_cache_dir/sudo_ts"
 
   if [[ "$1" == "-k" || "$1" == "-K" ]]; then
@@ -44,7 +44,9 @@ sudo() {
     return $?
   fi
 
-  local HASH_FILE="$HOME/.sudo_hash"
+  local _sudo_cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/muxrc"
+  local HASH_FILE="$_sudo_cfg_dir/sudo_hash"
+  [[ ! -f "$HASH_FILE" && -f "$HOME/.sudo_hash" ]] && HASH_FILE="$HOME/.sudo_hash"
   local SUDO_HASH=""
   [[ -f "$HASH_FILE" ]] && SUDO_HASH=$(< "$HASH_FILE" 2> /dev/null)
 
@@ -195,7 +197,9 @@ su() {
     fi
   fi
 
-  local HASH_FILE="$HOME/.sudo_hash"
+  local _sudo_cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/muxrc"
+  local HASH_FILE="$_sudo_cfg_dir/sudo_hash"
+  [[ ! -f "$HASH_FILE" && -f "$HOME/.sudo_hash" ]] && HASH_FILE="$HOME/.sudo_hash"
   local SUDO_HASH=""
   [[ -f "$HASH_FILE" ]] && SUDO_HASH=$(< "$HASH_FILE" 2> /dev/null)
 
@@ -218,7 +222,7 @@ su() {
     return 1
   fi
 
-  local _sudo_cache_dir="$HOME/.cache/muxrc"
+  local _sudo_cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/muxrc"
   local _sudo_ts_file="$_sudo_cache_dir/sudo_ts"
   if [[ "$EUID" -ne 0 ]]; then
     mkdir -p "$_sudo_cache_dir" 2> /dev/null
@@ -398,7 +402,7 @@ notify-task() {
 ###########################
 # Clipboard history helpers
 ###########################
-CLIP_HISTORY_FILE="$HOME/.cache/clip_history.log"
+CLIP_HISTORY_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/muxrc/clip_history.log"
 
 clip-save() {
   mkdir -p "${CLIP_HISTORY_FILE:h}"
@@ -423,7 +427,7 @@ clip-pick() {
 ########################
 # Safe trash and untrash
 ########################
-TRASH_DIR="$HOME/.trash"
+TRASH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/Trash"
 
 trash() {
   mkdir -p "$TRASH_DIR"
@@ -438,8 +442,17 @@ trash() {
 }
 
 untrash() {
-  local item=$(ls -1t "$TRASH_DIR" 2> /dev/null | fzf --prompt="restore> ") || return
-  [[ -n "$item" ]] && mv -- "$TRASH_DIR/$item" "./${item%.*}"
+  local search_dirs=()
+  [[ -d "$TRASH_DIR" ]] && search_dirs+=("$TRASH_DIR")
+  [[ -d "$HOME/.trash" && "$HOME/.trash" != "$TRASH_DIR" ]] && search_dirs+=("$HOME/.trash")
+  local item=$(ls -1t "${search_dirs[@]}" 2> /dev/null | fzf --prompt="restore> ") || return
+  if [[ -n "$item" ]]; then
+    if [[ -f "$TRASH_DIR/$item" ]]; then
+      mv -- "$TRASH_DIR/$item" "./${item%.*}"
+    elif [[ -f "$HOME/.trash/$item" ]]; then
+      mv -- "$HOME/.trash/$item" "./${item%.*}"
+    fi
+  fi
 }
 
 #####################

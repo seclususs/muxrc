@@ -6,10 +6,15 @@ ZSH_CONFIG_DIR="${ZSH_CONFIG_DIR:-$HOME/muxrc/zsh}"
 
 source "$ZSH_CONFIG_DIR/env.zsh"
 
+local _zsh_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/zsh"
+[[ ! -d "$_zsh_state_dir" ]] && mkdir -p "$_zsh_state_dir"
+
 if [[ "$EUID" -eq 0 ]]; then
-  HISTFILE="$HOME/.zsh_history_root"
+  HISTFILE="$_zsh_state_dir/history_root"
+  [[ ! -f "$HISTFILE" && -f "$HOME/.zsh_history_root" ]] && mv "$HOME/.zsh_history_root" "$HISTFILE" 2> /dev/null
 else
-  HISTFILE="$HOME/.zsh_history"
+  HISTFILE="$_zsh_state_dir/history"
+  [[ ! -f "$HISTFILE" && -f "$HOME/.zsh_history" ]] && mv "$HOME/.zsh_history" "$HISTFILE" 2> /dev/null
 fi
 
 HISTSIZE=10000

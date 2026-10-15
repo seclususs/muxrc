@@ -122,8 +122,11 @@ decrypt_target_file() {
 main() {
   local mode="--encrypt"
   local target_file=""
-  local output_file=""
-  local vault_dir="${HOME}/.vault"
+  local data_dir="${XDG_DATA_HOME:-${HOME}/.local/share}/muxrc"
+  local vault_dir="${data_dir}/vault"
+  if [[ ! -d "${vault_dir}" && -d "${HOME}/.vault" ]]; then
+    vault_dir="${HOME}/.vault"
+  fi
 
   if [[ "${1:-}" == "--decrypt" || "${1:-}" == "-d" ]]; then
     mode="--decrypt"

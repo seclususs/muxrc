@@ -12,7 +12,8 @@ check_dependencies() {
 }
 
 sync_plugins() {
-  local plugins_dir="${1:-${HOME}/.zsh/plugins}"
+  local data_dir="${XDG_DATA_HOME:-${HOME}/.local/share}"
+  local plugins_dir="${1:-${data_dir}/zsh/plugins}"
 
   mkdir -p "${plugins_dir}"
 

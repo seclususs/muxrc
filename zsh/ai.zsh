@@ -2,8 +2,11 @@
 # AI Assistant Module
 #####################
 
-typeset -g _ai_env="$HOME/.gemini_ai_env"
-typeset -g _ai_cooldown="$HOME/.cache/gemini_cooldown"
+typeset -g _ai_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/muxrc"
+typeset -g _ai_cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/muxrc"
+typeset -g _ai_env="$_ai_config_dir/ai.env"
+[[ ! -f "$_ai_env" && -f "$HOME/.gemini_ai_env" ]] && _ai_env="$HOME/.gemini_ai_env"
+typeset -g _ai_cooldown="$_ai_cache_dir/gemini_cooldown"
 typeset -g _ai_default_model="gemini-3.5-flash-lite"
 typeset -g _gemini_env="$_ai_env"
 typeset -g _gemini_cooldown="$_ai_cooldown"
@@ -102,7 +105,7 @@ _ai_gate_check() {
 
   if [[ -z "${GEMINI_API_KEY-}" ]]; then
     if ((silent == 0)); then
-      print -u2 "gemini api key not found. set GEMINI_API_KEY in ~/.gemini_ai_env"
+      print -u2 "gemini api key not found. set GEMINI_API_KEY in ~/.config/muxrc/ai.env (or run: ai-key)"
     fi
     return 1
   fi
@@ -141,12 +144,25 @@ _ai_check_cooldown() {
   return 0
 }
 
+_ai_ensure_env_migrated() {
+  if [[ "$_ai_env" != "$_ai_config_dir/ai.env" ]]; then
+    mkdir -p "$_ai_config_dir" 2> /dev/null
+    if [[ -f "$_ai_env" && ! -f "$_ai_config_dir/ai.env" ]]; then
+      cp -p "$_ai_env" "$_ai_config_dir/ai.env" 2> /dev/null
+      chmod 600 "$_ai_config_dir/ai.env" 2> /dev/null
+    fi
+    _ai_env="$_ai_config_dir/ai.env"
+    _gemini_env="$_ai_env"
+  fi
+  mkdir -p "${_ai_env:h}" 2> /dev/null
+  touch "$_ai_env" 2> /dev/null
+}
+
 ##################
 # AI master toggle
 ##################
 ai-toggle() {
-  mkdir -p "${_ai_env:h}" 2> /dev/null
-  touch "$_ai_env" 2> /dev/null
+  _ai_ensure_env_migrated
   _ai_load
 
   local current="${AI_ENABLED:-${AI_AUTOCORRECT_ENABLED:-0}}"
@@ -186,8 +202,7 @@ ai-model() {
   fi
 
   local target="$1"
-  mkdir -p "${_ai_env:h}" 2> /dev/null
-  touch "$_ai_env" 2> /dev/null
+  _ai_ensure_env_migrated
 
   if grep -q "^[[:space:]]*GEMINI_MODEL=" "$_ai_env" 2> /dev/null; then
     sed -i "s/^[[:space:]]*GEMINI_MODEL=.*/GEMINI_MODEL=\"${target}\"/" "$_ai_env"
@@ -262,8 +277,7 @@ ai-key() {
     print -u2 ""
   fi
 
-  mkdir -p "${_ai_env:h}" 2> /dev/null
-  touch "$_ai_env" 2> /dev/null
+  _ai_ensure_env_migrated
 
   local escaped_key="${new_key//\\/\\\\}"
   escaped_key="${escaped_key//\//\\/}"
@@ -291,7 +305,7 @@ _ai_start_phased_spinner() {
 
   _ai_stop_phased_spinner
 
-  _AI_PHASE_FILE="$HOME/.cache/ai_phase_$$"
+  _AI_PHASE_FILE="$_ai_cache_dir/ai_phase_$$"
   mkdir -p "${_AI_PHASE_FILE:h}" 2> /dev/null
   print "$initial_phase" > "$_AI_PHASE_FILE" 2> /dev/null
 
@@ -328,7 +342,7 @@ _ai_stop_phased_spinner() {
     rm -f "$_AI_PHASE_FILE" 2> /dev/null
     _AI_PHASE_FILE=""
   fi
-  rm -f "$HOME/.cache/ai_phase_$$" 2> /dev/null
+  rm -f "$_ai_cache_dir/ai_phase_$$" "$HOME/.cache/ai_phase_$$" 2> /dev/null
   if [[ -n "$_AI_SPINNER_PID" ]]; then
     kill -9 "$_AI_SPINNER_PID" 2> /dev/null
     wait "$_AI_SPINNER_PID" 2> /dev/null

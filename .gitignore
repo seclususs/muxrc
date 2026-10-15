@@ -4,6 +4,10 @@
 .zsh_history
 .gemini_ai_env
 
+.config/muxrc/ai.env
+.config/muxrc/sudo_hash
+.config/muxrc/presets/local-*.json
+
 tools/presets/local-*.json
 *.enc
 .nomedia

@@ -143,7 +143,8 @@ extract_data() {
 }
 
 main() {
-  local opsec_dir="${HOME}/.muxrc/run"
+  local cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/muxrc"
+  local opsec_dir="${cache_dir}/run"
   local extract_dir="${HOME}/muxrc-out/extracted"
   local opt=""
 

@@ -66,13 +66,21 @@ setup_directories() {
     return 1
   fi
 
+  mkdir -p "${HOME}/.config/muxrc/presets"
+  mkdir -p "${HOME}/.config/sudo"
+  mkdir -p "${HOME}/.cache/muxrc/run"
+  mkdir -p "${HOME}/.local/share/muxrc/vault"
+  mkdir -p "${HOME}/.local/share/Trash"
   mkdir -p "${zsh_plugins_dir}"
-  mkdir -p "${HOME}/.termux"
-  mkdir -p "${dotfiles_dir}/nano"
+  mkdir -p "${HOME}/.local/state/zsh"
+  mkdir -p "${HOME}/.termux/boot"
   mkdir -p "${HOME}/muxrc-out/stripped"
   mkdir -p "${HOME}/muxrc-out/decoys"
   mkdir -p "${HOME}/muxrc-out/extracted"
-  mkdir -p "${HOME}/.termux/boot"
+
+  if [[ -f "${dotfiles_dir}/tools/presets/iphone-nyc.json" && ! -f "${HOME}/.config/muxrc/presets/iphone-nyc.json" ]]; then
+    cp "${dotfiles_dir}/tools/presets/iphone-nyc.json" "${HOME}/.config/muxrc/presets/iphone-nyc.json"
+  fi
 
   log_info "muting termux motd..."
   touch "${HOME}/.hushlogin"
@@ -82,9 +90,13 @@ setup_sudo_wrapper() {
   local reset_sudo="y"
   local sudo_pass=""
   local sudo_pass_confirm=""
+  local sudo_hash_dir="${HOME}/.config/muxrc"
+  local sudo_hash_file="${sudo_hash_dir}/sudo_hash"
+
+  mkdir -p "${sudo_hash_dir}"
 
   log_info "setting up sudo wrapper..."
-  if [[ -f "${HOME}/.sudo_hash" ]]; then
+  if [[ -f "${sudo_hash_file}" || -f "${HOME}/.sudo_hash" ]]; then
     log_prompt "sudo pass configured. overwrite? [y/N]: "
     read -r reset_sudo
   fi
@@ -98,8 +110,8 @@ setup_sudo_wrapper() {
     echo ""
 
     if [[ "${sudo_pass}" == "${sudo_pass_confirm}" ]]; then
-      echo -n "${sudo_pass}" | sha256sum | awk '{print $1}' > "${HOME}/.sudo_hash"
-      chmod 600 "${HOME}/.sudo_hash"
+      echo -n "${sudo_pass}" | sha256sum | awk '{print $1}' > "${sudo_hash_file}"
+      chmod 600 "${sudo_hash_file}"
       log_success "sudo hash generated."
     else
       log_error "passwords mismatch. please retry."
@@ -205,14 +217,18 @@ setup_gemini_env() {
   local reset_gemini="y"
   local enable_ai=""
   local gemini_key=""
+  local ai_config_dir="${HOME}/.config/muxrc"
+  local ai_env_file="${ai_config_dir}/ai.env"
 
   if [[ -z "${dotfiles_dir}" ]]; then
     log_error "dotfiles directory not specified."
     return 1
   fi
 
+  mkdir -p "${ai_config_dir}"
+
   log_info "setting up gemini ai assistant..."
-  if [[ -f "${HOME}/.gemini_ai_env" ]]; then
+  if [[ -f "${ai_env_file}" || -f "${HOME}/.gemini_ai_env" ]]; then
     log_prompt "gemini config exists. overwrite? [y/N]: "
     read -r reset_gemini
   fi
@@ -229,21 +245,18 @@ setup_gemini_env() {
         echo "GEMINI_MODEL=\"gemini-3.5-flash-lite\""
         echo "AI_ENABLED=1"
         echo "AI_AUTOCORRECT_ENABLED=1"
-      } > "${HOME}/.gemini_ai_env"
-      chmod 600 "${HOME}/.gemini_ai_env"
+      } > "${ai_env_file}"
+      chmod 600 "${ai_env_file}"
       log_success "gemini config saved."
     fi
   else
     log_warn "keeping existing gemini config."
   fi
-
-  grep -qxF '.gemini_ai_env' "${dotfiles_dir}/.gitignore" || echo '.gemini_ai_env' >> "${dotfiles_dir}/.gitignore"
 }
 
 main() {
   local dotfiles_dir="${HOME}/muxrc"
-  local zsh_dir="${HOME}/.zsh"
-  local zsh_plugins_dir="${zsh_dir}/plugins"
+  local zsh_plugins_dir="${XDG_DATA_HOME:-${HOME}/.local/share}/zsh/plugins"
 
   trap 'cleanup_spinner' EXIT
 
@@ -251,6 +264,11 @@ main() {
   enable_repos
   install_packages
   setup_directories "${dotfiles_dir}" "${zsh_plugins_dir}"
+
+  if [[ -f "${SCRIPT_DIR}/tools/sh/migrate.sh" ]]; then
+    bash "${SCRIPT_DIR}/tools/sh/migrate.sh"
+  fi
+
   setup_sudo_wrapper
   setup_sudo_config
   setup_zsh_plugins "${zsh_plugins_dir}"
