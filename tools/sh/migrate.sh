@@ -139,10 +139,41 @@ migrate_vault() {
 }
 
 cleanup_legacy_dirs() {
-  if [[ -d "${HOME}/.muxrc" ]]; then
-    rmdir "${HOME}/.muxrc/run" 2> /dev/null || true
-    rmdir "${HOME}/.muxrc" 2> /dev/null || true
+  local cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}"
+
+  if [[ -f "${cache_dir}/gemini_cooldown" ]]; then
+    rm -f "${cache_dir}/gemini_cooldown" 2> /dev/null || true
   fi
+
+  local legacy_clip="${cache_dir}/clip_history.log"
+  local new_clip="${cache_dir}/muxrc/clip_history.log"
+  if [[ -f "${legacy_clip}" ]]; then
+    mkdir -p "${cache_dir}/muxrc"
+    if [[ ! -f "${new_clip}" ]]; then
+      mv "${legacy_clip}" "${new_clip}"
+    else
+      rm -f "${legacy_clip}" 2> /dev/null || true
+    fi
+  fi
+
+  if [[ -f "${cache_dir}/sudo_ts" ]]; then
+    rm -f "${cache_dir}/sudo_ts" 2> /dev/null || true
+  fi
+
+  local pfile
+  for pfile in "${cache_dir}"/ai_phase_*; do
+    [[ -f "${pfile}" ]] && rm -f "${pfile}" 2> /dev/null || true
+  done
+
+  rm -f "${HOME}/.zsh_history.LOCK" "${HOME}/.zsh_history_root.LOCK" 2> /dev/null || true
+
+  if [[ -d "${HOME}/.muxrc" ]]; then
+    rm -rf "${HOME}/.muxrc" 2> /dev/null || true
+  fi
+
+  [[ -d "${HOME}/.zsh" ]] && rmdir "${HOME}/.zsh" 2> /dev/null || true
+  [[ -d "${HOME}/.trash" ]] && rmdir "${HOME}/.trash" 2> /dev/null || true
+  [[ -d "${HOME}/.vault" ]] && rmdir "${HOME}/.vault" 2> /dev/null || true
 }
 
 main() {
