@@ -447,9 +447,9 @@ untrash() {
   [[ -d "$HOME/.trash" && "$HOME/.trash" != "$TRASH_DIR" ]] && search_dirs+=("$HOME/.trash")
   local item=$(ls -1t "${search_dirs[@]}" 2> /dev/null | fzf --prompt="restore> ") || return
   if [[ -n "$item" ]]; then
-    if [[ -f "$TRASH_DIR/$item" ]]; then
+    if [[ -e "$TRASH_DIR/$item" ]]; then
       mv -- "$TRASH_DIR/$item" "./${item%.*}"
-    elif [[ -f "$HOME/.trash/$item" ]]; then
+    elif [[ -e "$HOME/.trash/$item" ]]; then
       mv -- "$HOME/.trash/$item" "./${item%.*}"
     fi
   fi

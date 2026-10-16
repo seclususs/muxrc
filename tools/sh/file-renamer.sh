@@ -54,33 +54,35 @@ build_unique_target_path() {
   local -n _seen_ref="${5}"
   local ext=""
   local base_dir
+  local base_name
   local new_name
-  local new_path
+  local _target_path
   local counter=1
 
   base_dir=$(dirname "${file}")
+  base_name=$(basename "${file}")
 
-  if [[ "${file}" == *.* ]]; then
-    ext="${file##*.}"
+  if [[ "${base_name}" == ?*.* ]]; then
+    ext="${base_name##*.}"
     new_name="${prefix}_${date_str}.${ext}"
   else
     new_name="${prefix}_${date_str}"
   fi
 
-  new_path="${base_dir}/${new_name}"
+  _target_path="${base_dir}/${new_name}"
 
-  while [[ -e "${new_path}" || -n "${_seen_ref[${new_path}]:-}" ]]; do
+  while [[ -e "${_target_path}" || -n "${_seen_ref[${_target_path}]:-}" ]]; do
     if [[ -n "${ext}" ]]; then
       new_name="${prefix}_${date_str}_${counter}.${ext}"
     else
       new_name="${prefix}_${date_str}_${counter}"
     fi
-    new_path="${base_dir}/${new_name}"
+    _target_path="${base_dir}/${new_name}"
     ((counter++))
   done
 
-  _seen_ref["${new_path}"]=1
-  _out_ref="${new_path}"
+  _seen_ref["${_target_path}"]=1
+  _out_ref="${_target_path}"
 }
 
 display_proposed_changes() {

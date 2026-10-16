@@ -73,6 +73,7 @@ encrypt_target_file() {
   else
     stop_spinner "error" "encryption failed."
     trap - EXIT
+    rm -f "${out_file}" 2> /dev/null || true
     return 1
   fi
 }
@@ -122,6 +123,7 @@ decrypt_target_file() {
 main() {
   local mode="--encrypt"
   local target_file=""
+  local output_file=""
   local data_dir="${XDG_DATA_HOME:-${HOME}/.local/share}/muxrc"
   local vault_dir="${data_dir}/vault"
   if [[ ! -d "${vault_dir}" && -d "${HOME}/.vault" ]]; then

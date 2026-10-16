@@ -80,7 +80,7 @@ rename-by-date() {
 ##############
 spoof-meta() {
   if [[ $# -lt 2 ]]; then
-    log_error "usage: spoof-meta <preset_name_or_path> <image_file>"
+    log_error "usage: spoof-meta <preset_name_or_path> <image_or_directory>"
     return 1
   fi
 
@@ -105,8 +105,8 @@ spoof-meta() {
     return 1
   fi
 
-  if [[ ! -f "$image_file" ]]; then
-    log_error "image file '$image_file' not found"
+  if [[ ! -e "$image_file" ]]; then
+    log_error "target '$image_file' not found"
     return 1
   fi
 

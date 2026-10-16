@@ -31,8 +31,8 @@ validate_cidr() {
 execute_arp_sweep() {
   local target_cidr="${1}"
 
-  log_info "target subnet: ${target_cidr}" >&2
-  log_info "initiating sweep..." >&2
+  log_info "target subnet: ${target_cidr}"
+  log_info "initiating sweep..."
   printf "%-15s | %-17s | %s\n" "ip" "mac" "vendor (host)"
 
   nmap -sn "${target_cidr}" | awk '
@@ -65,7 +65,7 @@ execute_arp_sweep() {
     }
 }'
 
-  log_success "sweep complete." >&2
+  log_success "sweep complete."
 }
 
 main() {

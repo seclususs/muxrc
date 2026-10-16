@@ -255,7 +255,7 @@ setup_gemini_env() {
 }
 
 main() {
-  local dotfiles_dir="${HOME}/muxrc"
+  local dotfiles_dir="${SCRIPT_DIR}"
   local zsh_plugins_dir="${XDG_DATA_HOME:-${HOME}/.local/share}/zsh/plugins"
 
   trap 'cleanup_spinner' EXIT
