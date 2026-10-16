@@ -83,7 +83,10 @@ embed_data() {
   fi
 
   if ! pass=$(prompt_passphrase_confirmed); then
-    [[ "${embed_opt}" == "1" && -f "${embed_file}" ]] && shred -u "${embed_file}" 2> /dev/null
+    if [[ "${embed_opt}" == "1" && -f "${embed_file}" ]]; then
+      shred -u "${embed_file}" 2> /dev/null || true
+      trap - EXIT INT TERM
+    fi
     return 1
   fi
 
@@ -98,6 +101,7 @@ embed_data() {
 
   if [[ "${embed_opt}" == "1" && -f "${embed_file}" ]]; then
     shred -u "${embed_file}"
+    trap - INT TERM
   fi
 }
 

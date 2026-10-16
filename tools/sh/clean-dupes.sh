@@ -151,6 +151,9 @@ main() {
 
   display_duplicates_and_collect_deletions "${tmp_dir}"
   confirm_and_delete "${tmp_dir}/to_delete.txt"
+
+  rm -rf "${tmp_dir}"
+  trap - EXIT
 }
 
 main "$@"

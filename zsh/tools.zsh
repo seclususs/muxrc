@@ -319,6 +319,7 @@ muxrc-sync() {
   log_info "syncing muxrc..."
 
   local muxrc_dir="${MUXRC_DIR}"
+  local install_script="${muxrc_dir}/install.sh"
   local plugins_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins"
   [[ ! -d "$plugins_dir" && -d "$HOME/.zsh/plugins" ]] && plugins_dir="$HOME/.zsh/plugins"
   local old_hash=""
