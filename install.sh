@@ -241,7 +241,7 @@ setup_gemini_env() {
       read -r -s gemini_key
       echo
       {
-        echo "GEMINI_API_KEY=\"${gemini_key}\""
+        printf 'GEMINI_API_KEY=%q\n' "${gemini_key}"
         echo "GEMINI_MODEL=\"gemini-3.5-flash-lite\""
         echo "AI_ENABLED=1"
         echo "AI_AUTOCORRECT_ENABLED=1"

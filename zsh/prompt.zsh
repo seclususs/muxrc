@@ -86,7 +86,7 @@ precmd_set_title() {
 precmd_functions+=(precmd_set_title)
 
 preexec_set_title() {
-  print -Pn "\e]2;%~: $1\a"
+  print -n -- $'\e]2;'"${(%):-%~}: ${(V)1}"$'\a'
 }
 preexec_functions+=(preexec_set_title)
 
