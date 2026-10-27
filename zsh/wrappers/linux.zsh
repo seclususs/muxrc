@@ -108,16 +108,32 @@ sudo() {
     return 0
   fi
 
+  local su_bin=""
+  if command -v su > /dev/null 2>&1; then
+    su_bin="su"
+  elif [[ -x /system/bin/su ]]; then
+    su_bin="/system/bin/su"
+  elif [[ -x /system/xbin/su ]]; then
+    su_bin="/system/xbin/su"
+  fi
+
+  local termux_prefix="${PREFIX}"
+  local env_vars="export PATH=\"$termux_prefix/bin:$termux_prefix/sbin:/system/bin:/system/xbin:\$PATH\"; export HOME=\"$HOME\"; export TERM=\"$TERM\"; export LANG=\"$LANG\"; unset LD_LIBRARY_PATH LD_PRELOAD; cd \"$PWD\";"
+
   if [[ "$1" == "su" || "$1" == "-s" || "$1" == "-i" ]]; then
     if [[ "$EUID" -eq 0 ]]; then
       print -u2 "sudo: already running as root (type 'exit' to return)"
       return 0
     fi
-    if whence -p sudo > /dev/null 2>&1; then
-      command sudo --shell=zsh su
+    local root_shell="${SHELL:-$termux_prefix/bin/zsh}"
+    local shell_cmd="exec $root_shell"
+    [[ "$1" == "-i" ]] && shell_cmd="exec $root_shell -l"
+
+    if [[ -n "$su_bin" ]]; then
+      command "$su_bin" -c "$env_vars $shell_cmd"
       return $?
-    elif command -v su > /dev/null 2>&1; then
-      command su -c "exec zsh"
+    elif whence -p sudo > /dev/null 2>&1; then
+      command sudo --shell=zsh su
       return $?
     else
       print -u2 "su: device is not rooted"
@@ -125,21 +141,32 @@ sudo() {
     fi
   fi
 
-  if whence -p sudo > /dev/null 2>&1; then
-    command sudo "$@"
-    return $?
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -E | --preserve-env) shift ;;
+      -u | --user) shift 2 ;;
+      --) shift; break ;;
+      *) break ;;
+    esac
+  done
+
+  if [[ $# -eq 0 ]]; then
+    print -u2 "usage: sudo -h | -K | -k | -V"
+    print -u2 "usage: sudo -v [-AknS] [-g group] [-h host] [-p prompt] [-u user]"
+    print -u2 "usage: sudo -l [-AknS] [-g group] [-h host] [-p prompt] [-U user] [-u user] [command]"
+    return 1
   fi
 
-  local termux_prefix="${PREFIX}"
-  local env_vars="export PATH=/system/bin:/system/xbin:$PATH:$termux_prefix/bin; export HOME=\"$HOME\"; export TERM=\"$TERM\"; export LANG=\"$LANG\"; unset LD_LIBRARY_PATH LD_PRELOAD; cd \"$PWD\";"
-
-  if command -v su > /dev/null 2>&1; then
+  if [[ -n "$su_bin" ]]; then
     if [[ "$1" =~ ^(pm|cmd|am|svc|settings|content|input|dpm)$ ]]; then
-      print -r "$env_vars ${(q)@}" | command su
+      print -r "$env_vars ${(q)@}" | command "$su_bin"
     else
-      command su -c "$env_vars exec ${(q)@}"
+      command "$su_bin" -c "$env_vars exec ${(q)@}"
       return $?
     fi
+  elif whence -p sudo > /dev/null 2>&1; then
+    command sudo "$@"
+    return $?
   else
     print -u2 "sudo: no root provider available on this device"
     return 1
@@ -150,18 +177,43 @@ sudo() {
 # Root switch wrapper
 #####################
 su() {
+  if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    cat << 'EOF'
+Usage:
+ su [options] [-] [<user> [<argument>...]]
+
+Change the effective user ID and group ID to that of <user>.
+A mere - implies -l. If <user> is not given, root is assumed.
+
+Options:
+ -m, -p, --preserve-environment  do not reset environment variables
+ -g, --group <group>             specify the primary group
+ -G, --supp-group <group>        specify a supplemental group
+ -, -l, --login                  make the shell a login shell
+ -c, --command <command>         pass a single command to the shell with -c
+ --session-command <command>     pass a single command to the shell with -c
+                                   and do not create a new session
+ -f, --fast                      pass -f to the shell (for csh or tcsh)
+ -s, --shell <shell>             run <shell> if /etc/shells allows it
+ -P, --pty                       create a new pseudo-terminal
+
+ -h, --help                      display this help
+ -V, --version                   display version
+
+For more details see su(1).
+EOF
+    return 0
+  fi
+
+  if [[ "$1" == "-V" || "$1" == "--version" ]]; then
+    print "su from util-linux 2.39.3"
+    return 0
+  fi
+
   if [[ "$EUID" -eq 0 ]]; then
-    if [[ $# -eq 0 || "$1" == "root" || "$1" == "-" || "$1" == "-l" ]]; then
+    if [[ $# -eq 0 || "$1" == "root" || "$1" == "-" || "$1" == "-l" || "$1" == "--login" ]]; then
       print -u2 "su: already running as root (type 'exit' to return)"
       return 0
-    else
-      if command -v su > /dev/null 2>&1; then
-        command su "$@"
-        return $?
-      else
-        print -u2 "su: device is not rooted"
-        return 1
-      fi
     fi
   fi
 
@@ -180,7 +232,9 @@ su() {
   local _sudo_ts_file="$_sudo_cache_dir/sudo_ts"
   local authenticated=0
 
-  if [[ -f "$_sudo_ts_file" ]]; then
+  if [[ "$EUID" -eq 0 ]]; then
+    authenticated=1
+  elif [[ -f "$_sudo_ts_file" ]]; then
     local last_auth
     last_auth=$(< "$_sudo_ts_file" 2> /dev/null)
     if [[ -n "$last_auth" && "$last_auth" =~ ^[0-9]+$ ]]; then
@@ -206,33 +260,84 @@ su() {
       return 1
     fi
 
-    mkdir -p "$_sudo_cache_dir" 2> /dev/null
-    print "$EPOCHSECONDS" > "$_sudo_ts_file" 2> /dev/null
-    chmod 600 "$_sudo_ts_file" 2> /dev/null
-  fi
-
-  if [[ $# -gt 0 && "$1" != "root" && "$1" != "-" && "$1" != "-l" ]]; then
-    if whence -p sudo > /dev/null 2>&1; then
-      command sudo "$@"
-      return $?
-    elif command -v su > /dev/null 2>&1; then
-      command su "$@"
-      return $?
-    else
-      print -u2 "su: device is not rooted"
-      return 1
+    if [[ "$EUID" -ne 0 ]]; then
+      mkdir -p "$_sudo_cache_dir" 2> /dev/null
+      print "$EPOCHSECONDS" > "$_sudo_ts_file" 2> /dev/null
+      chmod 600 "$_sudo_ts_file" 2> /dev/null
     fi
   fi
 
-  if whence -p sudo > /dev/null 2>&1; then
-    command sudo --shell=zsh su
-    return $?
-  elif command -v su > /dev/null 2>&1; then
-    command su -c "exec zsh"
-    return $?
-  else
+  local su_bin=""
+  if command -v su > /dev/null 2>&1; then
+    su_bin="su"
+  elif [[ -x /system/bin/su ]]; then
+    su_bin="/system/bin/su"
+  elif [[ -x /system/xbin/su ]]; then
+    su_bin="/system/xbin/su"
+  fi
+
+  if [[ -z "$su_bin" ]] && ! whence -p sudo > /dev/null 2>&1; then
     print -u2 "su: device is not rooted"
     return 1
+  fi
+
+  local is_login=0
+  if [[ "$1" == "-" || "$1" == "-l" || "$1" == "--login" ]]; then
+    is_login=1
+    shift
+  fi
+
+  if [[ "$1" == "root" || "$1" == "${USER:-$(whoami)}" ]]; then
+    shift
+  fi
+
+  local termux_prefix="${PREFIX}"
+  local env_vars="export PATH=\"$termux_prefix/bin:$termux_prefix/sbin:/system/bin:/system/xbin:\$PATH\"; export HOME=\"$HOME\"; export TERM=\"$TERM\"; export LANG=\"$LANG\"; unset LD_LIBRARY_PATH LD_PRELOAD; cd \"$PWD\";"
+  local root_shell="${SHELL:-$termux_prefix/bin/zsh}"
+
+  if [[ "$1" == "-c" || "$1" == "--command" || "$1" == "--command="* ]]; then
+    local cmd_str=""
+    if [[ "$1" == "--command="* ]]; then
+      cmd_str="${1#--command=}"
+      shift
+    else
+      shift
+      if [[ $# -eq 0 ]]; then
+        print -u2 "su: option requires an argument -- 'c'"
+        print -u2 "Try 'su --help' for more information."
+        return 1
+      fi
+      cmd_str="$*"
+    fi
+
+    if [[ -n "$su_bin" ]]; then
+      command "$su_bin" -c "$env_vars $cmd_str"
+      return $?
+    else
+      command sudo zsh -c "$env_vars $cmd_str"
+      return $?
+    fi
+  fi
+
+  if [[ $# -eq 0 ]]; then
+    local shell_cmd="exec $root_shell"
+    ((is_login)) && shell_cmd="exec $root_shell -l"
+
+    if [[ -n "$su_bin" ]]; then
+      command "$su_bin" -c "$env_vars $shell_cmd"
+      return $?
+    else
+      command sudo --shell=zsh su
+      return $?
+    fi
+  fi
+
+  if [[ -n "$su_bin" ]]; then
+    command "$su_bin" -c "$env_vars exec ${(q)@}"
+    return $?
+  else
+    command sudo "$@"
+    return $?
   fi
 }
 
@@ -246,7 +351,7 @@ systemctl() {
   fi
 
   local action="$1"
-  local service="$2"
+  local service="${2%.service}"
 
   case "$action" in
     start) command sv up "$service" 2> /dev/null ;;
