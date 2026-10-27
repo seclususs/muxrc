@@ -1292,29 +1292,17 @@ Rules:
     return 0
   fi
 
-  local has_prev=0
-  if [[ -n "$cause" ]]; then
-    _ai_say cause "$cause"
-    has_prev=1
-  fi
-
-  if [[ -n "$note" ]]; then
-    ((has_prev)) && print -u2 ""
-    _ai_say note "$note"
-    has_prev=1
-  fi
+  [[ -n "$cause" ]] && _ai_say cause "$cause"
+  [[ -n "$note" ]] && _ai_say note "$note"
 
   local used_model
   used_model=$(< "$_ai_cache_dir/last_model" 2> /dev/null)
   if [[ -n "$used_model" && "$used_model" != "${GEMINI_MODEL:-$_ai_default_model}" ]]; then
-    ((has_prev)) && print -u2 ""
     _ai_say model "$used_model (fallback)"
-    has_prev=1
   fi
 
   [[ -n "$fix_cmd" ]] || return 0
 
-  ((has_prev)) && print -u2 ""
   _ai_say fix "$fix_cmd"
   _ai_confirm_run cmd-fix "$fix_cmd"
 }
