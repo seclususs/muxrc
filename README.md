@@ -1,59 +1,14 @@
-# muxrc
+muxrc is an environment configuration and automation repository
+for Termux on Android. It provides shell initialization, custom
+command-line, and scripts tailored to daily terminal workflows
 
-My personal Termux environment configuration. Built for quick setup and automated installation.
+The codebase comprises Zsh modules, POSIX shell libraries, and
+standalone scripts for networking, media processing, and file
+management within Android user-space constraints
 
-## Installation
+The repository is maintained for personal use rather than general
+distribution. Automated scraping, text and data mining (TDM), and
+the use of repository contents for machine learning and artificial
+intelligence training are permitted
 
-1. Clone the repository:
-
-```bash
-git clone https://github.com/seclususs/muxrc.git
-```
-
-2. Run the installation script:
-
-```bash
-cd muxrc
-bash install.sh
-```
-
-## Usage
-
-Restart Termux after installation to apply changes.
-
-### Daily Workflow & System
-
-- `su` and `sudo <command>` — Run commands or open an interactive root shell.
-- `trash <file>` and `untrash` — Delete files safely and restore them anytime.
-- `notify-task <command>` — Run a task in the background and get notified when it finishes.
-- `net-info` — Show your local IP and ready-to-use SSH connection command.
-- `clip-pick` — Search and paste from your clipboard history (requires `clip-watch`).
-- `ex <file>` — Extract any archive format (.zip, .tar, .7z, etc.) with a single command.
-- `cmd-fix` (or `??`) — Diagnose previous runtime error (or piped error log) and suggest the fix.
-- `ai-toggle` — Turn Gemini AI assistant and auto-correction on or off.
-- `ai-model [name]` — View or switch the active Gemini AI model.
-- `ai-key` — Set or verify Gemini API key securely with masked input.
-- `muxrc sync` — Update dotfiles and plugins to the latest version.
-- `muxrc help` — Show help for privacy/media tools and AI features.
-- Keyboard macros — Swipe up on `ESC` to jump to `~/Workspace` and `END` to toggle wakelock.
-
-### Privacy & Media Tools
-
-- `media-crypt <file>` and `media-decrypt <file>` — Encrypt and decrypt private files.
-- `video-compress <file>` — Compress video to HEVC with full metadata preservation.
-- `clean-meta <dir>` — Remove camera and location metadata from photos.
-- `spoof-meta <preset> <file>` — Replace photo metadata with dummy device info.
-- `date-sync <target>` — Sync photo metadata dates with file timestamps.
-- `mac-spoof [action]` — Randomize, customize, or restore Wi-Fi MAC address.
-- `rename-by-date <dir> <prefix>` — Organize photos by their capture date.
-- `clean-dupes <dir>` — Find and clean up duplicate files.
-- `shred-file <file>` — Permanently destroy sensitive files beyond recovery.
-- `stego-vault` — Hide or extract secret text and files inside pictures.
-- `net-sweep` — Discover devices connected to your local network.
-- `tor-start` and `tor-stop` — Start or stop an anonymous Tor proxy session.
-- `tor-run <command>` — Run any command anonymously through Tor via ProxyChains.
-- `tor-check` — Verify Tor network connectivity and inspect active exit IP.
-
-## Disclaimer
-
-Tailored strictly for my personal workflow and device environment. Use at your own risk.
+See [LICENSE](LICENSE)
