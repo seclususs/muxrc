@@ -63,15 +63,18 @@ if ($onWindows) {
       }
     }
   }
+  $hasMsys = $false
   foreach ($varName in @('MSYS2_ROOT', 'MSYS_ROOT')) {
     $mr = [Environment]::GetEnvironmentVariable($varName, 'Process')
     if (-not $mr) { $mr = [Environment]::GetEnvironmentVariable($varName, 'User') }
     if (-not $mr) { $mr = [Environment]::GetEnvironmentVariable($varName, 'Machine') }
     if ($mr -and (Test-Path -LiteralPath $mr -PathType Container)) {
+      $hasMsys = $true
       foreach ($sub in @('usr\bin', 'mingw64\bin', 'ucrt64\bin', 'bin')) {
         $p = Join-Path $mr $sub
         if (Test-Path -LiteralPath $p -PathType Container) { $extraDirs += $p }
       }
+      break
     }
   }
 }
@@ -94,7 +97,7 @@ $os = 'unknown'
 $envk = 'unknown'
 if ($onWindows) {
   $os = 'windows'
-  $envk = 'native'
+  $envk = if ($hasMsys) { 'msys' } else { 'native' }
   $arch = switch ($env:PROCESSOR_ARCHITECTURE) { 'AMD64' { 'x86_64' } 'ARM64' { 'aarch64' } 'x86' { 'i686' } default { [string]$env:PROCESSOR_ARCHITECTURE } }
 }
 else {
@@ -111,7 +114,7 @@ else {
 if (-not $arch) { $arch = 'unknown' }
 
 # Package manager (first match; order depends on host)
-$mgrs = if ($os -eq 'macos') { @('brew', 'port') } elseif ($os -eq 'windows') { @('winget', 'scoop', 'choco', 'pacman') } else { @('apt-get', 'dnf', 'pacman', 'zypper', 'apk', 'brew') }
+$mgrs = if ($os -eq 'macos') { @('brew', 'port') } elseif ($os -eq 'windows') { if ($envk -eq 'msys') { @('pacman', 'winget', 'scoop', 'choco') } else { @('winget', 'scoop', 'choco', 'pacman') } } else { @('apt-get', 'dnf', 'pacman', 'zypper', 'apk', 'brew') }
 $pkgmgr = 'none'
 foreach ($m in $mgrs) { if (Have $m) { $pkgmgr = $m; break } }
 
