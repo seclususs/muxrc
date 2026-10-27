@@ -13,6 +13,10 @@ compinit
 [ -f $PREFIX/share/fzf/completion.zsh ] && source $PREFIX/share/fzf/completion.zsh
 [ -f $PREFIX/share/fzf/key-bindings.zsh ] && source $PREFIX/share/fzf/key-bindings.zsh
 
+if [[ -f "$ZSH_PLUGINS_DIR/fzf-tab/fzf-tab.plugin.zsh" ]]; then
+  source "$ZSH_PLUGINS_DIR/fzf-tab/fzf-tab.plugin.zsh"
+fi
+
 if [[ -f "$ZSH_PLUGINS_DIR/zsh-history-substring-search/zsh-history-substring-search.zsh" ]]; then
   source "$ZSH_PLUGINS_DIR/zsh-history-substring-search/zsh-history-substring-search.zsh"
 
@@ -32,17 +36,13 @@ if [[ -f "$ZSH_PLUGINS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
   ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 fi
 
-if [[ -f "$ZSH_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
-  source "$ZSH_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-fi
-
-if [[ -f "$ZSH_PLUGINS_DIR/fzf-tab/fzf-tab.plugin.zsh" ]]; then
-  source "$ZSH_PLUGINS_DIR/fzf-tab/fzf-tab.plugin.zsh"
-fi
-
 if [[ -f "$ZSH_PLUGINS_DIR/zsh-autopair/autopair.zsh" ]]; then
   source "$ZSH_PLUGINS_DIR/zsh-autopair/autopair.zsh"
   autopair-init
+fi
+
+if [[ -f "$ZSH_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
+  source "$ZSH_PLUGINS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 fi
 
 ##############################

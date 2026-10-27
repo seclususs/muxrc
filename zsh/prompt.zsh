@@ -6,6 +6,29 @@ setopt PROMPT_SUBST
 
 autoload -U colors && colors
 
+zmodload zsh/datetime
+
+preexec_track_duration() { _cmd_start=$EPOCHSECONDS; }
+preexec_functions+=(preexec_track_duration)
+
+precmd_status_line() {
+  local exit_code=$?
+  local duration=""
+  if [[ -n "$_cmd_start" ]]; then
+    local elapsed=$((EPOCHSECONDS - _cmd_start))
+    ((elapsed >= 5)) && duration=" %F{yellow}${elapsed}s%f"
+    unset _cmd_start
+  fi
+
+  if ((exit_code != 0)); then
+    RPROMPT="%F{196}✗ ${exit_code}%f${duration}"
+  else
+    RPROMPT="${duration}"
+  fi
+  return $exit_code
+}
+precmd_functions+=(precmd_status_line)
+
 ######################
 # Lightweight Git Info
 ######################
@@ -14,7 +37,7 @@ typeset -g _muxrc_git_info=""
 _prompt_git_info() {
   _muxrc_git_info=""
   local raw
-  raw=$(git status --porcelain -b 2> /dev/null) || return
+  raw=$(git status --porcelain -b 2> /dev/null) || return 0
   local header="${raw%%$'\n'*}"
   local branch="${header#\#\# }"
 
@@ -37,28 +60,6 @@ _prompt_git_info() {
   fi
 }
 precmd_functions+=(_prompt_git_info)
-
-zmodload zsh/datetime
-
-preexec_track_duration() { _cmd_start=$EPOCHSECONDS; }
-preexec_functions+=(preexec_track_duration)
-
-precmd_status_line() {
-  local exit_code=$?
-  local duration=""
-  if [[ -n "$_cmd_start" ]]; then
-    local elapsed=$((EPOCHSECONDS - _cmd_start))
-    ((elapsed >= 5)) && duration=" %F{yellow}${elapsed}s%f"
-    unset _cmd_start
-  fi
-
-  if ((exit_code != 0)); then
-    RPROMPT="%F{196}✗ ${exit_code}%f${duration}"
-  else
-    RPROMPT="${duration}"
-  fi
-}
-precmd_functions+=(precmd_status_line)
 
 TERMUX_USER=${USER:-user}
 TERMUX_HOST="termux"

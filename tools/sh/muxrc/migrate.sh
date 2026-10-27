@@ -102,11 +102,13 @@ migrate_trash() {
     if [[ ! -d "${target_dir}" ]]; then
       mv "${legacy_dir}" "${target_dir}"
     else
+      shopt -s dotglob nullglob
       local item
       for item in "${legacy_dir}"/*; do
         [[ -e "${item}" ]] && mv -n "${item}" "${target_dir}/" 2> /dev/null || true
       done
-      rm -rf "${legacy_dir}" 2> /dev/null || true
+      shopt -u dotglob nullglob
+      rmdir "${legacy_dir}" 2> /dev/null || true
     fi
     log_success "migrated trash to ~/.local/share/Trash"
   fi
@@ -122,6 +124,7 @@ migrate_vault() {
     if [[ ! -d "${target_dir}" ]]; then
       mv "${legacy_dir}" "${target_dir}"
     else
+      shopt -s dotglob nullglob
       local item
       for item in "${legacy_dir}"/*; do
         if [[ -e "${item}" ]]; then
@@ -132,7 +135,8 @@ migrate_vault() {
           fi
         fi
       done
-      rm -rf "${legacy_dir}" 2> /dev/null || true
+      shopt -u dotglob nullglob
+      rmdir "${legacy_dir}" 2> /dev/null || true
     fi
     log_success "migrated vault to ~/.local/share/muxrc/vault"
   fi

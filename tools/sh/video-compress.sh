@@ -73,9 +73,15 @@ compress_video() {
 
   log_info "re-compressing '${file_name}' to hevc..."
 
+  local -a mov_opts=()
+  local ext_lower="${ext,,}"
+  if [[ "${ext_lower}" =~ ^(mp4|mov|m4v)$ ]]; then
+    mov_opts=(-movflags use_metadata_tags)
+  fi
+
   if ! ffmpeg -hide_banner -loglevel error -stats -y -i "${target_file}" \
     -map 0 -c copy -c:v libx265 -preset slow -crf 18 \
-    -map_metadata 0 -movflags use_metadata_tags \
+    -map_metadata 0 "${mov_opts[@]}" \
     "${temp_file}"; then
     log_error "ffmpeg encoding failed."
     return 1

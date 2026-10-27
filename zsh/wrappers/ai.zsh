@@ -567,6 +567,7 @@ _ai_precmd_hook() {
   fi
 
   _AI_LAST_STATUS=$last_ret
+  return $last_ret
 }
 
 preexec_functions+=(_ai_preexec_hook)
@@ -1146,7 +1147,7 @@ command_not_found_handler() {
 # Postcmd auto-correct
 ######################
 _ai_postcmd_check() {
-  local ret=$?
+  local ret=$_AI_LAST_STATUS
   [[ -o interactive && -o zle ]] && _ai_async_ok=1 || _ai_async_ok=0
 
   ((_ai_cmd_ran == 1)) || return 0
@@ -1172,6 +1173,7 @@ _ai_postcmd_check() {
   ((ret == 127)) && _ai_cmd_missing "$trimmed" && mode="not_found"
 
   _ai_async_start "$mode" "$lastcmd"
+  return $_AI_LAST_STATUS
 }
 precmd_functions+=(_ai_postcmd_check)
 

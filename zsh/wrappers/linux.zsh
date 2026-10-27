@@ -137,30 +137,8 @@ sudo() {
     if [[ "$1" =~ ^(pm|cmd|am|svc|settings|content|input|dpm)$ ]]; then
       print -r "$env_vars ${(q)@}" | command su
     else
-      local su_pid
-
-      command su -c "$env_vars exec ${(q)@}" &
-      su_pid=$!
-
-      trap '
-        local child line entry ppid
-        for child in /proc/<1->(N); do
-          line=$(<"$child/status") 2>/dev/null || continue
-          for entry in "${(f)line}"; do
-            if [[ "$entry" == PPid:* ]]; then
-              ppid="${entry#PPid:}"
-              ppid="${ppid//[[:space:]]/}"
-              [[ "$ppid" == "$su_pid" ]] && kill -INT "${child:t}" 2>/dev/null
-              break
-            fi
-          done
-        done
-      ' INT
-
-      wait "$su_pid"
-      local exit_code=$?
-      trap - INT
-      return $exit_code
+      command su -c "$env_vars exec ${(q)@}"
+      return $?
     fi
   else
     print -u2 "sudo: no root provider available on this device"
@@ -187,16 +165,6 @@ su() {
     fi
   fi
 
-  if [[ $# -gt 0 ]]; then
-    if command -v su > /dev/null 2>&1; then
-      command su "$@"
-      return $?
-    else
-      print -u2 "su: device is not rooted"
-      return 1
-    fi
-  fi
-
   local _sudo_cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/muxrc"
   local HASH_FILE="$_sudo_cfg_dir/sudo_hash"
   [[ ! -f "$HASH_FILE" && -f "$HOME/.sudo_hash" ]] && HASH_FILE="$HOME/.sudo_hash"
@@ -208,26 +176,52 @@ su() {
     return 1
   fi
 
-  local user_pass
-  if ! read -rs "user_pass?Password: "; then
-    print -u2 ""
-    return 1
-  fi
-  print -u2 ""
-
-  local input_hash
-  input_hash=$(echo -n "$user_pass" | sha256sum | awk '{print $1}')
-  if [[ "$input_hash" != "$SUDO_HASH" ]]; then
-    print -u2 "su: Authentication failure"
-    return 1
-  fi
-
   local _sudo_cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/muxrc"
   local _sudo_ts_file="$_sudo_cache_dir/sudo_ts"
-  if [[ "$EUID" -ne 0 ]]; then
+  local authenticated=0
+
+  if [[ -f "$_sudo_ts_file" ]]; then
+    local last_auth
+    last_auth=$(< "$_sudo_ts_file" 2> /dev/null)
+    if [[ -n "$last_auth" && "$last_auth" =~ ^[0-9]+$ ]]; then
+      local now=${EPOCHSECONDS:-0}
+      if ((now >= last_auth && now - last_auth <= 900)); then
+        authenticated=1
+      fi
+    fi
+  fi
+
+  if ((authenticated == 0)); then
+    local user_pass
+    if ! read -rs "user_pass?Password: "; then
+      print -u2 ""
+      return 1
+    fi
+    print -u2 ""
+
+    local input_hash
+    input_hash=$(echo -n "$user_pass" | sha256sum | awk '{print $1}')
+    if [[ "$input_hash" != "$SUDO_HASH" ]]; then
+      print -u2 "su: Authentication failure"
+      return 1
+    fi
+
     mkdir -p "$_sudo_cache_dir" 2> /dev/null
     print "$EPOCHSECONDS" > "$_sudo_ts_file" 2> /dev/null
     chmod 600 "$_sudo_ts_file" 2> /dev/null
+  fi
+
+  if [[ $# -gt 0 && "$1" != "root" && "$1" != "-" && "$1" != "-l" ]]; then
+    if whence -p sudo > /dev/null 2>&1; then
+      command sudo "$@"
+      return $?
+    elif command -v su > /dev/null 2>&1; then
+      command su "$@"
+      return $?
+    else
+      print -u2 "su: device is not rooted"
+      return 1
+    fi
   fi
 
   if whence -p sudo > /dev/null 2>&1; then
@@ -298,11 +292,26 @@ apt-get() { apt "$@"; }
 # Fallback ping command
 #######################
 ping() {
-  if command ping -c 1 "$1" > /dev/null 2>&1; then
-    command ping -c 4 "$@"
-  else
-    su -c "/system/bin/ping -c 4 ${(q)@}"
+  local -a args=("$@")
+  if [[ ! " ${args[*]} " =~ [[:space:]]-c[[:space:]] ]]; then
+    args=(-c 4 "${args[@]}")
   fi
+
+  if command ping "${args[@]}"; then
+    return 0
+  fi
+
+  local code=$?
+  if [[ -x /system/bin/ping ]] && /system/bin/ping "${args[@]}"; then
+    return 0
+  fi
+
+  if command -v su > /dev/null 2>&1; then
+    su -c "/system/bin/ping ${(q)args[@]}"
+    return $?
+  fi
+
+  return $code
 }
 
 ###########################
