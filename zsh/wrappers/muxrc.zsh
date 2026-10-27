@@ -64,38 +64,38 @@ _muxrc_sync() {
 ############
 _muxrc_help() {
   cat << 'EOF'
-muxrc - termux environment & dotfiles manager
+muxrc
 
 usage:
   muxrc <command> [args]
 
 commands:
-  sync                            update dotfiles and plugins to latest version
-  help                            show this help message
+  sync                    update dotfiles and plugins
+  help                    show this help message
 
 tools:
-  clean-dupes <dir>               find and clean duplicate files
-  clean-history                   clean zsh history and reload shell
-  clean-meta <dir>                remove camera and location metadata from photos
-  date-sync <target>              sync photo metadata dates with file timestamps
-  media-crypt <file>              encrypt private file
-  media-decrypt <file> [output]   decrypt private file
-  net-sweep                       discover devices connected to local network
-  rename-by-date <dir> <prefix>   organize photos by capture date
-  shred-file <file>               permanently destroy sensitive file
-  spoof-meta <preset> <file>      replace photo metadata with dummy device info
-  stego-vault                     hide or extract secret data in pictures
-  tor-check                       verify tor network connectivity and exit ip
-  tor-run <cmd> [args...]         run command anonymously through tor
-  tor-start                       start anonymous tor proxy session
-  tor-stop                        stop anonymous tor proxy session
-  video-compress <file>           compress video to hevc preserving metadata
+  clean-dupes <dir>       find duplicate files
+  clean-history           clean zsh history
+  clean-meta <dir>        strip photo metadata
+  date-sync <target>      sync metadata dates
+  media-crypt <file>      encrypt private file
+  media-decrypt <f> [out] decrypt private file
+  net-sweep               scan local network
+  rename-by-date <d> <p>  organize photos by date
+  shred-file <file>       permanently destroy file
+  spoof-meta <pre> <file> spoof photo metadata
+  stego-vault             hide/extract secret data
+  tor-check               verify tor exit ip
+  tor-run <cmd> [args]    run command via tor
+  tor-start               start tor session
+  tor-stop                stop tor session
+  video-compress <file>   compress video to hevc
 
 ai:
-  cmd-fix [hint]                  diagnose runtime error and suggest fix (alias: ??)
-  ai-toggle                       toggle gemini assistant and auto-correct
-  ai-model [name|--list|...]      view or switch active gemini model
-  ai-key [-c|--check]             set or verify gemini api key securely
+  cmd-fix [hint]          diagnose error & fix (??)
+  ai-toggle               toggle gemini assistant
+  ai-model [name]         view or switch model
+  ai-key [-c]             set or verify api key
 EOF
 }
 
