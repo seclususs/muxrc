@@ -612,24 +612,54 @@ _ai_list_files() {
 _ai_say() {
   local label="$1"
   local text="$2"
+  [[ -n "$text" ]] || return 0
+
   local width=$((${COLUMNS:-80} - 1))
   ((width < 24)) && width=24
 
-  print -r -- "$label: $text" | awk -v w="$width" '
+  local color="" reset=""
+  if [[ -t 2 ]]; then
+    reset=$'\033[0m'
+    case "$label" in
+      cause) color=$'\033[1;33m' ;;
+      note | tip) color=$'\033[1;36m' ;;
+      fix) color=$'\033[1;32m' ;;
+      model) color=$'\033[2m' ;;
+      *) color=$'\033[1m' ;;
+    esac
+  fi
+
+  local pad="        "
+  local full_label
+  full_label=$(printf "%-7s " "$label:")
+  local colored_label="$full_label"
+  if [[ -n "$color" ]]; then
+    colored_label="${color}${label}:${reset}${full_label#$label:}"
+  fi
+
+  print -r -- "$text" | awk -v w="$width" -v col="$colored_label" -v p="$pad" '
+    BEGIN { first = 1 }
     {
       n = split($0, words, /[ \t]+/)
-      line = ""
+      if (n == 0) {
+        if (!first) print ""
+        next
+      }
+      line = (first ? col : p)
+      cur_len = 8
       for (i = 1; i <= n; i++) {
         if (words[i] == "") continue
-        cand = (line == "") ? words[i] : line " " words[i]
-        if (length(cand) > w && line != "") {
+        if (cur_len + 1 + length(words[i]) > w && cur_len > 8) {
           print line
-          line = "  " words[i]
+          line = p words[i]
+          cur_len = 8 + length(words[i])
         } else {
-          line = cand
+          line = (cur_len == 8 && first) ? line words[i] : (cur_len == 8 ? p words[i] : line " " words[i])
+          cur_len += (cur_len == 8 ? 0 : 1) + length(words[i])
         }
       }
-      print line
+      if (cur_len > 8) print line
+      first = 0
     }' >&2
 }
 
@@ -1182,6 +1212,20 @@ cmd-fix() {
   local user_text="dir: $PWD"$'\n'"files: ${local_files:-none}"
   if [[ -n "$_AI_LAST_CMD" ]]; then
     user_text+=$'\n'"last command: $_AI_LAST_CMD (exit code $_AI_LAST_STATUS)"
+    local -a cmd_words
+    cmd_words=(${(z)_AI_LAST_CMD})
+    local base_cmd="${cmd_words[1]}"
+    while [[ ("$base_cmd" == *=* || "$base_cmd" == (builtin|command|exec|noglob)) && ${#cmd_words} -gt 1 ]]; do
+      shift cmd_words
+      base_cmd="${cmd_words[1]}"
+    done
+    if [[ -n "$base_cmd" ]]; then
+      if ((_AI_LAST_STATUS == 127)); then
+        user_text+=$'\n'"command status: '$base_cmd' not found in PATH (exit 127)"
+      elif [[ -x "$base_cmd" ]] || (( $+commands[$base_cmd] || $+functions[$base_cmd] || $+aliases[$base_cmd] || $+builtins[$base_cmd] )); then
+        user_text+=$'\n'"command status: executable '$base_cmd' exists and is installed in PATH"
+      fi
+    fi
   fi
   [[ -n "$user_hint" ]] && user_text+=$'\n'"hint: $user_hint"
   if [[ -n "$piped_hint" ]]; then
@@ -1196,6 +1240,7 @@ NOTE: <one short sentence: a manual step or tip, no command>
 FIX: <ONE single-line shell command that resolves it>
 Rules:
 - Termux conventions: use pkg (not apt), no systemd, paths under \$PREFIX and ~/storage.
+- Exit code 127 means command not found. If exit code is not 127 or the command exists in PATH, the binary is already installed; do NOT claim it is missing or tell the user to install it. Diagnose missing arguments, invalid flags, syntax errors, or runtime issues instead.
 - Omit FIX when the failure is expected (for example grep found nothing), needs a manual action, or no single safe command resolves it. Explain in CAUSE or NOTE instead.
 - NEVER put destructive flags (rm -rf, --force, chmod -R, dd, pipes into sh) in FIX unless the hint explicitly asks for it.
 - Keep every line short; the screen is narrow.
@@ -1247,18 +1292,31 @@ Rules:
     return 0
   fi
 
-  [[ -n "$cause" ]] && _ai_say cause "$cause"
-  [[ -n "$note" ]] && _ai_say note "$note"
+  local has_prev=0
+  if [[ -n "$cause" ]]; then
+    _ai_say cause "$cause"
+    has_prev=1
+  fi
+
+  if [[ -n "$note" ]]; then
+    ((has_prev)) && print -u2 ""
+    _ai_say note "$note"
+    has_prev=1
+  fi
 
   local used_model
   used_model=$(< "$_ai_cache_dir/last_model" 2> /dev/null)
   if [[ -n "$used_model" && "$used_model" != "${GEMINI_MODEL:-$_ai_default_model}" ]]; then
-    print -u2 "model: $used_model (fallback)"
+    ((has_prev)) && print -u2 ""
+    _ai_say model "$used_model (fallback)"
+    has_prev=1
   fi
 
   [[ -n "$fix_cmd" ]] || return 0
 
-  print -u2 "fix: $fix_cmd"
+  ((has_prev)) && print -u2 ""
+  _ai_say fix "$fix_cmd"
+  print -u2 ""
   _ai_confirm_run cmd-fix "$fix_cmd"
 }
 
