@@ -370,3 +370,23 @@ net-identity() {
     bash "${MUXRC_DIR}/tools/sh/net-identity.sh" "$@"
   fi
 }
+
+#########################
+# Network Killswitch Tool
+#########################
+net-killswitch() {
+  local action="${1:-status}"
+
+  if [[ "$action" != "status" && "$action" != "-h" && "$action" != "--help" && "$action" != "help" ]]; then
+    if [[ "$EUID" -ne 0 ]] && ! whence -p sudo > /dev/null 2>&1 && ! whence -p su > /dev/null 2>&1 && [[ ! -x /system/bin/su ]]; then
+      log_error "root access is required to modify firewall killswitch"
+      return 1
+    fi
+  fi
+
+  if [[ "$EUID" -ne 0 && "$action" != "status" && "$action" != "-h" && "$action" != "--help" && "$action" != "help" ]] && command -v sudo > /dev/null 2>&1; then
+    sudo bash "${MUXRC_DIR}/tools/sh/net-killswitch.sh" "$@"
+  else
+    bash "${MUXRC_DIR}/tools/sh/net-killswitch.sh" "$@"
+  fi
+}
