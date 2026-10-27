@@ -350,3 +350,23 @@ mac-spoof() {
     bash "${MUXRC_DIR}/tools/sh/mac-spoof.sh" "$@"
   fi
 }
+
+#######################
+# Network Identity Tool
+#######################
+net-identity() {
+  local action="${1:-show}"
+
+  if [[ "$action" != "show" && "$action" != "status" && "$action" != "-h" && "$action" != "--help" && "$action" != "help" ]]; then
+    if [[ "$EUID" -ne 0 ]] && ! whence -p sudo > /dev/null 2>&1 && ! whence -p su > /dev/null 2>&1 && [[ ! -x /system/bin/su ]]; then
+      log_error "root access is required to modify network identity"
+      return 1
+    fi
+  fi
+
+  if [[ "$EUID" -ne 0 && "$action" != "show" && "$action" != "status" && "$action" != "-h" && "$action" != "--help" && "$action" != "help" ]] && command -v sudo > /dev/null 2>&1; then
+    sudo bash "${MUXRC_DIR}/tools/sh/net-identity.sh" "$@"
+  else
+    bash "${MUXRC_DIR}/tools/sh/net-identity.sh" "$@"
+  fi
+}
