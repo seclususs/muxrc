@@ -305,10 +305,6 @@ tor-check() {
 clean-history() {
   log_info "cleaning history..."
 
-  HISTSIZE=0
-  SAVEHIST=0
-  builtin fc -p /dev/null 0 0 2> /dev/null || true
-
   local hfile="${HISTFILE:-${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history}"
   rm -f "$hfile" "${hfile}.LOCK" "$HOME/.zsh_history" "$HOME/.zsh_history.LOCK" "$HOME/.zsh_history_root" "$HOME/.zsh_history_root.LOCK" 2> /dev/null
 
