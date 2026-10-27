@@ -1316,7 +1316,6 @@ Rules:
 
   ((has_prev)) && print -u2 ""
   _ai_say fix "$fix_cmd"
-  print -u2 ""
   _ai_confirm_run cmd-fix "$fix_cmd"
 }
 
