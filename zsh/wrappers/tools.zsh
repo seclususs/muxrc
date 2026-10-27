@@ -330,3 +330,23 @@ date-sync() {
 
   bash "${MUXRC_DIR}/tools/sh/date-sync.sh" "$target"
 }
+
+######################
+# Wi-Fi MAC Spoof Tool
+######################
+mac-spoof() {
+  local action="${1:-show}"
+
+  if [[ "$action" != "show" && "$action" != "-h" && "$action" != "--help" && "$action" != "help" ]]; then
+    if [[ "$EUID" -ne 0 ]] && ! whence -p sudo > /dev/null 2>&1 && ! whence -p su > /dev/null 2>&1 && [[ ! -x /system/bin/su ]]; then
+      log_error "root access is required to modify mac address"
+      return 1
+    fi
+  fi
+
+  if [[ "$EUID" -ne 0 && "$action" != "show" && "$action" != "-h" && "$action" != "--help" && "$action" != "help" ]] && command -v sudo > /dev/null 2>&1; then
+    sudo bash "${MUXRC_DIR}/tools/sh/mac-spoof.sh" "$@"
+  else
+    bash "${MUXRC_DIR}/tools/sh/mac-spoof.sh" "$@"
+  fi
+}

@@ -78,6 +78,7 @@ tools:
   clean-history           clean zsh history
   clean-meta <dir>        strip photo metadata
   date-sync <target>      sync metadata dates
+  mac-spoof [action]      spoof wi-fi mac address
   media-crypt <file>      encrypt private file
   media-decrypt <f> [out] decrypt private file
   net-sweep               scan local network

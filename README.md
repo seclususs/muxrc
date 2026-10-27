@@ -44,6 +44,7 @@ Restart Termux after installation to apply changes.
 - `clean-meta <dir>` — Remove camera and location metadata from photos.
 - `spoof-meta <preset> <file>` — Replace photo metadata with dummy device info.
 - `date-sync <target>` — Sync photo metadata dates with file timestamps.
+- `mac-spoof [action]` — Randomize, customize, or restore Wi-Fi MAC address.
 - `rename-by-date <dir> <prefix>` — Organize photos by their capture date.
 - `clean-dupes <dir>` — Find and clean up duplicate files.
 - `shred-file <file>` — Permanently destroy sensitive files beyond recovery.
