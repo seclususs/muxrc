@@ -27,7 +27,7 @@ Both modes use the same evidence procedure.
    Change analysis: per file, state what changed (code facts), where (function, file:line), and the behavior effect. Take intent only from the request, commit subjects (`git --no-pager log -n 10 --format="%h %s"`), or code comments; mark inferred intent as inferred.
 8. Report with the template. Include the coverage line: parts and line counts read in full, files read in full, skipped files.
 
-`diff-collect` writes `tracked.diff`, `untracked.diff`, and `MANIFEST.tsv` under `.termux-agent` (inside the workspace). If the file viewer cannot open that path, pass `--out` with a directory inside the workspace.
+`diff-collect` writes `tracked.diff`, `untracked.diff`, and `MANIFEST.tsv` under `.termux-agent/diff` (inside the workspace). If the file viewer cannot open that path, pass `--out` with a directory inside the workspace.
 
 ## Severity
 - blocker: wrong behavior, data loss, security hole, native-behavior change in wrapper or CLI-integration code (wording, stream, exit code, added prefix), broken Termux compatibility, lint ERROR.

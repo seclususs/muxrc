@@ -90,7 +90,7 @@ else
 fi
 
 # The agent tooling directory is not project code; leave it out of the facts.
-awk '!/^\.agents?\//' "${tmp}/all.list" > "${tmp}/all.filtered"
+awk '!/^\.agents?\// && !/^\.termux-agent\//' "${tmp}/all.list" > "${tmp}/all.filtered"
 mv "${tmp}/all.filtered" "${tmp}/all.list"
 
 cr=$(printf '\r')

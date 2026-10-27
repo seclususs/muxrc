@@ -10,9 +10,9 @@ $usage = @'
 Usage: def-index.ps1 [options] [PATH ...]
 
 Index mode (default): prints "kind<TAB>name<TAB>file:line" lines, sorted. Save a baseline with --out:
-  def-index.ps1 --out before.tsv
+  def-index.ps1 --out .termux-agent/refactor/before.tsv
 Compare mode: indexes the current files and compares them with a saved baseline:
-  def-index.ps1 --compare before.tsv [--rename OLD=NEW ...]
+  def-index.ps1 --compare .termux-agent/refactor/before.tsv [--rename OLD=NEW ...]
 Reports: removed, added, moved (same name, different file set), renamed (declared with --rename),
 duplicate (func or alias defined more often than in the baseline). Exit 1 on removed or duplicate.
 
@@ -24,7 +24,7 @@ Options:
   -h, --help       show this help
 
 PATH arguments (files or directories) limit the scan. Without PATH, the scan covers git-tracked and
-untracked, non-ignored files (or every file under the directory outside git), excluding .agent and .agents.
+untracked, non-ignored files (or every file under the directory outside git), excluding .agent, .agents, and .termux-agent.
 Detection is line-based: it finds definitions at the usual positions and does not evaluate code.
 Dynamic definitions (eval, generated names) are not seen; verify them with behavior-snapshot.
 Variables count only at column 0 (top level); definitions inside functions are not indexed.
@@ -71,7 +71,7 @@ if ($compare -ne '' -and -not (Test-Path -LiteralPath $compare -PathType Leaf)) 
 
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $ord = [System.StringComparer]::Ordinal
-$skipDirs = @('.git', '.agent', '.agents', 'node_modules')
+$skipDirs = @('.git', '.agent', '.agents', '.termux-agent', 'node_modules')
 
 function Get-AllFiles([string]$dir) {
   $acc = New-Object System.Collections.ArrayList
@@ -114,7 +114,7 @@ function Get-Candidates {
   if ($inGit) {
     foreach ($l in @(& git -c core.quotepath=off ls-files -co --exclude-standard)) {
       $l = [string]$l
-      if ($l -cmatch '^\.agents?/') { continue }
+      if ($l -cmatch '^\.agents?/' -or $l -cmatch '^\.termux-agent/') { continue }
       [void]$list.Add($l)
     }
   }

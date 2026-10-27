@@ -80,7 +80,7 @@ else {
   [Array]::Sort($files, [System.StringComparer]::Ordinal)
 }
 # The agent tooling directory is not project code; leave it out of the facts.
-$files = @($files | Where-Object { $_ -and ($_ -notmatch '^\.agents?/') })
+$files = @($files | Where-Object { $_ -and ($_ -notmatch '^\.agents?/') -and ($_ -notmatch '^\.termux-agent/') })
 
 function Get-ShebangDialect([string]$first) {
   $parts = @(($first.Substring(2).Trim()) -split '\s+' | Where-Object { $_ })

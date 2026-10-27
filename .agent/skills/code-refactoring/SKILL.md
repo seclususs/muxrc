@@ -18,16 +18,16 @@ Research authority: search the web yourself when docs or dependency facts are mi
 
 ## Workflow
 1. Scope: goal, the code to change, what stays identical (public names, CLI, output, load order), stop conditions. Fill `assets/refactor-plan.md`.
-2. Baseline, before any edit. Keep baseline files in the workspace but outside tracked files, for example `<git-dir>/agent-refactor/<topic>/` (`git rev-parse --absolute-git-dir`).
+2. Baseline, before any edit. Keep baseline files in the workspace but outside tracked files under `.termux-agent/refactor/<topic>/` (or `.termux-agent/refactor/`).
    - `git --no-pager status --short`: unrelated edits are listed, not mixed in.
    - `lint-shell` (`termux-scripting`) on the files in scope: keep the SUMMARY line and findings.
-   - `sh scripts/def-index.sh --out <dir>/before.tsv` (`.ps1` flavor available).
-   - Behavior cases from `assets/cases.tpl` for each public command, function, and wrapper, then `sh scripts/behavior-snapshot.sh record --dir <dir>/snap --cases <cases> --source <module> ... [--stub-termux]`. List `--source` files in load order. Cases are deterministic. Device-only behavior stays UNVERIFIED with commands for the user.
+   - `sh scripts/def-index.sh --out .termux-agent/refactor/before.tsv` (`.ps1` flavor available).
+   - Behavior cases from `assets/cases.tpl` for each public command, function, and wrapper, then `sh scripts/behavior-snapshot.sh record --dir .termux-agent/refactor/snap --cases <cases> --source <module> ... [--stub-termux]`. List `--source` files in load order. Cases are deterministic. Device-only behavior stays UNVERIFIED with commands for the user.
 3. Plan ordered steps. Each names one refactoring type (rename, extract function, inline, move, split file, merge files, remove duplication, replace construct) and its expected `def-index` effect (none, moved, renamed, added).
 4. Apply one step. Then, before the next step:
    - `lint-shell` on touched files: no finding that the baseline did not have.
-   - `sh scripts/def-index.sh --compare <dir>/before.tsv [--rename OLD=NEW]`: the result matches the step's expected effect. An unexpected `removed`, `added`, or `duplicate` stops the step.
-   - `sh scripts/behavior-snapshot.sh compare --dir <dir>/snap --cases <cases> --source <module> ...`: every case is `same` unless the plan declared a difference.
+   - `sh scripts/def-index.sh --compare .termux-agent/refactor/before.tsv [--rename OLD=NEW]`: the result matches the step's expected effect. An unexpected `removed`, `added`, or `duplicate` stops the step.
+   - `sh scripts/behavior-snapshot.sh compare --dir .termux-agent/refactor/snap --cases <cases> --source <module> ...`: every case is `same` unless the plan declared a difference.
    - After a rename or move, search the whole repository for the old name (code, docs, completions, install scripts).
    Fix or revert a failing step before continuing.
 5. Moves and splits:

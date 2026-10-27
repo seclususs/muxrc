@@ -489,9 +489,9 @@ else
     exit 2
   }
   if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-    git -c core.quotepath=off ls-files -co --exclude-standard | awk '!/^\.agents?\//' > "${tmp}/files.list"
+    git -c core.quotepath=off ls-files -co --exclude-standard | awk '!/^\.agents?\// && !/^\.termux-agent\//' > "${tmp}/files.list"
   else
-    find . -type f ! -path './.git/*' ! -path '*/node_modules/*' ! -path './.agent/*' ! -path './.agents/*' | sed 's|^\./||' | LC_ALL=C sort > "${tmp}/files.list"
+    find . -type f ! -path './.git/*' ! -path '*/node_modules/*' ! -path './.agent/*' ! -path './.agents/*' ! -path './.termux-agent/*' | sed 's|^\./||' | LC_ALL=C sort > "${tmp}/files.list"
   fi
 fi
 

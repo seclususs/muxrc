@@ -18,7 +18,7 @@ Scope (default: working tree vs HEAD, staged + unstaged, plus untracked files):
   --unstaged           unstaged changes plus untracked files
   --range A..B         commit range (A..B or A...B); untracked files are not included
 Options:
-  --out DIR            output directory (default: <root>/.termux-agent, inside the workspace);
+  --out DIR            output directory (default: <root>/.termux-agent/diff, inside the workspace);
                        a relative path starts at the repository root
   --context N          context lines per hunk (default 3)
   --chunk N            lines per read range printed in the read plan (default 250)
@@ -115,7 +115,7 @@ git rev-parse --is-inside-work-tree > /dev/null 2>&1 || die_usage "not inside a 
 top=$(git rev-parse --show-toplevel) || exit 3
 cd "${top}" || exit 3
 gitdir=$(git rev-parse --absolute-git-dir) || exit 3
-[ -n "${out}" ] || out="${top}/.termux-agent"
+[ -n "${out}" ] || out="${top}/.termux-agent/diff"
 mkdir -p "${out}" || die_usage "cannot create output directory: ${out}"
 
 GIT_PAGER="cat"

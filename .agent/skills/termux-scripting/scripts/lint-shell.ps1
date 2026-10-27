@@ -414,13 +414,13 @@ else {
   $inGit = $false
   if ($haveGit) { $null = & git rev-parse --is-inside-work-tree 2>$null; $inGit = ($LASTEXITCODE -eq 0) }
   if ($inGit) {
-    foreach ($x in @(& git -c core.quotepath=off ls-files -co --exclude-standard 2>$null)) { if ($x -and ($x -notmatch '^\.agents?/')) { $fileList.Add($x) } }
+    foreach ($x in @(& git -c core.quotepath=off ls-files -co --exclude-standard 2>$null)) { if ($x -and ($x -notmatch '^\.agents?/') -and ($x -notmatch '^\.termux-agent/')) { $fileList.Add($x) } }
   }
   else {
     $prefixLen = (Get-Location).Path.TrimEnd('\', '/').Length + 1
     foreach ($x in (Walk-Files (Get-Location).Path)) {
       $rel = $x.Substring($prefixLen).Replace('\', '/')
-      if ($rel -match '(^|/)node_modules/' -or $rel -match '^\.agents?/') { continue }
+      if ($rel -match '(^|/)node_modules/' -or $rel -match '^\.agents?/' -or $rel -match '^\.termux-agent/') { continue }
       $fileList.Add($rel)
     }
   }

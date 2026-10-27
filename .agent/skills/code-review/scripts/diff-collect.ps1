@@ -19,7 +19,7 @@ Scope (default: working tree vs HEAD, staged + unstaged, plus untracked files):
   --unstaged           unstaged changes plus untracked files
   --range A..B         commit range (A..B or A...B); untracked files are not included
 Options:
-  --out DIR            output directory (default: <root>/.termux-agent, inside the workspace);
+  --out DIR            output directory (default: <root>/.termux-agent/diff, inside the workspace);
                        a relative path starts at the repository root
   --context N          context lines per hunk (default 3)
   --chunk N            lines per read range printed in the read plan (default 250)
@@ -90,7 +90,7 @@ if ($script:gitExit -ne 0) { Fail 'cannot resolve the repository root' 3 }
 Set-Location -LiteralPath $top
 [Environment]::CurrentDirectory = $top
 $gitdir = [string](Invoke-Git @('rev-parse', '--absolute-git-dir'))[0]
-if ($out -eq '') { $out = "$top/.termux-agent" }
+if ($out -eq '') { $out = "$top/.termux-agent/diff" }
 try { $null = New-Item -ItemType Directory -Force -Path $out } catch { Fail "cannot create output directory: $out" 2 }
 
 $dopts = @('--no-renames', '--no-ext-diff', '--no-textconv', '--no-color', '--src-prefix=a/', '--dst-prefix=b/')
