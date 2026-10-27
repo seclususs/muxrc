@@ -90,7 +90,7 @@ embed_data() {
     return 1
   fi
 
-  trap 'cleanup_spinner' EXIT
+  trap '[[ "${embed_opt}" == "1" && -f "${embed_file}" ]] && shred -u "${embed_file}" 2>/dev/null || true; cleanup_spinner' EXIT
   start_spinner "embedding data"
   if steghide embed -ef "${embed_file}" -cf "${cover}" -p "${pass}"; then
     stop_spinner "success" "embedded into ${cover}"

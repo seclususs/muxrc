@@ -38,6 +38,7 @@ cleanup_spinner() {
   if [[ -n "${SPINNER_PID:-}" ]] && kill -0 "${SPINNER_PID}" 2> /dev/null; then
     kill -9 "${SPINNER_PID}" 2> /dev/null || true
   fi
+  SPINNER_PID=""
   echo -ne "\r\033[K" >&2
 }
 
@@ -74,6 +75,7 @@ stop_spinner() {
     kill "${SPINNER_PID}" > /dev/null 2>&1
     wait "${SPINNER_PID}" 2> /dev/null || true
   fi
+  SPINNER_PID=""
 
   if [[ ${monitor_state} -eq 1 ]]; then set -m; fi
   echo -ne "\r\033[K" >&2

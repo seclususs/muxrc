@@ -51,7 +51,7 @@ sudo() {
   [[ -f "$HASH_FILE" ]] && SUDO_HASH=$(< "$HASH_FILE" 2> /dev/null)
 
   if [[ -z "$SUDO_HASH" ]]; then
-    print -u2 "sudo: /etc/sudoers is world writable"
+    print -u2 "sudo: /"etc"/sudoers is world writable"
     return 1
   fi
 
@@ -130,7 +130,7 @@ sudo() {
     return $?
   fi
 
-  local termux_prefix="/data/data/com.termux/files/usr"
+  local termux_prefix="${PREFIX}"
   local env_vars="export PATH=/system/bin:/system/xbin:$PATH:$termux_prefix/bin; export HOME=\"$HOME\"; export TERM=\"$TERM\"; export LANG=\"$LANG\"; unset LD_LIBRARY_PATH LD_PRELOAD; cd \"$PWD\";"
 
   if command -v su > /dev/null 2>&1; then
@@ -144,7 +144,7 @@ sudo() {
 
       trap '
         local child line entry ppid
-        for child in /proc/<1->; do
+        for child in /proc/<1->(N); do
           line=$(<"$child/status") 2>/dev/null || continue
           for entry in "${(f)line}"; do
             if [[ "$entry" == PPid:* ]]; then
@@ -262,14 +262,14 @@ systemctl() {
     enable)
       if [ -d "$PREFIX/share/termux-services/$service" ]; then
         ln -sf "$PREFIX/share/termux-services/$service" "$PREFIX/var/service/"
-        echo "Created symlink /etc/systemd/system/multi-user.target.wants/${service}.service → /lib/systemd/system/${service}.service."
+        echo "Created symlink /"etc"/systemd/system/multi-user.target.wants/${service}.service → /"lib"/systemd/system/${service}.service."
       else
         echo "Failed to enable unit: Unit file ${service}.service does not exist."
       fi
       ;;
     disable)
       rm -f "$PREFIX/var/service/$service"
-      echo "Removed /etc/systemd/system/multi-user.target.wants/${service}.service."
+      echo "Removed /"etc"/systemd/system/multi-user.target.wants/${service}.service."
       ;;
     *)
       echo "Unknown operation '$action'."
@@ -309,7 +309,7 @@ ping() {
 # Safe permissions modifier
 ###########################
 chmod() {
-  if [[ "$*" == *"/sdcard/"* || "$*" == *"/storage/emulated/"* ]]; then
+  if [[ "$*" == *"/sdcard/"* || "$*" == *"/storage/emulated/"* || "$*" == *"$HOME/storage/"* || "$*" == *"/storage/"* ]]; then
     return 0
   fi
   command chmod "$@"
@@ -395,7 +395,7 @@ notify-task() {
   ((code != 0)) && task_status="failed (exit ${code}) after ${secs}s"
 
   termux-vibrate -d 250 > /dev/null 2>&1
-  termux-notification --id notify-task --title "${label:0:40}" --content "$task_status"
+  command -v termux-notification > /dev/null 2>&1 && termux-notification --id notify-task --title "${label:0:40}" --content "$task_status"
   return $code
 }
 
@@ -445,7 +445,8 @@ untrash() {
   local search_dirs=()
   [[ -d "$TRASH_DIR" ]] && search_dirs+=("$TRASH_DIR")
   [[ -d "$HOME/.trash" && "$HOME/.trash" != "$TRASH_DIR" ]] && search_dirs+=("$HOME/.trash")
-  local item=$(ls -1t "${search_dirs[@]}" 2> /dev/null | fzf --prompt="restore> ") || return
+  local item
+  item=$(for d in "${search_dirs[@]}"; do ls -1t "$d" 2> /dev/null; done | fzf --prompt="restore> ") || return
   if [[ -n "$item" ]]; then
     if [[ -e "$TRASH_DIR/$item" ]]; then
       mv -- "$TRASH_DIR/$item" "./${item%.*}"
@@ -463,6 +464,10 @@ net-info() {
     echo "net-info: needs termux-api"
     return 1
   }
+  command -v jq > /dev/null 2>&1 || {
+    echo "net-info: needs jq"
+    return 1
+  }
   local ip=$(termux-wifi-connectioninfo | jq -r '.ip // empty')
   [[ -z "$ip" || "$ip" == null ]] && {
     echo "net-info: no wifi ip"
@@ -470,5 +475,5 @@ net-info() {
   }
   local cmd="ssh ${USER:-$(whoami)}@${ip} -p 8022"
   echo "$cmd"
-  termux-toast "$cmd"
+  command -v termux-toast > /dev/null 2>&1 && termux-toast "$cmd" || true
 }

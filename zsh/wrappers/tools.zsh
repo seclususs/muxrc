@@ -242,11 +242,6 @@ net-sweep() {
   local cidr
   cidr=$(ip route show 2> /dev/null | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1)
 
-  if [[ -z "$cidr" ]] && command -v sudo > /dev/null 2>&1; then
-    log_info "auto-detecting subnet requires root..."
-    cidr=$(sudo ip route show | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1)
-  fi
-
   if [[ -z "$cidr" ]] && command -v termux-wifi-connectioninfo > /dev/null 2>&1; then
     local wifi_ip
     wifi_ip=$(termux-wifi-connectioninfo 2> /dev/null | jq -r '.ip // empty' 2> /dev/null)
@@ -254,6 +249,11 @@ net-sweep() {
       cidr="${wifi_ip%.*}.0/24"
       log_info "detected wifi subnet: $cidr"
     fi
+  fi
+
+  if [[ -z "$cidr" ]] && command -v sudo > /dev/null 2>&1; then
+    log_info "auto-detecting subnet requires root..."
+    cidr=$(sudo ip route show 2> /dev/null | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1)
   fi
 
   if [[ -z "$cidr" ]]; then
@@ -329,5 +329,4 @@ date-sync() {
   fi
 
   bash "${MUXRC_DIR}/tools/sh/date-sync.sh" "$target"
-  return 0
 }

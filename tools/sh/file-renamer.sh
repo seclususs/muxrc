@@ -71,7 +71,7 @@ build_unique_target_path() {
 
   _target_path="${base_dir}/${new_name}"
 
-  while [[ -e "${_target_path}" || -n "${_seen_ref[${_target_path}]:-}" ]]; do
+  while [[ ("${_target_path}" != "${file}" && -e "${_target_path}") || -n "${_seen_ref[${_target_path}]:-}" ]]; do
     if [[ -n "${ext}" ]]; then
       new_name="${prefix}_${date_str}_${counter}.${ext}"
     else
