@@ -11,3 +11,5 @@
 tools/presets/local-*.json
 *.enc
 .nomedia
+
+.termux-agent/

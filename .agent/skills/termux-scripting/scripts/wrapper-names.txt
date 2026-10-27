@@ -1,0 +1,83 @@
+# Names of wrapper and CLI-integration functions (rule L002).
+# One name per line; a trailing * matches a prefix; # starts a comment.
+# A function with one of these names keeps native-command behavior and output:
+# no UI log prefixes ([*] [+] [-] [!] [?]) and no calls to the project logger.
+# Project-specific wrappers and CLI integrations (for example an AI CLI) are added
+# below the standard list. Find them by role with repo-map definitions; do not guess names.
+sudo
+su
+doas
+systemctl
+service
+apt
+apt-get
+apt-cache
+dpkg
+pkg
+ping
+traceroute
+ifconfig
+ip
+ss
+netstat
+nslookup
+dig
+chmod
+chown
+chgrp
+ls
+cp
+mv
+rm
+mkdir
+rmdir
+ln
+touch
+cat
+head
+tail
+less
+more
+grep
+egrep
+fgrep
+find
+sed
+awk
+sort
+uniq
+cut
+tr
+wc
+tar
+zip
+unzip
+curl
+wget
+ssh
+scp
+rsync
+git
+man
+clear
+reset
+df
+du
+free
+ps
+top
+kill
+killall
+mount
+umount
+date
+uptime
+whoami
+id
+hostname
+uname
+xdg-open
+open
+which
+
+# Project names (add below)

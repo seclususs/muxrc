@@ -1,0 +1,39 @@
+# TSV: dialects(posix|bash|zsh|* , comma list)<TAB>severity(ERROR|WARN|INFO|COUNT)<TAB>code<TAB>regex<TAB>message
+# Regex subset valid in POSIX ERE (awk) and .NET: no \s \d \b, no [[:class:]], no {n,m}. Use [ ] for space.
+# Applied to non-comment lines. Suppress per line with a trailing comment: lint-ignore: CODE[,CODE]
+posix	ERROR	B001	(^|[ ;&|(])\[\[ 	bashism: [[ ]] (use [ ] or case)
+posix	ERROR	B002	(^|[;&|({])[ ]*function [A-Za-z_]	bashism: function keyword (use name() { ...; })
+posix	ERROR	B003	(^|[;&|({])[ ]*(for[ ]*)?\(\(	bashism: (( )) command (use $(( )) with [ ] or test)
+posix	ERROR	B004	<<<	bashism: here-string <<<
+posix	ERROR	B005	[ ]&>	bashism: &> redirection (use > file 2>&1)
+posix	ERROR	B006	\$\{[A-Za-z_][A-Za-z0-9_]*(/|,|\^|@)	bashism: ${var/..} ${var,,} ${var^^} ${var@Op}
+posix	ERROR	B007	\$\{[A-Za-z_][A-Za-z0-9_]*:[0-9 $(]	bashism: substring ${var:off:len}
+posix	ERROR	B008	\$\{[A-Za-z_][A-Za-z0-9_]*\[	bashism: array reference
+posix	ERROR	B009	(^|[ ;&|({])[A-Za-z_][A-Za-z0-9_]*=\(	bashism: array assignment name=( )
+posix	ERROR	B010	(^|[;&|({]|[ ]then|[ ]do|[ ]else)[ ]*(declare|typeset|shopt|mapfile|readarray|compgen|complete|bind|coproc|select|let|source)[ ]	bashism: builtin/keyword not in POSIX sh (source -> .)
+posix	ERROR	B011	(^|[;&|({]|[ ]then|[ ]do|[ ]else)[ ]*local[ ]+-	bashism: local with options
+posix	INFO	B012	(^|[;&|({]|[ ]then|[ ]do|[ ]else)[ ]*local[ ]	local is not POSIX; dash, busybox and bash accept it (ShellCheck SC3043)
+posix	WARN	B013	(^|[;&|({]|[ ]then|[ ]do|[ ]else)[ ]*echo[ ]+-[a-zA-Z]*e	echo -e is not portable (dash prints -e); use printf
+posix	ERROR	B014	(^|[;&|({]|[ ]then|[ ]do|[ ]else)[ ]*read[ ]+-[a-zA-Z]*[pnsadtu]	bashism: read options (POSIX read supports -r only)
+posix	ERROR	B015	\$'[^']*\\[nrtabefv0-9x]	bashism: $'...' ANSI-C quoting (use printf)
+posix	WARN	B016	\{[0-9]+\.\.[0-9]+\}	bashism: brace sequence {1..N} (use seq or a loop)
+posix	WARN	B017	(^|[^$])\{[A-Za-z0-9_./-]+,[A-Za-z0-9_./,-]+\}	bashism: brace expansion {a,b}
+posix	ERROR	B018	\$\(<	bashism: $(< file) (use cat)
+posix	WARN	B019	\$\{?(RANDOM|EUID|OSTYPE|HOSTNAME|SECONDS|FUNCNAME|PIPESTATUS|BASH_[A-Z]+)([^A-Za-z0-9_]|$)	bashism: bash-only variable
+posix	WARN	B020	\[ [^=]*[ ]==[ ]	== inside [ ] is not POSIX (use =)
+posix	WARN	B021	set[ ]+-[a-zA-Z]*o[ ]+pipefail	pipefail missing in dash < 0.5.13; probe with (set -o pipefail) 2>/dev/null first
+posix	ERROR	B022	(^|[;&|({]|[ ]then|[ ]do|[ ]else)[ ]*trap[ ].*[ ](ERR|DEBUG|RETURN)([ ;]|$)	bashism: trap on ERR/DEBUG/RETURN
+posix	WARN	B023	printf[ ]+(-v[ ]|[^|;&]*%q)	printf -v and %q are not POSIX
+posix	ERROR	B024	[ ]\|&[ ]	bashism: |& (use 2>&1 |)
+posix	ERROR	B025	(^|[;&|({]|[ ]then|[ ]do|[ ]else)[ ]*export[ ]+-f	bashism: export -f
+posix	ERROR	B026	[A-Za-z_][A-Za-z0-9_]*\+=	bashism: += append
+zsh	ERROR	Z001	(^|[;&|({]|[ ]then|[ ]do|[ ]else)[ ]*read[ ]+-[a-zA-Z]*p	zsh: read -p reads a coprocess; use read '?prompt' var
+zsh	ERROR	Z002	\$\{![A-Za-z_]	zsh: ${!var} unsupported; use ${(P)var}
+zsh	WARN	Z003	\$\{?BASH_[A-Z]+	bash-only variable in zsh
+zsh	WARN	Z004	\$\{?[A-Za-z_][A-Za-z0-9_]*\[0\]	zsh arrays are 1-indexed; element [0] is empty
+zsh	WARN	Z005	(^|[;&|({]|[ ]then|[ ]do|[ ]else)[ ]*(shopt|mapfile|readarray|compgen|complete|bind)[ ]	bash-only builtin in zsh
+*	WARN	T001	(^|[ "'=:(])/(usr|etc|var|tmp|bin|sbin|lib|lib64|opt|home|root|mnt|run|srv)(/|[ "';)]|$)	hard-coded FHS path (absent in Termux): use $PREFIX/..., $TMPDIR, $HOME
+*	INFO	T002	/data/data/com\.termux	literal Termux path; prefer $PREFIX or $HOME (literal expected only in shebangs)
+*	INFO	T003	(^|[;&|]|[ ]then|[ ]do|[ ]else)[ ]*(sudo|su|apt|apt-get|systemctl|service|yum|dnf|pacman|apk|snap)[ ]	command not native in Termux; verify the package or a project wrapper provides it
+*	INFO	T004	/system/bin/(sh|bash)	Android system shell, not Termux dash/bash
+*	COUNT	L001	(^|[^A-Za-z0-9_])\[[*+!?-]\]([^}]|$)	UI log prefix tokens present; allowed only in installers/general utilities, never in command wrappers or CLI integrations

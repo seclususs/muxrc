@@ -1,0 +1,30 @@
+# Known termux.properties keys. Source: official termux-tools termux.properties template (master, commit 05c857e, 2026-10-15).
+# TSV: key<TAB>type<TAB>spec. Types: bool | enum(a|b) | int(min-max) | uint | intset(0|min-max) | path | shortcut | extra-keys.
+# Template-verified: all keys above; the 'virtual' volume-keys value and 'show/hide' value come from wiki/defaults, not the template.
+# The list can lag the app: an unknown key is a WARN to verify against the current Termux wiki, never an ERROR.
+allow-external-apps	bool	
+default-working-directory	path	
+disable-terminal-session-change-toast	bool	
+hide-soft-keyboard-on-startup	bool	
+soft-keyboard-toggle-behaviour	enum	show/hide|enable/disable
+terminal-transcript-rows	int	1-50000
+volume-keys	enum	virtual|volume
+fullscreen	bool	
+use-fullscreen-workaround	bool	
+terminal-cursor-blink-rate	intset	0|100-2000
+terminal-cursor-style	enum	block|bar|underline
+terminal-margin-horizontal	uint	
+terminal-margin-vertical	uint	
+extra-keys-style	enum	default|arrows-only|arrows-all|all|none
+extra-keys-text-all-caps	bool	
+extra-keys	extra-keys	
+use-black-ui	bool	
+disable-hardware-keyboard-shortcuts	bool	
+shortcut.create-session	shortcut	
+shortcut.next-session	shortcut	
+shortcut.previous-session	shortcut	
+shortcut.rename-session	shortcut	
+bell-character	enum	vibrate|beep|ignore
+back-key	enum	escape|back
+enforce-char-based-input	bool	
+ctrl-space-workaround	bool	

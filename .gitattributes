@@ -9,3 +9,5 @@ install.sh linguist-language=Shell
 *.properties linguist-language=Properties
 
 *.enc binary
+
+.agent/** linguist-vendored
