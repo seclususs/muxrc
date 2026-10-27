@@ -1,6 +1,6 @@
-###################
-# Logging Functions
-###################
+#######################
+# Custom tools wrappers
+#######################
 
 typeset -g MUXRC_DIR="${MUXRC_DIR:-$HOME/muxrc}"
 source "${MUXRC_DIR}/lib/init.sh"
@@ -309,60 +309,6 @@ clean-history() {
   rm -f "$hfile" "${hfile}.LOCK" "$HOME/.zsh_history" "$HOME/.zsh_history.LOCK" "$HOME/.zsh_history_root" "$HOME/.zsh_history_root.LOCK" 2> /dev/null
 
   log_success "history cleaned. reloading shell..."
-  exec zsh
-}
-
-############
-# Sync Muxrc
-############
-muxrc-sync() {
-  log_info "syncing muxrc..."
-
-  local muxrc_dir="${MUXRC_DIR}"
-  local install_script="${muxrc_dir}/install.sh"
-  local plugins_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins"
-  [[ ! -d "$plugins_dir" && -d "$HOME/.zsh/plugins" ]] && plugins_dir="$HOME/.zsh/plugins"
-  local old_hash=""
-  local new_hash=""
-
-  if [[ ! -d "$muxrc_dir" ]]; then
-    log_error "muxrc dir not found."
-    return 1
-  fi
-
-  if [[ -f "$install_script" ]]; then
-    old_hash=$(sha256sum "$install_script" 2> /dev/null | awk '{print $1}')
-  fi
-
-  start_spinner "pulling repository"
-  if git -C "$muxrc_dir" pull -q; then
-    stop_spinner "success" "repository updated."
-  else
-    stop_spinner "error" "failed to pull repository."
-    return 1
-  fi
-
-  if [[ -f "$muxrc_dir/tools/sh/migrate.sh" ]]; then
-    log_info "checking migrations..."
-    bash "$muxrc_dir/tools/sh/migrate.sh"
-  fi
-
-  if [[ -f "$muxrc_dir/tools/sh/sync-plugins.sh" ]]; then
-    log_info "syncing zsh plugins..."
-    bash "$muxrc_dir/tools/sh/sync-plugins.sh" "$plugins_dir"
-  fi
-
-  if [[ -f "$install_script" ]]; then
-    new_hash=$(sha256sum "$install_script" 2> /dev/null | awk '{print $1}')
-    if [[ "$old_hash" != "$new_hash" ]]; then
-      log_info "install.sh updated. executing..."
-      bash "$install_script"
-    else
-      log_warn "install.sh unchanged. skipping."
-    fi
-  fi
-
-  log_success "sync complete. reloading shell..."
   exec zsh
 }
 

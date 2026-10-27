@@ -33,7 +33,8 @@ Restart Termux after installation to apply changes.
 - `ai-toggle` — Turn Gemini AI assistant and auto-correction on or off.
 - `ai-model [name]` — View or switch the active Gemini AI model.
 - `ai-key` — Set or verify Gemini API key securely with masked input.
-- `muxrc-sync` — Update dotfiles and plugins to the latest version.
+- `muxrc sync` — Update dotfiles and plugins to the latest version.
+- `muxrc help` — Show help for privacy/media tools and AI features.
 - Keyboard macros — Swipe up on `ESC` to jump to `~/Workspace` and `END` to toggle wakelock.
 
 ### Privacy & Media Tools

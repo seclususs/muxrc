@@ -1,5 +1,5 @@
 ########################
-# Custom shell functions
+# Linux command wrappers
 ########################
 
 #####################
