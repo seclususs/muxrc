@@ -32,18 +32,33 @@ validate_target() {
   return 0
 }
 
+setup_timezone() {
+  # Android does not export TZ by default; fetch from system property for Perl/exiftool
+  if [[ -z "${TZ:-}" ]] && command -v getprop > /dev/null 2>&1; then
+    local sys_tz
+    sys_tz=$(getprop persist.sys.timezone 2> /dev/null || true)
+    if [[ -n "${sys_tz}" ]]; then
+      export TZ="${sys_tz}"
+    fi
+  fi
+}
+
 sync_metadata_dates() {
   local target="$1"
+
+  setup_timezone
 
   trap 'cleanup_spinner' EXIT
   start_spinner "syncing metadata dates"
 
-  exiftool -r -P -overwrite_original_in_place -d "%Y:%m:%d %H:%M:%S" -m -q \
+  # -api QuickTimeUTC converts local file time to UTC for QuickTime/MP4 container standards
+  exiftool -r -P -overwrite_original_in_place -api QuickTimeUTC -d "%Y:%m:%d %H:%M:%S" -m -q \
     "-AllDates<FileModifyDate" \
     "-TrackCreateDate<FileModifyDate" \
     "-TrackModifyDate<FileModifyDate" \
     "-MediaCreateDate<FileModifyDate" \
     "-MediaModifyDate<FileModifyDate" \
+    "-QuickTime:CreationDate<FileModifyDate" \
     "-CreationTime<FileModifyDate" \
     "${target}" > /dev/null 2>&1 || true
 
