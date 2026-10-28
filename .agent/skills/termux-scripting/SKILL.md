@@ -39,6 +39,7 @@ Comments: only for non-obvious reasons, Termux or Android constraints, workaroun
 
 ## 4. Quality gate (run after every edit)
 `sh scripts/lint-shell.sh [paths]` or `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/lint-shell.ps1 [paths]`
+- Format modified `.sh` files with shfmt through `.editorconfig` (no style flags) before running the gate.
 - No paths = every shell-like file of the repository (agent directories excluded). Output: `LEVEL file:line [CODE] message` and one `SUMMARY ... coverage=full|partial skipped=...` line. Options: `--dialect`, `--no-external`, `--strict`, `--max-per-rule`, `--root`.
 - Uses ShellCheck (+ `.shellcheckrc`), shfmt (+ `.editorconfig`, only when one exists), dialect syntax checks, and heuristics from `scripts/patterns.tsv` (bashisms in sh, zsh pitfalls, FHS paths, banner borders, CRLF, log-prefix evidence). Missing tools give `SKIP` lines and `coverage=partial`: say so in the report.
 - Heuristic hits are leads: confirm against the code. Suppress a confirmed false positive with a trailing `# lint-ignore: CODE`. Here-document bodies are skipped; `H001` means a delimiter never closed and later lines were not checked.

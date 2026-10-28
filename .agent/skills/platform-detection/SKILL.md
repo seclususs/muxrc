@@ -1,6 +1,6 @@
 ---
 name: platform-detection
-description: Detects the development host (Linux, macOS, Windows, WSL, Git Bash, MSYS), its package manager, and available tools (ShellCheck, shfmt, dash, bash, zsh, git, PowerShell), and selects fallbacks for missing tools. Runs at the start of every user message through using-termux-skills, and again when a host tool fails with "not found". Covers host tools only; a missing Termux command belongs to systematic-debugging or termux-environment.
+description: Detects the development host (Linux, macOS, Windows, WSL, Git Bash, MSYS), its package manager, and available tools (ShellCheck, shfmt, dash, bash, zsh, git, PowerShell), and selects fallbacks for missing tools. Runs on initial turn, session start, or tool failure through using-termux-skills, and again when a host tool fails with "not found". Covers host tools only; a missing Termux command belongs to systematic-debugging or termux-environment.
 ---
 
 # Platform detection
@@ -14,7 +14,7 @@ Research authority: search the web yourself when docs or dependency facts are mi
    - POSIX shell present (`uname -s` works: Linux, macOS, WSL, Git Bash, MSYS, Cygwin): `sh scripts/detect-platform.sh --brief`
    - Windows PowerShell or cmd (`uname` not found): `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/detect-platform.ps1 --brief`; with PowerShell 7: `pwsh -NoProfile -File scripts/detect-platform.ps1 --brief`
    `--brief` replaces the per-tool lines with one `tool.missing` line; omit it to see every tool path.
-2. Read the `key=value` output; keep it for the rest of the message. The script is read-only and fast; run it once per user message and again when a tool fails unexpectedly.
+2. Read the `key=value` output; reuse it across turns. The script is read-only and fast; run it on initial turn, session start, or when a tool fails unexpectedly.
 3. For each step you need, read `cap.*` (best provider, or the fallback). Order and coverage effects: `references/fallback-matrix.md`.
 4. Missing tool: use the fallback; do not stop. Report which checks ran with reduced coverage.
 5. `hint.*` lines are suggestions. Offer them only if the user wants the tool; do not install system packages without approval; verify package ids with the package manager first.
@@ -25,7 +25,7 @@ Research authority: search the web yourself when docs or dependency facts are mi
 ## Host command rules
 - Every host script exists as `.sh` (needs a POSIX shell) and `.ps1` (Windows PowerShell 5.1+ or PowerShell 7+) with the same options, output, and exit codes. `termux-environment` `device-facts.sh` is the exception: it runs inside Termux. `behavior-snapshot.ps1` and the `sandbox-run`/`trace-run` `.ps1` files are launchers that need a POSIX shell.
 - Windows PowerShell 5.1 has no `&&`, `||`, or `?:`: run commands separately. Pass forward slashes to POSIX tools. Its `>` and `Out-File` write UTF-16, so scripts let git or .NET write files.
-- Git for Windows bundles `sh`, `bash`, `awk`, `sed` but may not put them on PATH; the `.ps1` scripts search its install directories.
+- Git for Windows bundles `sh`, `bash`, `awk`, `sed` but may not put them on PATH; the `.ps1` scripts search its install directories. Tools detected outside system PATH require their full path or sandbox scripts, not bare commands.
 - `host.env=termux` means you run inside the target: host-only assumptions do not apply.
 
 ## Gotchas

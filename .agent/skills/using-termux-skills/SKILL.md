@@ -10,7 +10,7 @@ Paths are relative to this skill directory. Run scripts through their interprete
 Research authority: search the web yourself when docs or dependency facts are missing or stale (primary sources first: Termux wiki, termux-packages, termux-app, Android and shell manuals); cite URLs; never guess.
 
 ## Procedure (every message)
-1. Run `platform-detection`: `sh ../platform-detection/scripts/detect-platform.sh --brief`, or the `.ps1` flavor when `uname` is missing. Once per message, not per tool call. Use `run.scripts` in its output to pick `.sh` or `.ps1` for every other script.
+1. Check host environment via `platform-detection` on initial turn, session start, or tool failure (`sh ../platform-detection/scripts/detect-platform.sh --brief`, or the `.ps1` flavor when `uname` is missing); reuse output across turns. Use `run.scripts` in its output to pick `.sh` or `.ps1` for every other script.
 2. Classify the request with the routing table; read each matching `SKILL.md`.
 3. If the request touches repository code or config: `sh scripts/repo-map.sh` (or `.ps1`). Read the config files it lists (`.editorconfig`, `.shellcheckrc`, `.gitattributes`) when style or line endings matter.
 4. Do the work with those skills, then answer.

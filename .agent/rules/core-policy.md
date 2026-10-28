@@ -8,14 +8,14 @@ description: Core invariants for Termux-targeted shell projects. Applies to ever
 ## Entry gate
 For every user message, including questions, clarifications, and read-only requests:
 1. Read `.agent/skills/using-termux-skills/SKILL.md`.
-2. Run skill `platform-detection` and keep its output.
+2. Check host environment via `platform-detection`: run on initial turn, session start, or when a tool fails; reuse output across turns.
 3. Load each skill the entry skill routes to, then respond.
 
 No message type is exempt. A subagent that received a brief follows the brief instead.
 
 ## Target and host
 - Target: Termux on Android (aarch64 primary; also arm, i686, x86_64). Use `$PREFIX`, `$HOME`, `$TMPDIR`; do not rely on FHS paths (`/usr`, `/etc`, `/tmp`, `/bin`). Files use LF.
-- Host (Linux, macOS, Windows) is only the development environment. Do not assume its OS or tools; use the `platform-detection` output and its fallbacks, and state reduced coverage.
+- Host (Linux, macOS, Windows) is only the development environment. Do not assume its OS or tools; use the `platform-detection` output and its fallbacks, and state reduced coverage. Tools detected outside system PATH require their full path or sandbox scripts.
 - Host runs show syntax and logic, not Termux behavior; list what needs a device check.
 - Skill scripts print options with `--help`. Run `.sh` with `sh`; run `.ps1` with `powershell -NoProfile -ExecutionPolicy Bypass -File <path> <args>`.
 
@@ -36,7 +36,7 @@ No message type is exempt. A subagent that received a brief follows the brief in
 - KISS, DRY, SRP, reusable, idempotent, fail-fast. No side effects on source; single-purpose functions.
 - Defensive: scope variables (`local` where supported), quote `"$VAR"`, validate arguments up front.
 - Streams: data on stdout; logs and errors on stderr (`>&2`).
-- Lint sh/bash with ShellCheck (project `.shellcheckrc`); skip zsh. Format with shfmt through `.editorconfig` and no style flags (flags disable it); zsh is diff-only (shfmt can corrupt zsh syntax).
+- Lint sh/bash with ShellCheck (project `.shellcheckrc`); skip zsh. Format with shfmt through `.editorconfig` before linting; run with no style flags (flags disable it); zsh is diff-only (shfmt can corrupt zsh syntax).
 - Lean and fast: no needless forks in loops or at shell startup.
 
 ## Output contract by code role
@@ -58,6 +58,7 @@ No message type is exempt. A subagent that received a brief follows the brief in
 - No conventional prefixes (`feat:`, `fix:`).
 - Subject: imperative (`Add`, `Fix`, `Drop`), at most 52 chars, no trailing period.
 - Body: blank line after the subject, wrap at 72. Flat single-level `-` bullets. Explain what changed and why, briefly.
+- Do not split bullets into separate `-m` flags (git inserts blank lines between them); pass the body via a file (`git commit -F <file>`) or a single multiline argument.
 
 ## Writing style
 - Reply in the user's language. Rules, skills, templates, and code comments are English.
