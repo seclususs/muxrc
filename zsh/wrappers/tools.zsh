@@ -2,6 +2,7 @@
 # Custom tools wrappers
 #######################
 
+typeset -g MUXRC_DIR="${MUXRC_DIR:-${ZSH_CONFIG_DIR:+${ZSH_CONFIG_DIR:h}}}"
 typeset -g MUXRC_DIR="${MUXRC_DIR:-$HOME/muxrc}"
 source "${MUXRC_DIR}/lib/init.sh"
 

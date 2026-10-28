@@ -368,7 +368,10 @@ systemctl() {
       fi
       ;;
     disable)
-      rm -f "$PREFIX/var/service/$service"
+      if command -v sv-disable > /dev/null 2>&1; then
+        sv-disable "$service" > /dev/null 2>&1 || true
+      fi
+      rm -rf "$PREFIX/var/service/$service"
       echo "Removed /"etc"/systemd/system/multi-user.target.wants/${service}.service."
       ;;
     *)
@@ -459,7 +462,8 @@ ex() {
   fi
 
   if [[ -f $1 ]]; then
-    case $1 in
+    local target="${1:l}"
+    case "$target" in
       *.tar.bz2) tar xjf "$1" ;;
       *.tar.gz) tar xzf "$1" ;;
       *.bz2) bunzip2 "$1" ;;
@@ -469,7 +473,7 @@ ex() {
       *.tbz2) tar xjf "$1" ;;
       *.tgz) tar xzf "$1" ;;
       *.zip) unzip "$1" ;;
-      *.Z) uncompress "$1" ;;
+      *.z) uncompress "$1" ;;
       *.7z) 7z x "$1" ;;
       *.tar.xz | *.txz) tar xJf "$1" ;;
       *.xz) unxz "$1" ;;
@@ -550,7 +554,10 @@ clip-watch() {
 clip-pick() {
   [[ -f "$CLIP_HISTORY_FILE" ]] || return 1
   local pick=$(tac "$CLIP_HISTORY_FILE" | fzf --prompt="clip> ")
-  [[ -n "$pick" ]] && echo -n "$pick" | termux-clipboard-set && termux-toast "copied"
+  if [[ -n "$pick" ]]; then
+    print -rn -- "$pick" | termux-clipboard-set
+    command -v termux-toast > /dev/null 2>&1 && termux-toast "copied" || true
+  fi
 }
 
 ########################
@@ -567,7 +574,7 @@ trash() {
   mkdir -p "$TRASH_DIR"
   local f
   for f in "$@"; do
-    [[ -e "$f" ]] || {
+    [[ -e "$f" || -L "$f" ]] || {
       echo "trash: no such file: $f"
       continue
     }

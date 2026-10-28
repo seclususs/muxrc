@@ -65,7 +65,7 @@ function flush_host() {
     ip = $5
     if (ip ~ /\(/) {
         ip = substr(ip, 2, length(ip)-2)
-        host = $5
+        host = ""
     } else {
         host = ""
         if (NF == 6) {

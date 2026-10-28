@@ -81,11 +81,22 @@ execute_spoof() {
     args+=("-${key}=${val}")
   done < <(jq -r 'to_entries | .[] | "\(.key)=\(.value)"' "${preset_file}")
 
+  if [[ ${#args[@]} -eq 0 ]]; then
+    log_error "no valid metadata keys found in preset"
+    return 1
+  fi
+
   trap 'cleanup_spinner' EXIT
   start_spinner "injecting decoy into ${msg_target}"
-  exiftool "${args[@]}" -o "${output_target}" "${target_path}" > /dev/null
-  stop_spinner "success" "decoy saved to ${output_target}"
-  trap - EXIT
+  if exiftool "${args[@]}" -o "${output_target}" "${target_path}" > /dev/null 2>&1; then
+    stop_spinner "success" "decoy saved to ${output_target}"
+    trap - EXIT
+    return 0
+  else
+    stop_spinner "error" "decoy injection failed"
+    trap - EXIT
+    return 1
+  fi
 }
 
 main() {

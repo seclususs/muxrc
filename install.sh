@@ -193,7 +193,7 @@ symlink_configurations() {
   ln -sf "${dotfiles_dir}/nano/.nanorc" "${HOME}/.nanorc"
 
   ln -sf "${dotfiles_dir}/boot/start-sshd" "${HOME}/.termux/boot/start-sshd"
-  chmod +x "${dotfiles_dir}/boot/start-sshd"
+  chmod +x "${dotfiles_dir}/boot/start-sshd" 2> /dev/null || true
 }
 
 setup_nerd_font() {
