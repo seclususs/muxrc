@@ -239,8 +239,11 @@ net-sweep() {
     return 1
   fi
 
-  local cidr
-  cidr=$(ip route show 2> /dev/null | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1)
+  local cidr="${1:-}"
+
+  if [[ -z "$cidr" ]]; then
+    cidr=$(ip route show 2> /dev/null | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1)
+  fi
 
   if [[ -z "$cidr" ]] && command -v termux-wifi-connectioninfo > /dev/null 2>&1; then
     local wifi_ip
@@ -384,7 +387,7 @@ net-killswitch() {
     fi
   fi
 
-  if [[ "$EUID" -ne 0 && "$action" != "status" && "$action" != "-h" && "$action" != "--help" && "$action" != "help" ]] && command -v sudo > /dev/null 2>&1; then
+  if [[ "$EUID" -ne 0 && "$action" != "-h" && "$action" != "--help" && "$action" != "help" ]] && command -v sudo > /dev/null 2>&1; then
     sudo bash "${MUXRC_DIR}/tools/sh/net-killswitch.sh" "$@"
   else
     bash "${MUXRC_DIR}/tools/sh/net-killswitch.sh" "$@"

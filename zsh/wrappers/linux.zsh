@@ -364,6 +364,7 @@ systemctl() {
         echo "Created symlink /"etc"/systemd/system/multi-user.target.wants/${service}.service → /"lib"/systemd/system/${service}.service."
       else
         echo "Failed to enable unit: Unit file ${service}.service does not exist."
+        return 1
       fi
       ;;
     disable)
@@ -423,7 +424,7 @@ ping() {
 # Safe permissions modifier
 ###########################
 chmod() {
-  if [[ "$*" == *"/sdcard/"* || "$*" == *"/storage/emulated/"* || "$*" == *"$HOME/storage/"* || "$*" == *"/storage/"* ]]; then
+  if [[ "$PWD" == "/sdcard"* || "$PWD" == *"/storage/"* || "$PWD" == *"$HOME/storage"* || "$*" == *"/sdcard"* || "$*" == *"/storage/emulated/"* || "$*" == *"$HOME/storage"* || "$*" == *"/storage/"* ]]; then
     return 0
   fi
   command chmod "$@"
@@ -443,7 +444,7 @@ xdg-open() {
   if command -v termux-open > /dev/null 2>&1; then
     command termux-open "$@"
   else
-    echo "xdg-open: command not found. Please run: apt install termux-api"
+    echo "xdg-open: command not found. Please run: pkg install termux-tools"
     return 127
   fi
 }
@@ -452,6 +453,11 @@ xdg-open() {
 # Universal archive extractor
 #############################
 ex() {
+  if [[ $# -eq 0 ]]; then
+    echo "usage: ex <archive_file>"
+    return 1
+  fi
+
   if [[ -f $1 ]]; then
     case $1 in
       *.tar.bz2) tar xjf "$1" ;;
@@ -465,10 +471,14 @@ ex() {
       *.zip) unzip "$1" ;;
       *.Z) uncompress "$1" ;;
       *.7z) 7z x "$1" ;;
-      *) echo "ex: '$1' has unknown archive format." ;;
+      *)
+        echo "ex: '$1' has unknown archive format."
+        return 1
+        ;;
     esac
   else
     echo "ex: '$1' is not a valid file."
+    return 1
   fi
 }
 
@@ -544,6 +554,11 @@ clip-pick() {
 TRASH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/Trash"
 
 trash() {
+  if [[ $# -eq 0 ]]; then
+    echo "usage: trash <file> [file...]"
+    return 1
+  fi
+
   mkdir -p "$TRASH_DIR"
   local f
   for f in "$@"; do
@@ -551,7 +566,15 @@ trash() {
       echo "trash: no such file: $f"
       continue
     }
-    mv -- "$f" "$TRASH_DIR/${f:t}.$(date +%s)"
+    local ts
+    ts=$(date +%s)
+    local dest="$TRASH_DIR/${f:t}.${ts}"
+    local counter=1
+    while [[ -e "$dest" ]]; do
+      dest="$TRASH_DIR/${f:t}.${ts}.${counter}"
+      ((counter++))
+    done
+    mv -- "$f" "$dest"
   done
 }
 
@@ -562,10 +585,18 @@ untrash() {
   local item
   item=$(for d in "${search_dirs[@]}"; do ls -1t "$d" 2> /dev/null; done | fzf --prompt="restore> ") || return
   if [[ -n "$item" ]]; then
+    local target_dest="./${item%.*}"
+    if [[ -e "$target_dest" ]]; then
+      local confirm=""
+      read -q "confirm?target '$target_dest' already exists in current directory. overwrite? [y/N] "
+      echo ""
+      [[ "$confirm" =~ ^[Yy]$ ]] || return 1
+    fi
+
     if [[ -e "$TRASH_DIR/$item" ]]; then
-      mv -- "$TRASH_DIR/$item" "./${item%.*}"
+      mv -- "$TRASH_DIR/$item" "$target_dest"
     elif [[ -e "$HOME/.trash/$item" ]]; then
-      mv -- "$HOME/.trash/$item" "./${item%.*}"
+      mv -- "$HOME/.trash/$item" "$target_dest"
     fi
   fi
 }

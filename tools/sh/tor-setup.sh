@@ -116,7 +116,7 @@ EOF
 terminate_tor_process() {
   local tpid="${1:-}"
 
-  if [[ -z "${tpid}" ]]; then
+  if [[ -z "${tpid}" || ! "${tpid}" =~ ^[0-9]+$ ]]; then
     return 1
   fi
 
@@ -190,11 +190,16 @@ stop_tor() {
   if [[ ! -f "${pid_file}" ]]; then
     log_warn "pid file not found in ${opsec_dir}."
     log_warn "assume tor is stopped."
+    shred_tor_state "${opsec_dir}" "${torrc}" "${tor_data}" "${pid_file}"
     return 0
   fi
 
-  tpid=$(cat "${pid_file}")
-  terminate_tor_process "${tpid}"
+  tpid=$(tr -d ' \n' < "${pid_file}" 2> /dev/null || true)
+  if [[ -n "${tpid}" && "${tpid}" =~ ^[0-9]+$ ]]; then
+    terminate_tor_process "${tpid}" || true
+  else
+    log_warn "invalid or empty pid file, proceeding with state shredding."
+  fi
   shred_tor_state "${opsec_dir}" "${torrc}" "${tor_data}" "${pid_file}"
 }
 

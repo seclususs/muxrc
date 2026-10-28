@@ -220,6 +220,10 @@ show_status() {
     mode=$(tr -d ' \n' < "${state_dir}/killswitch_mode" 2> /dev/null || echo "unknown")
   fi
 
+  if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+    log_warn "reading firewall status requires root; results may be inaccurate without sudo."
+  fi
+
   if is_killswitch_active; then
     printf "\n"
     printf "killswitch status: active\n"

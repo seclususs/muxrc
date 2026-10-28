@@ -81,6 +81,8 @@ tools:
   mac-spoof [action]      spoof wi-fi mac address
   media-crypt <file>      encrypt private file
   media-decrypt <f> [out] decrypt private file
+  net-identity [action]   rotate network identity
+  net-killswitch [act]    firewall leak killswitch
   net-sweep               scan local network
   rename-by-date <d> <p>  organize photos by date
   shred-file <file>       permanently destroy file

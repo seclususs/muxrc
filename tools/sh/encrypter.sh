@@ -62,6 +62,16 @@ encrypt_target_file() {
   base_name=$(basename "${target_file}")
   out_file="${vault_dir}/.${base_name}.enc"
 
+  if [[ -e "${out_file}" ]]; then
+    local overwrite=""
+    log_prompt "vault file '${out_file}' already exists. overwrite? [y/N]: "
+    read -r overwrite
+    if [[ ! "${overwrite:-}" =~ ^[Yy]$ ]]; then
+      log_warn "aborted."
+      return 1
+    fi
+  fi
+
   trap 'cleanup_spinner' EXIT
   start_spinner "encrypting ${base_name}"
 

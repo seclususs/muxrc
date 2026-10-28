@@ -200,7 +200,7 @@ apply_mac() {
     trap - EXIT
     return 0
   else
-    stop_spinner "fail" "mac update refused by driver. active: ${verified_mac}"
+    stop_spinner "error" "mac update refused by driver. active: ${verified_mac}"
     trap - EXIT
     return 1
   fi

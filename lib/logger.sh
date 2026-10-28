@@ -81,8 +81,10 @@ stop_spinner() {
   echo -ne "\r\033[K" >&2
   if [[ "${spin_status}" == "success" ]]; then
     log_success "${msg}"
-  elif [[ "${spin_status}" == "error" ]]; then
+  elif [[ "${spin_status}" == "error" || "${spin_status}" == "fail" ]]; then
     log_error "${msg}"
+  elif [[ "${spin_status}" == "warn" ]]; then
+    log_warn "${msg}"
   else
     log_info "${msg}"
   fi

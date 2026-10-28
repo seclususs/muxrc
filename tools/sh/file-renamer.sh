@@ -32,11 +32,11 @@ extract_timestamp() {
 
   if [[ -z "${date_str}" ]]; then
     birth_epoch=$(stat -c %W "${file}" 2> /dev/null || echo 0)
-    if [[ "${birth_epoch}" == "0" || "${birth_epoch}" == "?" ]]; then
+    if [[ ! "${birth_epoch}" =~ ^[1-9][0-9]*$ ]]; then
       birth_epoch=$(stat -c %Y "${file}" 2> /dev/null || echo 0)
     fi
 
-    if [[ "${birth_epoch}" != "0" ]]; then
+    if [[ "${birth_epoch}" =~ ^[1-9][0-9]*$ ]]; then
       date_str=$(date -d "@${birth_epoch}" "+%Y%m%d_%H%M%S" 2> /dev/null || echo "UNKNOWN")
     else
       date_str="UNKNOWN"

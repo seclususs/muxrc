@@ -165,8 +165,11 @@ setup_storage_symlinks() {
   for dir_name in "${!storage_dirs[@]}"; do
     target_path="${storage_dirs[${dir_name}]}"
     if [[ ! -d "${target_path}" ]]; then
-      mkdir -p "${target_path}"
-      log_success "created ${target_path}"
+      if mkdir -p "${target_path}" 2> /dev/null; then
+        log_success "created ${target_path}"
+      else
+        log_warn "could not create ${target_path} (check storage permissions)."
+      fi
     else
       log_warn "${target_path} already exists, skipping."
     fi
@@ -196,17 +199,20 @@ symlink_configurations() {
 setup_nerd_font() {
   if [[ ! -f "${HOME}/.termux/font.ttf" ]]; then
     log_info "installing jetbrains mono font..."
-    wget -q --show-progress -O "${HOME}/.termux/font.ttf" \
-      "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf"
+    if ! wget -q --show-progress -O "${HOME}/.termux/font.ttf" \
+      "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf"; then
+      log_warn "font download failed, skipping."
+      rm -f "${HOME}/.termux/font.ttf" 2> /dev/null || true
+    fi
   else
     log_warn "font already installed, skipping."
   fi
 
-  termux-reload-settings
+  termux-reload-settings 2> /dev/null || true
 }
 
 setup_default_shell() {
-  if [[ "${SHELL}" != */zsh ]]; then
+  if [[ "${SHELL:-}" != */zsh ]]; then
     log_info "changing default shell..."
     chsh -s zsh
   fi

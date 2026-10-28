@@ -56,7 +56,7 @@ hash_potential_duplicates() {
   for file in "${candidates[@]}"; do
     idx=$((idx + 1))
     log_progress "${idx}" "${total}" "hashing duplicates"
-    sha256sum "${file}" >> "${tmp_dir}/hashed.txt"
+    sha256sum -- "${file}" >> "${tmp_dir}/hashed.txt"
   done
 
   clear_progress
@@ -85,8 +85,10 @@ display_duplicates_and_collect_deletions() {
     | sort -k1,1 > "${tmp_dir}/dup_files.txt"
 
   while IFS= read -r line; do
-    hash="${line:0:64}"
-    file="${line:66}"
+    hash="${line%% *}"
+    hash="${hash#\\}"
+    file="${line#* }"
+    file="${file# }"
 
     if [[ "${hash}" != "${current_hash}" ]]; then
       current_hash="${hash}"
@@ -120,7 +122,7 @@ confirm_and_delete() {
 
   if [[ "${confirm:-}" =~ ^[Yy]$ ]]; then
     log_info "cleaning..."
-    xargs -r -d '\n' rm -f < "${delete_list}"
+    xargs -r -d '\n' rm -f -- < "${delete_list}"
     log_success "deleted ${total_to_delete} files."
   else
     log_warn "aborted."

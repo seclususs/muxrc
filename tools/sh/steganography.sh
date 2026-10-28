@@ -92,8 +92,10 @@ embed_data() {
 
   trap '[[ "${embed_opt}" == "1" && -f "${embed_file}" ]] && shred -u "${embed_file}" 2>/dev/null || true; cleanup_spinner' EXIT
   start_spinner "embedding data"
+  local embed_success=0
   if steghide embed -ef "${embed_file}" -cf "${cover}" -p "${pass}"; then
     stop_spinner "success" "embedded into ${cover}"
+    embed_success=1
   else
     stop_spinner "error" "steghide failed."
   fi
@@ -103,6 +105,8 @@ embed_data() {
     shred -u "${embed_file}"
     trap - INT TERM
   fi
+
+  [[ ${embed_success} -eq 1 ]] || return 1
 }
 
 extract_data() {
@@ -136,14 +140,18 @@ extract_data() {
 
   trap 'cleanup_spinner' EXIT
   start_spinner "extracting data"
+  local extract_success=0
   pushd "${extract_dir}" > /dev/null
   if steghide extract -sf "${stego_img_abs}" -f -p "${pass}"; then
     stop_spinner "success" "extracted to ${extract_dir}"
+    extract_success=1
   else
     stop_spinner "error" "extraction failed."
   fi
   popd > /dev/null
   trap - EXIT
+
+  [[ ${extract_success} -eq 1 ]] || return 1
 }
 
 main() {
