@@ -5,7 +5,7 @@
 ############
 set -euo pipefail
 
-termux-wake-lock
+command -v termux-wake-lock > /dev/null 2>&1 && termux-wake-lock 2> /dev/null || true
 
 if ! pgrep -x sshd > /dev/null 2>&1; then
   sshd

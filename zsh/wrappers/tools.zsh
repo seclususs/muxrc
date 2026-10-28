@@ -248,7 +248,7 @@ net-sweep() {
   if [[ -z "$cidr" ]] && command -v termux-wifi-connectioninfo > /dev/null 2>&1; then
     local wifi_ip
     wifi_ip=$(termux-wifi-connectioninfo 2> /dev/null | jq -r '.ip // empty' 2> /dev/null)
-    if [[ -n "$wifi_ip" && "$wifi_ip" != "null" ]]; then
+    if [[ -n "$wifi_ip" && "$wifi_ip" != "null" && "$wifi_ip" != "0.0.0.0" ]]; then
       cidr="${wifi_ip%.*}.0/24"
       log_info "detected wifi subnet: $cidr"
     fi

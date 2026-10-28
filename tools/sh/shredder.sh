@@ -51,7 +51,7 @@ execute_shred() {
 
   trap 'cleanup_spinner' EXIT
   start_spinner "shredding file"
-  shred -u -z -n 3 "${target_file}"
+  shred -u -z -n 3 -- "${target_file}"
   stop_spinner "success" "file destroyed."
   trap - EXIT
 }

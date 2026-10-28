@@ -112,7 +112,7 @@ apply_renames() {
   if [[ "${conf}" =~ ^[Yy]$ ]]; then
     log_info "executing rename..."
     for i in "${!_old_targets[@]}"; do
-      mv -n "${_old_targets[${i}]}" "${_new_targets[${i}]}"
+      mv -n -- "${_old_targets[${i}]}" "${_new_targets[${i}]}"
     done
     log_success "done."
   else

@@ -471,6 +471,8 @@ ex() {
       *.zip) unzip "$1" ;;
       *.Z) uncompress "$1" ;;
       *.7z) 7z x "$1" ;;
+      *.tar.xz | *.txz) tar xJf "$1" ;;
+      *.xz) unxz "$1" ;;
       *)
         echo "ex: '$1' has unknown archive format."
         return 1
@@ -518,7 +520,7 @@ notify-task() {
   local task_status="done in ${secs}s"
   ((code != 0)) && task_status="failed (exit ${code}) after ${secs}s"
 
-  termux-vibrate -d 250 > /dev/null 2>&1
+  command -v termux-vibrate > /dev/null 2>&1 && termux-vibrate -d 250 > /dev/null 2>&1 || true
   command -v termux-notification > /dev/null 2>&1 && termux-notification --id notify-task --title "${label:0:40}" --content "$task_status"
   return $code
 }
@@ -527,12 +529,15 @@ notify-task() {
 # Clipboard history helpers
 ###########################
 CLIP_HISTORY_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/muxrc/clip_history.log"
+typeset -g _CLIP_LAST=""
 
 clip-save() {
   mkdir -p "${CLIP_HISTORY_FILE:h}"
   local cur=$(termux-clipboard-get 2> /dev/null)
   [[ -z "$cur" ]] && return
-  [[ "$(tail -n1 "$CLIP_HISTORY_FILE" 2> /dev/null)" != "$cur" ]] && echo "$cur" >> "$CLIP_HISTORY_FILE"
+  [[ "$cur" == "$_CLIP_LAST" ]] && return
+  _CLIP_LAST="$cur"
+  echo "$cur" >> "$CLIP_HISTORY_FILE"
 }
 
 clip-watch() {
@@ -585,7 +590,11 @@ untrash() {
   local item
   item=$(for d in "${search_dirs[@]}"; do ls -1t "$d" 2> /dev/null; done | fzf --prompt="restore> ") || return
   if [[ -n "$item" ]]; then
-    local target_dest="./${item%.*}"
+    local orig_name="${item%.*}"
+    if [[ "$item" =~ '\.[0-9]+\.[0-9]+$' ]]; then
+      orig_name="${orig_name%.*}"
+    fi
+    local target_dest="./${orig_name}"
     if [[ -e "$target_dest" ]]; then
       local confirm=""
       read -q "confirm?target '$target_dest' already exists in current directory. overwrite? [y/N] "
@@ -614,7 +623,7 @@ net-info() {
     return 1
   }
   local ip=$(termux-wifi-connectioninfo | jq -r '.ip // empty')
-  [[ -z "$ip" || "$ip" == null ]] && {
+  [[ -z "$ip" || "$ip" == null || "$ip" == "0.0.0.0" ]] && {
     echo "net-info: no wifi ip"
     return 1
   }

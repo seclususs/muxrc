@@ -31,12 +31,32 @@ validate_cidr() {
 execute_arp_sweep() {
   local target_cidr="${1}"
 
+  if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+    log_warn "running without root: mac addresses and vendors will be omitted by nmap."
+  fi
+
   log_info "target subnet: ${target_cidr}"
   log_info "initiating sweep..."
   printf "%-15s | %-17s | %s\n" "ip" "mac" "vendor (host)"
 
   nmap -sn "${target_cidr}" | awk '
+function flush_host() {
+    if (ip != "") {
+        if (mac == "") {
+            mac = "<unknown>"
+            vendor = "(no root / local)"
+        }
+        if (host != "") {
+            printf "%-15s | %-17s | %s (%s)\n", ip, mac, vendor, host
+        } else {
+            printf "%-15s | %-17s | %s\n", ip, mac, vendor
+        }
+    }
+    ip = ""; host = ""; mac = ""; vendor = ""
+}
+
 /^Nmap scan report for/ {
+    flush_host()
     ip = $5
     if (ip ~ /\(/) {
         ip = substr(ip, 2, length(ip)-2)
@@ -57,12 +77,9 @@ execute_arp_sweep() {
     }
 
     gsub(/^\(|\) $/, "", vendor)
-
-    if (host != "") {
-        printf "%-15s | %-17s | %s (%s)\n", ip, mac, vendor, host
-    } else {
-        printf "%-15s | %-17s | %s\n", ip, mac, vendor
-    }
+}
+END {
+    flush_host()
 }'
 
   log_success "sweep complete."

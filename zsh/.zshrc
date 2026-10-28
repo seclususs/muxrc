@@ -35,10 +35,10 @@ source "$ZSH_CONFIG_DIR/wrappers/tools.zsh"
 source "$ZSH_CONFIG_DIR/wrappers/ai.zsh"
 source "$ZSH_CONFIG_DIR/aliases.zsh"
 source "$ZSH_CONFIG_DIR/prompt.zsh"
-source "$ZSH_CONFIG_DIR/plugins.zsh"
-
 if [[ -f "$HOME/.dircolors" ]]; then
   eval "$(dircolors -b "$HOME/.dircolors")"
 fi
+
+source "$ZSH_CONFIG_DIR/plugins.zsh"
 
 source "$ZSH_CONFIG_DIR/motd.zsh"

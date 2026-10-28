@@ -163,6 +163,9 @@ enable_killswitch() {
       fi
 
       log_info "permitting tor egress (uid: ${tor_uid})..."
+      if [[ "${tor_uid}" -ge 10000 || "${tor_uid}" == "${SUDO_UID:-}" ]]; then
+        log_warn "tor shares app uid ${tor_uid} with termux: direct cli commands share this uid and can bypass wan drop."
+      fi
       "${ipt}" -A "${CHAIN_NAME}" -m owner --uid-owner "${tor_uid}" -j ACCEPT
 
       # Permit local loopback access to Tor ports
