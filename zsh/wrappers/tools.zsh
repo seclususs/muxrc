@@ -199,6 +199,7 @@ commands:
   decrypt <f> [out]    decrypt vault file
   stego                hide/extract in image
   shred <file>         secure permanent delete
+  panic [flags]        emergency one-shot secure burn
 
 run 'sec <command> -h' for subcommand details
 EOF
@@ -288,6 +289,29 @@ sec() {
     shred)
       shift
       bash "${MUXRC_DIR}/lib/shredder.sh" "$@"
+      ;;
+    panic)
+      shift
+      bash "${MUXRC_DIR}/tools/sh/sec/panic.sh" "$@"
+      local exit_code=$?
+      if [[ $exit_code -eq 0 ]]; then
+        local arg
+        local is_dry=0
+        for arg in "$@"; do
+          if [[ "$arg" == "-n" || "$arg" == "--dry-run" || "$arg" == "-h" || "$arg" == "--help" ]]; then
+            is_dry=1
+            break
+          fi
+        done
+        if [[ $is_dry -eq 0 ]]; then
+          HISTSIZE=0
+          SAVEHIST=0
+          if whence fc > /dev/null 2>&1; then
+            fc -p
+          fi
+        fi
+      fi
+      return $exit_code
       ;;
     "")
       _sec_help
