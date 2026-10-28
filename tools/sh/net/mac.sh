@@ -5,71 +5,10 @@
 ######################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../lib/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../../lib/init.sh"
 
 check_dependencies() {
   require_cmd ip awk
-}
-
-check_root() {
-  if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-    log_error "root access required. run via sudo: sudo mac-spoof"
-    return 1
-  fi
-  return 0
-}
-
-detect_interface() {
-  local iface="${1:-}"
-
-  if [[ -n "${iface}" ]]; then
-    if [[ ! -d "/sys/class/net/${iface}" ]] && ! ip link show "${iface}" > /dev/null 2>&1; then
-      log_error "interface '${iface}' not found."
-      return 1
-    fi
-    printf "%s\n" "${iface}"
-    return 0
-  fi
-
-  local detected=""
-  local dev_path
-  for dev_path in /sys/class/net/wlan*; do
-    if [[ -d "${dev_path}" ]]; then
-      detected="${dev_path##*/}"
-      break
-    fi
-  done
-
-  if [[ -z "${detected}" ]]; then
-    detected=$(ip -o link show 2> /dev/null | awk -F': ' '{print $2}' | grep -E '^wlan' | head -n 1 || true)
-  fi
-
-  if [[ -z "${detected}" ]]; then
-    detected="wlan0"
-  fi
-
-  if [[ ! -d "/sys/class/net/${detected}" ]] && ! ip link show "${detected}" > /dev/null 2>&1; then
-    log_error "no active wireless interface detected."
-    return 1
-  fi
-
-  printf "%s\n" "${detected}"
-  return 0
-}
-
-get_current_mac() {
-  local iface="${1}"
-  local cur_mac=""
-
-  if [[ -f "/sys/class/net/${iface}/address" ]]; then
-    cur_mac=$(tr -d ' \n' < "/sys/class/net/${iface}/address" 2> /dev/null || true)
-  fi
-
-  if [[ -z "${cur_mac}" ]]; then
-    cur_mac=$(ip -o link show "${iface}" 2> /dev/null | awk '{for(i=1;i<=NF;i++) if($i=="link/ether") print $(i+1)}' || true)
-  fi
-
-  printf "%s\n" "${cur_mac,,}"
 }
 
 generate_laa_mac() {
@@ -107,20 +46,20 @@ validate_mac() {
   local mac_regex='^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$'
 
   if [[ ! "${mac}" =~ ${mac_regex} ]]; then
-    log_error "invalid mac address format: ${mac}"
+    log_error "invalid mac format: ${mac}"
     return 1
   fi
 
   local lower_mac="${mac,,}"
   if [[ "${lower_mac}" == "00:00:00:00:00:00" || "${lower_mac}" == "ff:ff:ff:ff:ff:ff" ]]; then
-    log_error "reserved broadcast/null mac cannot be used: ${mac}"
+    log_error "reserved mac rejected: ${mac}"
     return 1
   fi
 
   local first_byte="${mac%%:*}"
   local second_nibble="${first_byte:1:1}"
   if [[ "${second_nibble}" =~ [13579bdfBDF] ]]; then
-    log_error "multicast mac address not allowed: ${mac}"
+    log_error "multicast mac rejected: ${mac}"
     return 1
   fi
 
@@ -147,17 +86,6 @@ save_original_mac() {
   fi
 }
 
-set_wifi_framework_state() {
-  local state="${1}"
-
-  # Android 10+ uses cmd wifi; older Android uses svc wifi
-  if command -v cmd > /dev/null 2>&1; then
-    cmd wifi set-wifi-enabled "${state}" > /dev/null 2>&1 || true
-  elif command -v svc > /dev/null 2>&1; then
-    svc wifi "${state}" > /dev/null 2>&1 || true
-  fi
-}
-
 apply_mac() {
   local iface="${1}"
   local new_mac="${2}"
@@ -165,7 +93,7 @@ apply_mac() {
 
   cur_mac=$(get_current_mac "${iface}")
   if [[ "${cur_mac}" == "${new_mac,,}" ]]; then
-    log_warn "interface ${iface} already has address ${cur_mac}."
+    log_warn "interface ${iface} already has address ${cur_mac}"
     return 0
   fi
 
@@ -200,7 +128,7 @@ apply_mac() {
     trap - EXIT
     return 0
   else
-    stop_spinner "error" "mac update refused by driver. active: ${verified_mac}"
+    stop_spinner "error" "mac refused by driver. active: ${verified_mac}"
     trap - EXIT
     return 1
   fi
@@ -228,11 +156,11 @@ show_status() {
     addr_type="Locally Administered / Spoofed (LAA)"
   fi
 
-  printf "%-14s : %s\n" "interface" "${iface}"
-  printf "%-14s : %s\n" "state" "${link_state^^}"
-  printf "%-14s : %s\n" "active mac" "${cur_mac}"
-  printf "%-14s : %s\n" "type" "${addr_type}"
-  printf "%-14s : %s\n" "factory mac" "${orig_mac}"
+  printf "%-12s : %s\n" "interface" "${iface}"
+  printf "%-12s : %s\n" "state" "${link_state^^}"
+  printf "%-12s : %s\n" "active mac" "${cur_mac}"
+  printf "%-12s : %s\n" "type" "${addr_type}"
+  printf "%-12s : %s\n" "factory mac" "${orig_mac}"
 }
 
 reset_mac() {
@@ -241,7 +169,7 @@ reset_mac() {
   local orig_file="${state_dir}/mac_orig_${iface}"
 
   if [[ ! -f "${orig_file}" ]]; then
-    log_error "no factory mac backup found for ${iface} in ${state_dir}."
+    log_error "no factory mac backup found for ${iface}"
     return 1
   fi
 
@@ -254,19 +182,25 @@ reset_mac() {
 }
 
 usage() {
-  echo "usage: $(basename "$0") {show|random|set <mac>|reset} [interface]"
+  echo "usage: net mac <action> [iface]"
   echo ""
-  echo "commands:"
-  echo "  show [iface]       show current mac, state, and address type"
-  echo "  random [iface]     generate and apply a valid ieee 802 laa unicast mac"
-  echo "  set <mac> [iface]  apply a custom mac address"
-  echo "  reset [iface]      restore saved factory mac address"
+  echo "actions:"
+  echo "  show [iface]       show current mac & type"
+  echo "  random [iface]     apply random laa mac (root)"
+  echo "  set <mac> [iface]  apply custom mac (root)"
+  echo "  reset [iface]      restore factory mac (root)"
 }
 
 main() {
+  local action="${1:-show}"
+
+  if [[ "${action}" == "-h" || "${action}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
   check_dependencies || exit 1
 
-  local action="${1:-show}"
   shift || true
 
   case "${action}" in
@@ -276,7 +210,7 @@ main() {
       show_status "${iface}"
       ;;
     random)
-      check_root || exit 1
+      require_root || exit 1
       local iface
       iface=$(detect_interface "${1:-}") || exit 1
       local target_mac
@@ -284,10 +218,10 @@ main() {
       apply_mac "${iface}" "${target_mac}"
       ;;
     set)
-      check_root || exit 1
+      require_root || exit 1
       local target_mac="${1:-}"
-      if [[ -z "${target_mac}" ]]; then
-        log_error "usage: $(basename "$0") set <mac_address> [interface]"
+      if [[ -z "${target_mac}" || "${target_mac}" == "-h" || "${target_mac}" == "--help" ]]; then
+        log_error "usage: net mac set <mac_address> [interface]"
         exit 1
       fi
       shift
@@ -297,16 +231,13 @@ main() {
       apply_mac "${iface}" "${target_mac}"
       ;;
     reset)
-      check_root || exit 1
+      require_root || exit 1
       local iface
       iface=$(detect_interface "${1:-}") || exit 1
       reset_mac "${iface}"
       ;;
-    -h | --help | help)
-      usage
-      ;;
     *)
-      log_error "unknown command: ${action}"
+      log_error "unknown action: ${action} (see -h)"
       usage
       exit 1
       ;;

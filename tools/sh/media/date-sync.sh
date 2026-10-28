@@ -5,7 +5,7 @@
 ################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
+source "$(dirname "$(realpath "$0")")/../../../lib/init.sh"
 
 check_dependencies() {
   require_cmd exiftool
@@ -15,21 +15,27 @@ validate_target() {
   local target="${1:-}"
 
   if [[ -z "${target}" ]]; then
-    log_error "usage: $(basename "$0") <file_or_directory>"
+    log_error "usage: media sync <target> (see -h)"
     return 1
   fi
 
   if [[ ! -e "${target}" ]]; then
-    log_error "target '${target}' not found."
+    log_error "target '${target}' not found"
     return 1
   fi
 
   if [[ ! -r "${target}" ]]; then
-    log_error "target '${target}' is not readable."
+    log_error "target '${target}' not readable"
     return 1
   fi
 
   return 0
+}
+
+usage() {
+  echo "usage: media sync <file_or_directory>"
+  echo "sync file modification timestamps with internal"
+  echo "exif creation dates (QuickTime UTC compatible)."
 }
 
 setup_timezone() {
@@ -62,11 +68,16 @@ sync_metadata_dates() {
     "-CreationTime<FileModifyDate" \
     "${target}" > /dev/null 2>&1 || true
 
-  stop_spinner "success" "metadata dates synced."
+  stop_spinner "success" "metadata dates synced"
   trap - EXIT
 }
 
 main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
   local target="${1:-}"
 
   validate_target "${target}" || exit 1

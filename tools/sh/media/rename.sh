@@ -5,7 +5,7 @@
 ##############
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
+source "$(dirname "$(realpath "$0")")/../../../lib/init.sh"
 
 check_dependencies() {
   require_cmd exiftool stat date find mv
@@ -16,11 +16,17 @@ validate_inputs() {
   local prefix="${2:-}"
 
   if [[ -z "${target_dir}" || -z "${prefix}" ]]; then
-    log_error "usage: $(basename "$0") <directory> <prefix>"
+    log_error "usage: media rename <dir> <prefix> (see -h)"
     return 1
   fi
 
   validate_dir_readable "${target_dir}"
+}
+
+usage() {
+  echo "usage: media rename <directory> <prefix>"
+  echo "rename media files by date metadata:"
+  echo "<prefix>_YYYYMMDD_HHMMSS.<ext>"
 }
 
 extract_timestamp() {
@@ -106,7 +112,7 @@ apply_renames() {
   local conf=""
   local i
 
-  log_prompt "confirm rename? [y/n]: "
+  log_prompt "confirm rename? [y/N]: "
   read -r conf
 
   if [[ "${conf}" =~ ^[Yy]$ ]]; then
@@ -114,13 +120,18 @@ apply_renames() {
     for i in "${!_old_targets[@]}"; do
       mv -n -- "${_old_targets[${i}]}" "${_new_targets[${i}]}"
     done
-    log_success "done."
+    log_success "rename complete"
   else
-    log_warn "aborted."
+    log_warn "aborted"
   fi
 }
 
 main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
   local dir="${1:-}"
   local prefix="${2:-}"
   local file
@@ -140,7 +151,7 @@ main() {
   total=${#file_list[@]}
 
   if [[ "${total}" -eq 0 ]]; then
-    log_info "no files to rename."
+    log_info "no files to rename"
     exit 0
   fi
 
@@ -162,10 +173,10 @@ main() {
   done
 
   clear_progress
-  log_success "parsing complete."
+  log_success "parsing complete"
 
   if [[ ${#old_names[@]} -eq 0 ]]; then
-    log_info "no files to rename."
+    log_info "no files to rename"
     exit 0
   fi
 

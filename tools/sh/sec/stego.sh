@@ -5,10 +5,20 @@
 #####################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
+_stego_dir="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
+source "${_stego_dir}/../../../lib/init.sh"
+if [[ -f "${_stego_dir}/../../../lib/shredder.sh" ]]; then
+  source "${_stego_dir}/../../../lib/shredder.sh"
+fi
 
 check_dependencies() {
-  require_cmd steghide shred
+  require_cmd steghide
+}
+
+usage() {
+  echo "usage: sec stego"
+  echo "interactive tool to hide or extract secret"
+  echo "payload in cover images using steghide."
 }
 
 prompt_passphrase_confirmed() {
@@ -19,7 +29,7 @@ prompt_passphrase_confirmed() {
   read -r -s pass
   echo >&2
   if [[ -z "${pass}" ]]; then
-    log_error "passphrase cannot be empty."
+    log_error "passphrase cannot be empty"
     return 1
   fi
 
@@ -27,7 +37,7 @@ prompt_passphrase_confirmed() {
   read -r -s pass_conf
   echo >&2
   if [[ "${pass}" != "${pass_conf}" ]]; then
-    log_error "passphrases do not match."
+    log_error "passphrases do not match"
     return 1
   fi
 
@@ -39,7 +49,7 @@ embed_data() {
   local opsec_dir="${1:-}"
 
   if [[ -z "${opsec_dir}" ]]; then
-    log_error "missing opsec directory parameter."
+    log_error "missing opsec directory parameter"
     return 1
   fi
 
@@ -52,7 +62,7 @@ embed_data() {
   log_prompt "path to cover image: "
   read -r cover
   if [[ ! -f "${cover}" ]]; then
-    log_error "cover image not found."
+    log_error "cover image not found"
     return 1
   fi
 
@@ -64,7 +74,7 @@ embed_data() {
 
   if [[ "${embed_opt}" == "1" ]]; then
     embed_file="${opsec_dir}/secret-payload.txt"
-    trap 'shred -u "${embed_file}" 2>/dev/null || true; cleanup_spinner' EXIT INT TERM
+    trap 'shred_file "${embed_file}" 1; cleanup_spinner' EXIT INT TERM
     log_prompt "text to hide: "
     read -r secret_text
     touch "${embed_file}"
@@ -74,35 +84,35 @@ embed_data() {
     log_prompt "path to file to hide: "
     read -r embed_file
     if [[ ! -f "${embed_file}" ]]; then
-      log_error "file to embed not found."
+      log_error "file to embed not found"
       return 1
     fi
   else
-    log_error "invalid option."
+    log_error "invalid option"
     return 1
   fi
 
   if ! pass=$(prompt_passphrase_confirmed); then
     if [[ "${embed_opt}" == "1" && -f "${embed_file}" ]]; then
-      shred -u "${embed_file}" 2> /dev/null || true
+      shred_file "${embed_file}" 1
       trap - EXIT INT TERM
     fi
     return 1
   fi
 
-  trap '[[ "${embed_opt}" == "1" && -f "${embed_file}" ]] && shred -u "${embed_file}" 2>/dev/null || true; cleanup_spinner' EXIT
+  trap '[[ "${embed_opt}" == "1" && -f "${embed_file}" ]] && shred_file "${embed_file}" 1; cleanup_spinner' EXIT
   start_spinner "embedding data"
   local embed_success=0
-  if steghide embed -ef "${embed_file}" -cf "${cover}" -p "${pass}"; then
-    stop_spinner "success" "embedded into ${cover}"
+  if steghide embed -ef "${embed_file}" -cf "${cover}" -p "${pass}" > /dev/null 2>&1; then
+    stop_spinner "success" "embedded into $(basename "${cover}")"
     embed_success=1
   else
-    stop_spinner "error" "steghide failed."
+    stop_spinner "error" "steghide failed"
   fi
   trap - EXIT
 
   if [[ "${embed_opt}" == "1" && -f "${embed_file}" ]]; then
-    shred -u "${embed_file}"
+    shred_file "${embed_file}" 1
     trap - INT TERM
   fi
 
@@ -113,7 +123,7 @@ extract_data() {
   local extract_dir="${1:-}"
 
   if [[ -z "${extract_dir}" ]]; then
-    log_error "missing extraction directory parameter."
+    log_error "missing extraction directory parameter"
     return 1
   fi
 
@@ -124,7 +134,7 @@ extract_data() {
   log_prompt "path to stego-image: "
   read -r stego_img
   if [[ ! -f "${stego_img}" ]]; then
-    log_error "stego-image not found."
+    log_error "stego-image not found"
     return 1
   fi
 
@@ -134,7 +144,7 @@ extract_data() {
   read -r -s pass
   echo >&2
   if [[ -z "${pass}" ]]; then
-    log_error "passphrase cannot be empty."
+    log_error "passphrase cannot be empty"
     return 1
   fi
 
@@ -142,11 +152,11 @@ extract_data() {
   start_spinner "extracting data"
   local extract_success=0
   pushd "${extract_dir}" > /dev/null
-  if steghide extract -sf "${stego_img_abs}" -f -p "${pass}"; then
-    stop_spinner "success" "extracted to ${extract_dir}"
+  if steghide extract -sf "${stego_img_abs}" -f -p "${pass}" > /dev/null 2>&1; then
+    stop_spinner "success" "extracted to ${extract_dir}/"
     extract_success=1
   else
-    stop_spinner "error" "extraction failed."
+    stop_spinner "error" "extraction failed"
   fi
   popd > /dev/null
   trap - EXIT
@@ -155,6 +165,11 @@ extract_data() {
 }
 
 main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
   local cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/muxrc"
   local opsec_dir="${cache_dir}/run"
   local extract_dir="${HOME}/muxrc-out/extracted"
@@ -180,7 +195,7 @@ main() {
     log_warn "exiting..."
     exit 0
   else
-    log_error "invalid option."
+    log_error "invalid option"
     exit 1
   fi
 }

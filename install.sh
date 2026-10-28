@@ -150,7 +150,7 @@ setup_zsh_plugins() {
   fi
 
   log_info "fetching zsh plugins..."
-  bash "${SCRIPT_DIR}/tools/sh/muxrc/sync-plugins.sh" "${zsh_plugins_dir}"
+  bash "${SCRIPT_DIR}/lib/sync.sh" "${zsh_plugins_dir}"
 }
 
 setup_storage_symlinks() {
@@ -270,8 +270,8 @@ main() {
   enable_repos
   install_packages
 
-  if [[ -f "${SCRIPT_DIR}/tools/sh/muxrc/migrate.sh" ]]; then
-    bash "${SCRIPT_DIR}/tools/sh/muxrc/migrate.sh"
+  if [[ -f "${SCRIPT_DIR}/lib/migrate.sh" ]]; then
+    bash "${SCRIPT_DIR}/lib/migrate.sh"
   fi
 
   setup_directories "${dotfiles_dir}" "${zsh_plugins_dir}"

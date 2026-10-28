@@ -9,6 +9,12 @@ source "${MUXRC_DIR}/lib/init.sh"
 # Muxrc Sync
 ############
 _muxrc_sync() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    echo "usage: muxrc sync"
+    echo "pull repository updates, run migrations, and sync plugins."
+    return 0
+  fi
+
   log_info "syncing muxrc..."
 
   local muxrc_dir="${MUXRC_DIR}"
@@ -35,14 +41,14 @@ _muxrc_sync() {
     return 1
   fi
 
-  if [[ -f "$muxrc_dir/tools/sh/muxrc/migrate.sh" ]]; then
+  if [[ -f "$muxrc_dir/lib/migrate.sh" ]]; then
     log_info "checking migrations..."
-    bash "$muxrc_dir/tools/sh/muxrc/migrate.sh"
+    bash "$muxrc_dir/lib/migrate.sh"
   fi
 
-  if [[ -f "$muxrc_dir/tools/sh/muxrc/sync-plugins.sh" ]]; then
+  if [[ -f "$muxrc_dir/lib/sync.sh" ]]; then
     log_info "syncing zsh plugins..."
-    bash "$muxrc_dir/tools/sh/muxrc/sync-plugins.sh" "$plugins_dir"
+    bash "$muxrc_dir/lib/sync.sh" "$plugins_dir"
   fi
 
   if [[ -f "$install_script" ]]; then
@@ -59,46 +65,50 @@ _muxrc_sync() {
   exec zsh
 }
 
+#############
+# Muxrc Clean
+#############
+_muxrc_clean() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    echo "usage: muxrc clean"
+    echo "clear active and backup shell history files."
+    return 0
+  fi
+
+  log_info "cleaning shell history..."
+
+  local hfile="${HISTFILE:-${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history}"
+  rm -f "$hfile" "${hfile}.LOCK" "$HOME/.zsh_history" "$HOME/.zsh_history.LOCK" "$HOME/.zsh_history_root" "$HOME/.zsh_history_root.LOCK" 2> /dev/null
+
+  log_success "history cleaned. reloading shell..."
+  exec zsh
+}
+
 ############
 # Muxrc Help
 ############
 _muxrc_help() {
   cat << 'EOF'
-muxrc
+muxrc: termux environment manager
 
-usage:
-  muxrc <command> [args]
+usage: muxrc <command> [args]
 
 commands:
-  sync                    update dotfiles and plugins
-  help                    show this help message
+  sync                    update dotfiles & plugins
+  clean                   clear shell history
 
 tools:
-  clean-dupes <dir>       find duplicate files
-  clean-history           clean zsh history
-  clean-meta <dir>        strip photo metadata
-  date-sync <target>      sync metadata dates
-  mac-spoof [action]      spoof wi-fi mac address
-  media-crypt <file>      encrypt private file
-  media-decrypt <f> [out] decrypt private file
-  net-identity [action]   rotate network identity
-  net-killswitch [act]    firewall leak killswitch
-  net-sweep               scan local network
-  rename-by-date <d> <p>  organize photos by date
-  shred-file <file>       permanently destroy file
-  spoof-meta <pre> <file> spoof photo metadata
-  stego-vault             hide/extract secret data
-  tor-check               verify tor exit ip
-  tor-run <cmd> [args]    run command via tor
-  tor-start               start tor session
-  tor-stop                stop tor session
-  video-compress <file>   compress video to hevc
+  net <command>           network opsec & tor (-h)
+  media <command>         media processing & exif (-h)
+  sec <command>           data security & privacy (-h)
 
 ai:
   cmd-fix [hint]          diagnose error & fix (??)
   ai-toggle               toggle gemini assistant
   ai-model [name]         view or switch model
   ai-key [-c]             set or verify api key
+
+run 'muxrc <command> -h' or '<prefix> -h' for details
 EOF
 }
 
@@ -113,23 +123,19 @@ muxrc() {
       shift
       _muxrc_sync "$@"
       ;;
-    help | -h | --help)
+    clean)
+      shift
+      _muxrc_clean "$@"
+      ;;
+    -h | --help)
       _muxrc_help
       ;;
     "")
       _muxrc_help
       ;;
     *)
-      log_error "unknown command: $subcmd"
-      log_info "run 'muxrc help' for usage."
+      log_error "unknown command: $subcmd (see: muxrc -h)"
       return 1
       ;;
   esac
-}
-
-########################
-# Backward Compatibility
-########################
-muxrc-sync() {
-  muxrc sync "$@"
 }

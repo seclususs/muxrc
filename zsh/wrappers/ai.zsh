@@ -42,7 +42,7 @@ typeset -ga _ai_risk_rules=(
   'raw disk write|(^|[[:space:];&|(])dd[[:space:]][^;&|]*of=/dev/|>[[:space:]]*/dev/(sd|hd|nvme|mmcblk|block)|(^|[[:space:];&|(])(mkfs[[:alnum:].]*|wipefs|blkdiscard)([[:space:]]|$)'
   'download piped into shell|(curl|wget)[^;&]*\|[[:space:]]*(sudo[[:space:]]+)?(ba|da|z|k)?sh([[:space:]]|$)|(^|[[:space:];&|(])(ba|da|z|k)?sh[[:space:]]+(-c[[:space:]]+)?(["'"'"']?\$\(|<\()[[:space:]]*(curl|wget)'
   'recursive permission change|(^|[[:space:];&|(])(chmod|chown|chgrp)[[:space:]]+([^;&|]*[[:space:]])?(-[[:alnum:]]*R[[:alnum:]]*|--recursive)([[:space:]]|$)'
-  'bulk delete|(^|[[:space:];&|(])find[[:space:]][^;&|]*(-delete|-exec[[:space:]]+rm)([[:space:]]|$)|(^|[[:space:];&|(])(shred|shred-file|clean-dupes)([[:space:]]|$)'
+  'bulk delete|(^|[[:space:];&|(])find[[:space:]][^;&|]*(-delete|-exec[[:space:]]+rm)([[:space:]]|$)|(^|[[:space:];&|(])(shred|sec[[:space:]]+shred|media[[:space:]]+dupes)([[:space:]]|$)'
   'git history rewrite|(^|[[:space:];&|(])git[[:space:]]+(reset[[:space:]]+([^;&|]*[[:space:]])?--hard|clean[[:space:]]+([^;&|]*[[:space:]])?-[[:alnum:]]*f|push[[:space:]]+([^;&|]*[[:space:]])?(--force|-f)([[:space:]]|$))'
   'fork bomb|:\(\)[[:space:]]*\{'
 )

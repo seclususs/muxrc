@@ -5,7 +5,7 @@
 ########################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
+source "$(dirname "$(realpath "$0")")/../../../lib/init.sh"
 
 check_dependencies() {
   require_cmd find stat sha256sum awk sort xargs
@@ -15,11 +15,17 @@ validate_target_dir() {
   local target_dir="${1:-}"
 
   if [[ -z "${target_dir}" ]]; then
-    log_error "usage: $(basename "$0") <directory>"
+    log_error "usage: media dupes <directory> (see -h)"
     return 1
   fi
 
   validate_dir_readable "${target_dir}"
+}
+
+usage() {
+  echo "usage: media dupes <directory>"
+  echo "scan directory for duplicate files by size and"
+  echo "sha256 hash, with interactive deletion."
 }
 
 scan_file_sizes() {
@@ -32,7 +38,7 @@ scan_file_sizes() {
 
   start_spinner "scanning '${target_dir}'"
   find "${target_dir}" -type f -size +0c -print0 | xargs -r0 stat -c '%s %n' > "${tmp_dir}/all_files.txt"
-  stop_spinner "success" "scanning complete."
+  stop_spinner "success" "scanning complete"
 
   awk '{size=$1; count[size]++} END {for(s in count) if(count[s]>1) print s}' "${tmp_dir}/all_files.txt" > "${tmp_dir}/dup_sizes.txt"
 }
@@ -55,12 +61,12 @@ hash_potential_duplicates() {
 
   for file in "${candidates[@]}"; do
     idx=$((idx + 1))
-    log_progress "${idx}" "${total}" "hashing duplicates"
+    log_progress "${idx}" "${total}" "hashing dupes"
     sha256sum -- "${file}" >> "${tmp_dir}/hashed.txt"
   done
 
   clear_progress
-  log_success "hashing complete."
+  log_success "hashing complete"
 
   awk '{hash=$1; count[hash]++} END {for(h in count) if(count[h]>1) print h}' "${tmp_dir}/hashed.txt" > "${tmp_dir}/dup_hashes.txt"
 }
@@ -93,7 +99,7 @@ display_duplicates_and_collect_deletions() {
     if [[ "${hash}" != "${current_hash}" ]]; then
       current_hash="${hash}"
       total_dupe_sets=$((total_dupe_sets + 1))
-      log_info "[group ${total_dupe_sets}] hash: ${hash:0:8}..."
+      log_info "[group ${total_dupe_sets}] ${hash:0:8}..."
       log_success "keep: ${file}"
     else
       log_warn "del : ${file}"
@@ -117,19 +123,24 @@ confirm_and_delete() {
     return 0
   fi
 
-  log_prompt "delete ${total_to_delete} files? [y/n]: "
+  log_prompt "delete ${total_to_delete} files? [y/N]: "
   read -r confirm
 
   if [[ "${confirm:-}" =~ ^[Yy]$ ]]; then
-    log_info "cleaning..."
+    log_info "deleting..."
     xargs -r -d '\n' rm -f -- < "${delete_list}"
-    log_success "deleted ${total_to_delete} files."
+    log_success "deleted ${total_to_delete} files"
   else
-    log_warn "aborted."
+    log_warn "aborted"
   fi
 }
 
 main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
   local target_dir="${1:-}"
   local tmp_dir
 
@@ -141,13 +152,13 @@ main() {
 
   scan_file_sizes "${target_dir}" "${tmp_dir}"
   if [[ ! -s "${tmp_dir}/dup_sizes.txt" ]]; then
-    log_success "no duplicates found."
+    log_success "no duplicates found"
     exit 0
   fi
 
   hash_potential_duplicates "${tmp_dir}"
   if [[ ! -s "${tmp_dir}/dup_hashes.txt" ]]; then
-    log_success "no exact duplicates found."
+    log_success "no exact duplicates found"
     exit 0
   fi
 

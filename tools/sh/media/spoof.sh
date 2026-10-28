@@ -5,7 +5,7 @@
 ##############
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
+source "$(dirname "$(realpath "$0")")/../../../lib/init.sh"
 
 check_dependencies() {
   require_cmd exiftool jq
@@ -16,7 +16,7 @@ validate_inputs() {
   local target_path="${2:-}"
 
   if [[ -z "${preset_file}" || -z "${target_path}" ]]; then
-    log_error "usage: $(basename "$0") <preset_json_file> <target_image_or_directory>"
+    log_error "usage: media spoof <preset> <target> (see -h)"
     return 1
   fi
 
@@ -28,11 +28,17 @@ validate_inputs() {
   fi
 
   if [[ ! -r "${target_path}" ]]; then
-    log_error "target is not readable: ${target_path}"
+    log_error "target not readable: ${target_path}"
     return 1
   fi
 
   return 0
+}
+
+usage() {
+  echo "usage: media spoof <preset_json_file> <target>"
+  echo "inject decoy exif metadata into target."
+  echo "output is saved to ~/muxrc-out/decoys/"
 }
 
 execute_spoof() {
@@ -41,7 +47,7 @@ execute_spoof() {
   local output_dir="${3:-}"
 
   if [[ -z "${preset_file}" || -z "${target_path}" || -z "${output_dir}" ]]; then
-    log_error "missing parameters for spoof execution."
+    log_error "missing parameters for spoof execution"
     return 1
   fi
 
@@ -57,7 +63,7 @@ execute_spoof() {
 
   if [[ -d "${target_path}" ]]; then
     output_target="${output_dir}/"
-    msg_target="directory $(basename "${target_path}")"
+    msg_target="dir $(basename "${target_path}")"
   elif [[ -f "${target_path}" ]]; then
     output_target="${output_dir}/$(basename "${target_path}")"
     msg_target="file $(basename "${target_path}")"
@@ -78,11 +84,16 @@ execute_spoof() {
   trap 'cleanup_spinner' EXIT
   start_spinner "injecting decoy into ${msg_target}"
   exiftool "${args[@]}" -o "${output_target}" "${target_path}" > /dev/null
-  stop_spinner "success" "decoy at: ${output_target}"
+  stop_spinner "success" "decoy saved to ${output_target}"
   trap - EXIT
 }
 
 main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
   local preset_file="${1:-}"
   local target_path="${2:-}"
   local output_dir="${HOME}/muxrc-out/decoys"

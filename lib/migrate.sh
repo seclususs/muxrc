@@ -5,7 +5,7 @@
 ######################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/../../../lib/init.sh"
+source "$(dirname "$(realpath "$0")")/init.sh"
 
 migrate_sudo_hash() {
   local config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/muxrc"
@@ -181,6 +181,12 @@ cleanup_legacy_dirs() {
 }
 
 main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    echo "usage: migrate.sh [-h|--help]"
+    echo "run legacy xdg path migrations for muxrc."
+    exit 0
+  fi
+
   migrate_sudo_hash
   migrate_ai_env
   migrate_zsh_plugins

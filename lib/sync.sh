@@ -5,7 +5,7 @@
 ###################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/../../../lib/init.sh"
+source "$(dirname "$(realpath "$0")")/init.sh"
 
 check_dependencies() {
   require_cmd git
@@ -89,6 +89,12 @@ sync_plugins() {
 }
 
 main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    echo "usage: sync.sh [-h|--help] [plugins_dir]"
+    echo "sync and update official and custom zsh plugins."
+    exit 0
+  fi
+
   check_dependencies || exit 1
   sync_plugins "$@"
 }

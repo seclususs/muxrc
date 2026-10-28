@@ -5,7 +5,7 @@
 ########################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
+source "$(dirname "$(realpath "$0")")/../../../lib/init.sh"
 
 check_dependencies() {
   require_cmd openssl
@@ -15,7 +15,7 @@ validate_target_file() {
   local target_file="${1:-}"
 
   if [[ -z "${target_file}" ]]; then
-    log_error "usage: $(basename "$0") [--encrypt|--decrypt] <target_file> [output_file]"
+    log_error "usage: sec encrypt <file> | sec decrypt <file> [out] (see -h)"
     return 1
   fi
 
@@ -24,7 +24,7 @@ validate_target_file() {
 
 validate_password() {
   if [[ -z "${MUXRC_CRYPT_PASS:-}" ]]; then
-    log_error "password not provided in MUXRC_CRYPT_PASS."
+    log_error "password not provided in MUXRC_CRYPT_PASS"
     return 1
   fi
   return 0
@@ -34,7 +34,7 @@ ensure_vault_dir() {
   local vault_dir="${1:-}"
 
   if [[ -z "${vault_dir}" ]]; then
-    log_error "vault directory not specified."
+    log_error "vault directory not specified"
     return 1
   fi
 
@@ -47,12 +47,20 @@ ensure_vault_dir() {
   fi
 }
 
+usage() {
+  echo "usage: sec encrypt <target_file>"
+  echo "       sec decrypt <encrypted_file> [output_file]"
+  echo ""
+  echo "encrypt target file using aes-256-cbc pbkdf2 and store in"
+  echo "\$HOME/.local/share/muxrc/vault/ or decrypt back to plaintext."
+}
+
 encrypt_target_file() {
   local target_file="${1:-}"
   local vault_dir="${2:-}"
 
   if [[ -z "${target_file}" || -z "${vault_dir}" ]]; then
-    log_error "missing encryption parameters."
+    log_error "missing encryption parameters"
     return 1
   fi
 
@@ -64,10 +72,10 @@ encrypt_target_file() {
 
   if [[ -e "${out_file}" ]]; then
     local overwrite=""
-    log_prompt "vault file '${out_file}' already exists. overwrite? [y/N]: "
+    log_prompt "vault file '${out_file}' exists. overwrite? [y/N]: "
     read -r overwrite
     if [[ ! "${overwrite:-}" =~ ^[Yy]$ ]]; then
-      log_warn "aborted."
+      log_warn "aborted"
       return 1
     fi
   fi
@@ -81,7 +89,7 @@ encrypt_target_file() {
     trap - EXIT
     return 0
   else
-    stop_spinner "error" "encryption failed."
+    stop_spinner "error" "encryption failed"
     trap - EXIT
     rm -f "${out_file}" 2> /dev/null || true
     return 1
@@ -93,7 +101,7 @@ decrypt_target_file() {
   local out_file="${2:-}"
 
   if [[ -z "${target_file}" ]]; then
-    log_error "missing target file for decryption."
+    log_error "missing target file for decryption"
     return 1
   fi
 
@@ -107,10 +115,10 @@ decrypt_target_file() {
 
   if [[ -e "${out_file}" ]]; then
     local overwrite=""
-    log_prompt "output '${out_file}' already exists. overwrite? [y/N]: "
+    log_prompt "output '${out_file}' exists. overwrite? [y/N]: "
     read -r overwrite
     if [[ ! "${overwrite:-}" =~ ^[Yy]$ ]]; then
-      log_warn "aborted."
+      log_warn "aborted"
       return 1
     fi
   fi
@@ -123,7 +131,7 @@ decrypt_target_file() {
     trap - EXIT
     return 0
   else
-    stop_spinner "error" "decryption failed. invalid password or corrupt file."
+    stop_spinner "error" "decryption failed (bad pass or corrupt)"
     trap - EXIT
     rm -f "${out_file}" 2> /dev/null || true
     return 1
@@ -140,6 +148,11 @@ main() {
     vault_dir="${HOME}/.vault"
   fi
 
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
   if [[ "${1:-}" == "--decrypt" || "${1:-}" == "-d" ]]; then
     mode="--decrypt"
     shift
@@ -150,6 +163,11 @@ main() {
 
   target_file="${1:-}"
   output_file="${2:-}"
+
+  if [[ "${target_file}" == "-h" || "${target_file}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
 
   validate_target_file "${target_file}" || exit 1
   validate_password || exit 1

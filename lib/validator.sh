@@ -89,3 +89,14 @@ validate_file_writable() {
 
   return 0
 }
+
+################################
+# Verifies root or EUID 0 access
+################################
+require_root() {
+  if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+    log_error "root access required (run via sudo)"
+    return 1
+  fi
+  return 0
+}

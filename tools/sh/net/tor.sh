@@ -5,10 +5,14 @@
 #################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/../../lib/init.sh"
+_script_dir="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
+source "${_script_dir}/../../../lib/init.sh"
+if [[ -f "${_script_dir}/../../../lib/shredder.sh" ]]; then
+  source "${_script_dir}/../../../lib/shredder.sh"
+fi
 
 check_dependencies() {
-  require_cmd tor shred
+  require_cmd tor
 }
 
 ensure_proxychains_config() {
@@ -46,18 +50,18 @@ start_tor() {
   local pid_file="${4:-}"
 
   if [[ -z "${opsec_dir}" || -z "${torrc}" || -z "${tor_data}" || -z "${pid_file}" ]]; then
-    log_error "missing tor configuration parameters."
+    log_error "missing tor config params"
     return 1
   fi
 
   local existing_pid=""
   existing_pid=$(pgrep -x tor 2> /dev/null | head -n 1 || true)
   if [[ -n "${existing_pid}" ]]; then
-    if [[ -f "${pid_file}" ]] && [[ "$(cat "${pid_file}" 2> /dev/null)" == "${existing_pid}" ]]; then
-      log_warn "tor already running (pid: ${existing_pid})."
+    if [[ -f "${pid_file}" ]] && [[ "$(< "${pid_file}")" == "${existing_pid}" ]]; then
+      log_warn "tor already running (pid: ${existing_pid})"
       return 0
     else
-      log_error "external tor process detected (pid: ${existing_pid}). stop it first."
+      log_error "external tor detected (pid: ${existing_pid}), stop it first"
       return 1
     fi
   fi
@@ -71,7 +75,7 @@ start_tor() {
 
   ensure_proxychains_config "${opsec_dir}"
 
-  log_info "generating config..."
+  log_info "generating torrc..."
   cat << EOF > "${torrc}"
 SocksPort 127.0.0.1:9050 IsolateDestAddr IsolateDestPort
 DNSPort 127.0.0.1:5353
@@ -86,7 +90,7 @@ PidFile ${pid_file}
 EOF
 
   if ! tor --verify-config -f "${torrc}" > /dev/null 2>&1; then
-    log_error "torrc syntax verification failed."
+    log_error "torrc syntax error"
     return 1
   fi
 
@@ -100,7 +104,7 @@ EOF
     if [[ -f "${pid_file}" ]]; then
       tpid=$(cat "${pid_file}" 2> /dev/null || true)
       if [[ -n "${tpid}" ]] && kill -0 "${tpid}" 2> /dev/null; then
-        stop_spinner "success" "tor spawned (pid: ${tpid}). proxy: 127.0.0.1:9050"
+        stop_spinner "success" "tor spawned (pid: ${tpid}) at 127.0.0.1:9050"
         trap - EXIT
         return 0
       fi
@@ -108,7 +112,7 @@ EOF
     sleep 0.1
   done
 
-  stop_spinner "error" "failed to spawn tor. check log"
+  stop_spinner "error" "failed to spawn tor"
   trap - EXIT
   return 1
 }
@@ -123,12 +127,12 @@ terminate_tor_process() {
   local i=0
 
   if ! kill -0 "${tpid}" 2> /dev/null; then
-    log_warn "tor ${tpid} no longer running."
+    log_warn "tor ${tpid} not running"
     return 0
   fi
 
   trap 'cleanup_spinner' EXIT
-  start_spinner "terminating tor (pid: ${tpid})"
+  start_spinner "stopping tor (pid: ${tpid})"
   kill -INT "${tpid}"
 
   for ((i = 0; i < 30; i++)); do
@@ -139,11 +143,10 @@ terminate_tor_process() {
   done
 
   if kill -0 "${tpid}" 2> /dev/null; then
-    stop_spinner "error" "force killing tor..."
-    kill -9 "${tpid}"
-  else
-    stop_spinner "success" "tor terminated."
+    kill -9 "${tpid}" 2> /dev/null || true
   fi
+
+  stop_spinner "success" "tor terminated"
   trap - EXIT
   return 0
 }
@@ -154,24 +157,20 @@ shred_tor_state() {
   local tor_data="${3:-}"
   local pid_file="${4:-}"
 
-  if [[ -z "${opsec_dir}" || -z "${torrc}" || -z "${tor_data}" || -z "${pid_file}" ]]; then
-    return 1
-  fi
-
   trap 'cleanup_spinner' EXIT
-  start_spinner "shredding state"
+  start_spinner "shredding tor state"
 
-  [[ -f "${torrc}" ]] && shred -u "${torrc}" 2> /dev/null || true
-  [[ -f "${pid_file}" ]] && shred -u "${pid_file}" 2> /dev/null || true
-  [[ -f "${opsec_dir}/tor.log" ]] && shred -u "${opsec_dir}/tor.log" 2> /dev/null || true
-  [[ -f "${opsec_dir}/proxychains.conf" ]] && shred -u "${opsec_dir}/proxychains.conf" 2> /dev/null || true
+  [[ -f "${torrc}" ]] && shred_file "${torrc}" 1
+  [[ -f "${pid_file}" ]] && shred_file "${pid_file}" 1
+  [[ -f "${opsec_dir}/tor.log" ]] && shred_file "${opsec_dir}/tor.log" 1
+  [[ -f "${opsec_dir}/proxychains.conf" ]] && shred_file "${opsec_dir}/proxychains.conf" 1
 
   if [[ -d "${tor_data}" ]]; then
     find "${tor_data}" -type f -exec shred -u {} \; 2> /dev/null || true
     rm -rf "${tor_data}"
   fi
 
-  stop_spinner "success" "tor stopped and shredded."
+  stop_spinner "success" "tor state shredded"
   trap - EXIT
 }
 
@@ -181,15 +180,10 @@ stop_tor() {
   local tor_data="${3:-}"
   local pid_file="${4:-}"
 
-  if [[ -z "${opsec_dir}" || -z "${torrc}" || -z "${tor_data}" || -z "${pid_file}" ]]; then
-    return 1
-  fi
-
   local tpid=""
 
   if [[ ! -f "${pid_file}" ]]; then
-    log_warn "pid file not found in ${opsec_dir}."
-    log_warn "assume tor is stopped."
+    log_warn "tor pid file not found"
     shred_tor_state "${opsec_dir}" "${torrc}" "${tor_data}" "${pid_file}"
     return 0
   fi
@@ -197,8 +191,6 @@ stop_tor() {
   tpid=$(tr -d ' \n' < "${pid_file}" 2> /dev/null || true)
   if [[ -n "${tpid}" && "${tpid}" =~ ^[0-9]+$ ]]; then
     terminate_tor_process "${tpid}" || true
-  else
-    log_warn "invalid or empty pid file, proceeding with state shredding."
   fi
   shred_tor_state "${opsec_dir}" "${torrc}" "${tor_data}" "${pid_file}"
 }
@@ -210,9 +202,9 @@ run_tor_command() {
   local pid_file="${4:-}"
   shift 4
 
-  if [[ $# -eq 0 ]]; then
-    log_error "usage: $(basename "$0") run <command> [args...]"
-    return 1
+  if [[ $# -eq 0 || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    echo "usage: net tor run <command> [args...]"
+    return 0
   fi
 
   require_cmd proxychains4 || return 1
@@ -227,7 +219,7 @@ run_tor_command() {
   fi
 
   if [[ ${is_running} -eq 0 ]]; then
-    log_info "tor not running. spawning opsec session..."
+    log_info "spawning tor session..."
     start_tor "${opsec_dir}" "${torrc}" "${tor_data}" "${pid_file}" || return 1
   fi
 
@@ -254,18 +246,18 @@ check_tor_connection() {
   fi
 
   if [[ ${is_running} -eq 0 ]]; then
-    log_warn "tor is not running. start it with tor-start."
+    log_warn "tor is not running (start via: net tor start)"
     return 1
   fi
 
   trap 'cleanup_spinner' EXIT
-  start_spinner "checking tor network routing"
+  start_spinner "checking tor routing"
 
   local response
   response=$(curl -s --max-time 15 --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/api/ip 2> /dev/null || true)
 
   if [[ -z "${response}" ]]; then
-    stop_spinner "error" "failed to reach tor check service."
+    stop_spinner "error" "failed to reach tor check service"
     trap - EXIT
     return 1
   fi
@@ -275,15 +267,30 @@ check_tor_connection() {
   exit_ip=$(echo "${response}" | jq -r '.IP // empty' 2> /dev/null)
 
   if [[ "${is_tor}" == "true" ]]; then
-    stop_spinner "success" "tor verified. exit ip: ${exit_ip}"
+    stop_spinner "success" "tor verified (exit ip: ${exit_ip})"
   else
-    stop_spinner "warn" "not routed through tor! ip: ${exit_ip}"
+    stop_spinner "warn" "not routed through tor (ip: ${exit_ip})"
   fi
   trap - EXIT
 }
 
+usage() {
+  echo "usage: net tor <action> [args]"
+  echo ""
+  echo "actions:"
+  echo "  start              spawn isolated tor daemon"
+  echo "  stop               terminate tor & shred state"
+  echo "  run <cmd> [args]   run command via proxychains"
+  echo "  check              verify routing & exit ip"
+}
+
 main() {
   local action="${1:-start}"
+  if [[ "${action}" == "-h" || "${action}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
   local cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/muxrc"
   local opsec_dir="${cache_dir}/run"
   local torrc="${opsec_dir}/torrc"
@@ -307,7 +314,8 @@ main() {
       check_tor_connection "${pid_file}"
       ;;
     *)
-      log_error "usage: $(basename "$0") {start|stop|run <cmd>|check}"
+      log_error "unknown action: ${action} (see -h)"
+      usage
       exit 1
       ;;
   esac
