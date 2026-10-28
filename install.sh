@@ -78,8 +78,17 @@ setup_directories() {
   mkdir -p "${HOME}/muxrc-out/decoys"
   mkdir -p "${HOME}/muxrc-out/extracted"
 
-  if [[ -f "${dotfiles_dir}/tools/presets/iphone-nyc.json" && ! -f "${HOME}/.config/muxrc/presets/iphone-nyc.json" ]]; then
-    cp "${dotfiles_dir}/tools/presets/iphone-nyc.json" "${HOME}/.config/muxrc/presets/iphone-nyc.json"
+  local preset
+  local bname
+  if [[ -d "${dotfiles_dir}/tools/presets" ]]; then
+    for preset in "${dotfiles_dir}/tools/presets"/*.json; do
+      if [[ -f "${preset}" ]]; then
+        bname="$(basename "${preset}")"
+        if [[ ! -f "${HOME}/.config/muxrc/presets/${bname}" ]]; then
+          cp "${preset}" "${HOME}/.config/muxrc/presets/${bname}"
+        fi
+      fi
+    done
   fi
 
   log_info "muting termux motd..."

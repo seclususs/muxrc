@@ -112,7 +112,7 @@ usage: media <command> [args]
 commands:
   dupes <dir>          find duplicate files
   strip <dir>          strip exif metadata
-  spoof <pre> <target> inject decoy metadata
+  spoof [pre] <target> inject decoy metadata
   sync <target>        sync dates to exif
   rename <dir> <pfx>   rename photos by date
   compress <video>     compress video to hevc
@@ -143,33 +143,12 @@ media() {
         bash "${MUXRC_DIR}/tools/sh/media/spoof.sh" -h
         return 0
       fi
-      if [[ $# -lt 2 ]]; then
-        log_error "usage: media spoof <preset> <target> (see -h)"
+      if [[ $# -eq 0 ]]; then
+        log_error "usage: media spoof [preset] <target> (see -h)"
         return 1
       fi
 
-      local preset_input="$1"
-      local image_file="$2"
-      local preset_file=""
-
-      local clean_name="${preset_input%.json}"
-      local user_preset="${XDG_CONFIG_HOME:-$HOME/.config}/muxrc/presets/${clean_name}.json"
-      local repo_preset="${MUXRC_DIR}/tools/presets/${clean_name}.json"
-
-      if [[ -f "$preset_input" ]]; then
-        preset_file="$preset_input"
-      elif [[ -f "$user_preset" ]]; then
-        preset_file="$user_preset"
-      elif [[ -f "$repo_preset" ]]; then
-        preset_file="$repo_preset"
-      fi
-
-      if [[ -z "$preset_file" || ! -f "$preset_file" ]]; then
-        log_error "preset '$preset_input' not found in presets or path"
-        return 1
-      fi
-
-      bash "${MUXRC_DIR}/tools/sh/media/spoof.sh" "$preset_file" "$image_file"
+      bash "${MUXRC_DIR}/tools/sh/media/spoof.sh" "$@"
       ;;
     sync)
       shift
