@@ -10,9 +10,9 @@ usage() {
 Usage: def-index.sh [options] [PATH ...]
 
 Index mode (default): prints "kind<TAB>name<TAB>file:line" lines, sorted. Save a baseline with --out:
-  def-index.sh --out .termux-agent/refactor/before.tsv
+  def-index.sh --out .artifacts/refactor/before.tsv
 Compare mode: indexes the current files and compares them with a saved baseline:
-  def-index.sh --compare .termux-agent/refactor/before.tsv [--rename OLD=NEW ...]
+  def-index.sh --compare .artifacts/refactor/before.tsv [--rename OLD=NEW ...]
 Reports: removed, added, moved (same name, different file set), renamed (declared with --rename),
 duplicate (func or alias defined more often than in the baseline). Exit 1 on removed or duplicate.
 
@@ -24,7 +24,7 @@ Options:
   -h, --help       show this help
 
 PATH arguments (files or directories) limit the scan. Without PATH, the scan covers git-tracked and
-untracked, non-ignored files (or every file under the directory outside git), excluding .agent, .agents, and .termux-agent.
+untracked, non-ignored files (or every file under the directory outside git), excluding .agent, .agents, and .artifacts.
 Detection is line-based: it finds definitions at the usual positions and does not evaluate code.
 Dynamic definitions (eval, generated names) are not seen; verify them with behavior-snapshot.
 Variables count only at column 0 (top level); definitions inside functions are not indexed.
@@ -49,11 +49,13 @@ while [ $# -gt 0 ]; do
     --out)
       [ $# -ge 2 ] || die_usage "--out needs a value"
       outfile=$2
+      case ${outfile} in /*) ;; *) outfile="$(pwd)/${outfile}" ;; esac
       shift
       ;;
     --compare)
       [ $# -ge 2 ] || die_usage "--compare needs a value"
       compare=$2
+      case ${compare} in /*) ;; *) compare="$(pwd)/${compare}" ;; esac
       shift
       ;;
     --rename)
@@ -131,7 +133,7 @@ list_candidates() {
     printf '%s' "${paths}" | while IFS= read -r p; do
       [ -n "${p}" ] || continue
       if [ -d "${p}" ]; then
-        find "${p}" \( -name .git -o -name .agent -o -name .agents -o -name .termux-agent -o -name node_modules \) -prune -o -type f -print
+        find "${p}" \( -name .git -o -name .agent -o -name .agents -o -name .artifacts \) -prune -o -type f -print
       elif [ -f "${p}" ]; then
         printf '%s\n' "${p}"
       else
@@ -139,9 +141,9 @@ list_candidates() {
       fi
     done
   elif git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-    git -c core.quotepath=off ls-files -co --exclude-standard | grep -v -E '^(\.agents?|\.termux-agent)/'
+    git -c core.quotepath=off ls-files -co --exclude-standard | grep -v -E '^(\.agents?|\.artifacts)/'
   else
-    find . \( -name .git -o -name .agent -o -name .agents -o -name .termux-agent -o -name node_modules \) -prune -o -type f -print | sed 's|^\./||'
+    find . \( -name .git -o -name .agent -o -name .agents -o -name .artifacts \) -prune -o -type f -print | sed 's|^\./||'
   fi
 }
 
@@ -263,7 +265,13 @@ EOF
 
 if [ -z "${compare}" ]; then
   if [ -n "${outfile}" ]; then
+    mkdir -p "$(dirname "${outfile}")" || die_usage "cannot create directory for ${outfile}"
+    # Output convention: .artifacts/ at the project root ignores itself in git
+    case ${outfile} in
+      */.artifacts/*) [ -e "${outfile%%/.artifacts/*}/.artifacts/.gitignore" ] || printf '*\n' > "${outfile%%/.artifacts/*}/.artifacts/.gitignore" ;;
+    esac
     build_index "${outfile}"
+    [ -s "${outfile}" ] || die_usage "could not write ${outfile}"
     echo "def-index: wrote $(awk 'END { print NR }' "${outfile}") entries to ${outfile}"
     exit 0
   fi

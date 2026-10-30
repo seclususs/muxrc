@@ -10,9 +10,9 @@ $usage = @'
 Usage: def-index.ps1 [options] [PATH ...]
 
 Index mode (default): prints "kind<TAB>name<TAB>file:line" lines, sorted. Save a baseline with --out:
-  def-index.ps1 --out .termux-agent/refactor/before.tsv
+  def-index.ps1 --out .artifacts/refactor/before.tsv
 Compare mode: indexes the current files and compares them with a saved baseline:
-  def-index.ps1 --compare .termux-agent/refactor/before.tsv [--rename OLD=NEW ...]
+  def-index.ps1 --compare .artifacts/refactor/before.tsv [--rename OLD=NEW ...]
 Reports: removed, added, moved (same name, different file set), renamed (declared with --rename),
 duplicate (func or alias defined more often than in the baseline). Exit 1 on removed or duplicate.
 
@@ -24,7 +24,7 @@ Options:
   -h, --help       show this help
 
 PATH arguments (files or directories) limit the scan. Without PATH, the scan covers git-tracked and
-untracked, non-ignored files (or every file under the directory outside git), excluding .agent, .agents, and .termux-agent.
+untracked, non-ignored files (or every file under the directory outside git), excluding .agent, .agents, and .artifacts.
 Detection is line-based: it finds definitions at the usual positions and does not evaluate code.
 Dynamic definitions (eval, generated names) are not seen; verify them with behavior-snapshot.
 Variables count only at column 0 (top level); definitions inside functions are not indexed.
@@ -43,8 +43,8 @@ for ($i = 0; $i -lt $args.Count; $i++) {
   $a = [string]$args[$i]
   if ($dashdash) { [void]$paths.Add($a); continue }
   switch -CaseSensitive ($a) {
-    '--out' { if ($i + 1 -ge $args.Count) { Fail '--out needs a value' 2 }; $i++; $outfile = [string]$args[$i] }
-    '--compare' { if ($i + 1 -ge $args.Count) { Fail '--compare needs a value' 2 }; $i++; $compare = [string]$args[$i] }
+    '--out' { if ($i + 1 -ge $args.Count) { Fail '--out needs a value' 2 }; $i++; $outfile = [System.IO.Path]::GetFullPath([string]$args[$i]) }
+    '--compare' { if ($i + 1 -ge $args.Count) { Fail '--compare needs a value' 2 }; $i++; $compare = [System.IO.Path]::GetFullPath([string]$args[$i]) }
     '--rename' {
       if ($i + 1 -ge $args.Count) { Fail '--rename needs OLD=NEW' 2 }
       $i++; $r = [string]$args[$i]; $eq = $r.IndexOf('=')
@@ -71,7 +71,7 @@ if ($compare -ne '' -and -not (Test-Path -LiteralPath $compare -PathType Leaf)) 
 
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $ord = [System.StringComparer]::Ordinal
-$skipDirs = @('.git', '.agent', '.agents', '.termux-agent', 'node_modules')
+$skipDirs = @('.git', '.agent', '.agents', '.artifacts')
 
 function Get-AllFiles([string]$dir) {
   $acc = New-Object System.Collections.ArrayList
@@ -114,7 +114,7 @@ function Get-Candidates {
   if ($inGit) {
     foreach ($l in @(& git -c core.quotepath=off ls-files -co --exclude-standard)) {
       $l = [string]$l
-      if ($l -cmatch '^\.agents?/' -or $l -cmatch '^\.termux-agent/') { continue }
+      if ($l -cmatch '^\.agents?/' -or $l -cmatch '^\.artifacts/') { continue }
       [void]$list.Add($l)
     }
   }
@@ -250,6 +250,15 @@ function Build-Index {
 $current = Build-Index
 if ($compare -eq '') {
   if ($outfile -ne '') {
+    $outDir = Split-Path -Parent $outfile
+    try { $null = New-Item -ItemType Directory -Force -Path $outDir } catch { Fail "cannot create directory for $outfile" 2 }
+    # Output convention: .artifacts/ at the project root ignores itself in git
+    $normOut = $outfile.Replace('\', '/')
+    $artIdx = $normOut.IndexOf('/.artifacts/')
+    if ($artIdx -ge 0) {
+      $gi = $normOut.Substring(0, $artIdx) + '/.artifacts/.gitignore'
+      if (-not (Test-Path -LiteralPath $gi)) { [System.IO.File]::WriteAllText($gi, "*`n") }
+    }
     $body = ''
     if ($current.Length -gt 0) { $body = (($current | ForEach-Object { [string]$_ }) -join "`n") + "`n" }
     [System.IO.File]::WriteAllText($outfile, $body, $utf8)

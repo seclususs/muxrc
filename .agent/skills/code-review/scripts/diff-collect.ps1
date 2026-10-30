@@ -19,7 +19,7 @@ Scope (default: working tree vs HEAD, staged + unstaged, plus untracked files):
   --unstaged           unstaged changes plus untracked files
   --range A..B         commit range (A..B or A...B); untracked files are not included
 Options:
-  --out DIR            output directory (default: <root>/.termux-agent/diff, inside the workspace);
+  --out DIR            output directory (default: <root>/.artifacts/diff, inside the workspace);
                        a relative path starts at the repository root
   --context N          context lines per hunk (default 3)
   --chunk N            lines per read range printed in the read plan (default 250)
@@ -89,9 +89,13 @@ $top = [string](Invoke-Git @('rev-parse', '--show-toplevel'))[0]
 if ($script:gitExit -ne 0) { Fail 'cannot resolve the repository root' 3 }
 Set-Location -LiteralPath $top
 [Environment]::CurrentDirectory = $top
-$gitdir = [string](Invoke-Git @('rev-parse', '--absolute-git-dir'))[0]
-if ($out -eq '') { $out = "$top/.termux-agent/diff" }
+if ($out -eq '') { $out = "$top/.artifacts/diff" }
 try { $null = New-Item -ItemType Directory -Force -Path $out } catch { Fail "cannot create output directory: $out" 2 }
+# Output convention: .artifacts/ at the project root ignores itself in git
+if ($out.Replace('\', '/').StartsWith("$top/.artifacts")) {
+  $gi = "$top/.artifacts/.gitignore"
+  if (-not (Test-Path -LiteralPath $gi)) { [System.IO.File]::WriteAllText($gi, "*`n") }
+}
 
 $dopts = @('--no-renames', '--no-ext-diff', '--no-textconv', '--no-color', '--src-prefix=a/', '--dst-prefix=b/')
 $pspec = @()
@@ -183,7 +187,7 @@ try {
         $f = [string]$f
         if ($f.Length -eq 0) { continue }
         if (Test-Path -LiteralPath $f -PathType Container) { continue }
-        if (-not $agent -and ($f.StartsWith('.agent/') -or $f.StartsWith('.agents/') -or $f.StartsWith('.termux-agent/'))) { continue }
+        if (-not $agent -and ($f.StartsWith('.agent/') -or $f.StartsWith('.agents/') -or $f.StartsWith('.artifacts/'))) { continue }
         if ($f.StartsWith('"')) { [void]$skippedList.Add($f); continue }
         $size = -1
         try { $size = (Get-Item -LiteralPath $f -Force).Length } catch { }

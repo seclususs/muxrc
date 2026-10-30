@@ -18,7 +18,7 @@ Scope (default: working tree vs HEAD, staged + unstaged, plus untracked files):
   --unstaged           unstaged changes plus untracked files
   --range A..B         commit range (A..B or A...B); untracked files are not included
 Options:
-  --out DIR            output directory (default: <root>/.termux-agent/diff, inside the workspace);
+  --out DIR            output directory (default: <root>/.artifacts/diff, inside the workspace);
                        a relative path starts at the repository root
   --context N          context lines per hunk (default 3)
   --chunk N            lines per read range printed in the read plan (default 250)
@@ -114,9 +114,12 @@ fi
 git rev-parse --is-inside-work-tree > /dev/null 2>&1 || die_usage "not inside a git work tree"
 top=$(git rev-parse --show-toplevel) || exit 3
 cd "${top}" || exit 3
-gitdir=$(git rev-parse --absolute-git-dir) || exit 3
-[ -n "${out}" ] || out="${top}/.termux-agent/diff"
+[ -n "${out}" ] || out="${top}/.artifacts/diff"
 mkdir -p "${out}" || die_usage "cannot create output directory: ${out}"
+# Output convention: .artifacts/ at the project root ignores itself in git
+case ${out} in
+  "${top}/.artifacts" | "${top}/.artifacts"/*) [ -e "${top}/.artifacts/.gitignore" ] || printf '*\n' > "${top}/.artifacts/.gitignore" ;;
+esac
 
 GIT_PAGER="cat"
 PAGER="cat"
@@ -162,7 +165,7 @@ if [ "${untracked}" -eq 1 ] && { [ "${scope}" = all ] || [ "${scope}" = unstaged
     [ -n "${f}" ] || continue
     [ -d "${f}" ] && continue
     if [ "${agent}" -eq 0 ]; then
-      case ${f} in .agent/* | .agents/* | .termux-agent/*) continue ;; esac
+      case ${f} in .agent/* | .agents/* | .artifacts/*) continue ;; esac
     fi
     case ${f} in
       '"'*)

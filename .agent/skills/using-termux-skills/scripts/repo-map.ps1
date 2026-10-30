@@ -73,14 +73,14 @@ else {
   $list = New-Object System.Collections.Generic.List[string]
   foreach ($f in (Get-ChildItem -LiteralPath $root -Recurse -File -Force -ErrorAction SilentlyContinue)) {
     $rel = $f.FullName.Substring($prefixLen).Replace('\', '/')
-    if ($rel -match '(^|/)\.git/' -or $rel -match '(^|/)node_modules/') { continue }
+    if ($rel -match '(^|/)\.git/') { continue }
     $list.Add($rel)
   }
   $files = $list.ToArray()
   [Array]::Sort($files, [System.StringComparer]::Ordinal)
 }
 # The agent tooling directory is not project code; leave it out of the facts.
-$files = @($files | Where-Object { $_ -and ($_ -notmatch '^\.agents?/') -and ($_ -notmatch '^\.termux-agent/') })
+$files = @($files | Where-Object { $_ -and ($_ -notmatch '^\.agents?/') -and ($_ -notmatch '^\.artifacts/') })
 
 function Get-ShebangDialect([string]$first) {
   $parts = @(($first.Substring(2).Trim()) -split '\s+' | Where-Object { $_ })

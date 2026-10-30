@@ -2,8 +2,8 @@
 # One name per line; a trailing * matches a prefix; # starts a comment.
 # A function with one of these names keeps native-command behavior and output:
 # no UI log prefixes ([*] [+] [-] [!] [?]) and no calls to the project logger.
-# Project-specific wrappers and CLI integrations (for example an AI CLI) are added
-# below the standard list. Find them by role with repo-map definitions; do not guess names.
+# Project-specific wrappers and external-CLI integrations are added below the
+# standard list. Find them by role with repo-map definitions; do not guess names.
 sudo
 su
 doas

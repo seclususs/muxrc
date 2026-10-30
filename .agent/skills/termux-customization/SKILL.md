@@ -7,8 +7,6 @@ description: Customizes and personalizes Termux - termux.properties, extra keys,
 
 Paths are relative to this skill directory. Code goes through `termux-scripting`; runtime facts through `termux-environment`.
 
-Research authority: search the web yourself when docs or dependency facts are missing or stale (primary sources first: Termux wiki, termux-packages, termux-app, Android and shell manuals); cite URLs; never guess.
-
 ## Workflow
 1. Facts: run repo-map (skill `using-termux-skills`); read the existing config and how the shell loads modules. Do not assume file locations.
 2. Place the change (table below). One concern per file; extend, do not duplicate.
@@ -30,7 +28,7 @@ Research authority: search the web yourself when docs or dependency facts are mi
 | Long-running service | `termux-services` | per its docs |
 
 ## Rules
-- Output contract by code role (core policy): utilities that print status use the project logger; wrappers and CLI integrations have no prefixes and keep native output.
+- Output contract by code role (core policy): utilities that print status use the project's logger convention; wrappers and external-CLI integrations have no prefixes and keep native output.
 - Startup speed: measure first (`termux-scripting` `references/zsh.md`), remove forks from startup, defer heavy plugins, cache completion; report before and after timings.
 - Keep the prompt cheap: no blocking git or network calls on every prompt.
 - `allow-external-apps` lets other apps run commands in Termux: security-sensitive; change it only on explicit request.

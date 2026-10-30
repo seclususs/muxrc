@@ -26,6 +26,11 @@ Options:
   --no-external      skip ShellCheck/shfmt/syntax tools (heuristics only)
   --strict           exit 1 on WARN as well
   --max-per-rule N   cap findings per rule per file (default 5)
+  --list             print DIALECT<TAB>FILE for each file that would be linted, then exit
+                     (used by format-shell.sh)
+  --out FILE         write the findings to FILE (UTF-8, LF) and print only the
+                     SUMMARY line; use for output longer than about 200 lines
+                     (convention: .artifacts/lint/report.txt at the project root)
   -h, --help         show this help
 
 Output: LEVEL FILE:LINE [CODE] message, then one SUMMARY line.
@@ -47,6 +52,8 @@ root=""
 external=1
 strict=0
 maxper=5
+outfile=""
+list_only=0
 while [ $# -gt 0 ]; do
   case $1 in
     -h | --help)
@@ -76,6 +83,19 @@ while [ $# -gt 0 ]; do
       }
       maxper=$2
       shift 2
+      ;;
+    --out)
+      [ $# -ge 2 ] || {
+        echo "lint-shell: --out needs a value" >&2
+        exit 2
+      }
+      outfile=$2
+      case ${outfile} in /*) ;; *) outfile="$(pwd)/${outfile}" ;; esac
+      shift 2
+      ;;
+    --list)
+      list_only=1
+      shift
       ;;
     --no-external)
       external=0
@@ -458,8 +478,16 @@ lint_file() {
       case ${f##*/} in
         *.zsh)
           if have shfmt && has_editorconfig "${f}"; then
-            hunks=$(shfmt -d "${f}" 2>&1 | grep -c '^@@' || true)
-            [ "${hunks:-0}" -gt 0 ] && echo "INFO ${f}:1 [FMT] shfmt advisory (zsh): ${hunks} hunk(s) differ from .editorconfig; review with shfmt -d, never write" >> "${out}"
+            # shfmt parses .zsh as bash unless it is a release with zsh support
+            if [ -z "${shfmt_zsh:-}" ]; then
+              if printf 'echo hi\n' | shfmt -ln zsh > /dev/null 2>&1; then shfmt_zsh=yes; else shfmt_zsh=no; fi
+            fi
+            if [ "${shfmt_zsh}" = yes ]; then
+              hunks=$(shfmt -d "${f}" 2>&1 | grep -c '^@@' || true)
+              [ "${hunks:-0}" -gt 0 ] && echo "INFO ${f}:1 [FMT] shfmt advisory (zsh): ${hunks} hunk(s) differ from .editorconfig; review with shfmt -d, never write" >> "${out}"
+            else
+              skip_once shfmt-zsh "installed shfmt has no zsh support; zsh formatting not checked"
+            fi
           fi
           ;;
       esac
@@ -489,9 +517,9 @@ else
     exit 2
   }
   if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-    git -c core.quotepath=off ls-files -co --exclude-standard | awk '!/^\.agents?\// && !/^\.termux-agent\//' > "${tmp}/files.list"
+    git -c core.quotepath=off ls-files -co --exclude-standard | awk '!/^\.agents?\// && !/^\.artifacts\//' > "${tmp}/files.list"
   else
-    find . -type f ! -path './.git/*' ! -path '*/node_modules/*' ! -path './.agent/*' ! -path './.agents/*' ! -path './.termux-agent/*' | sed 's|^\./||' | LC_ALL=C sort > "${tmp}/files.list"
+    find . -type f ! -path './.git/*' ! -path './.agent/*' ! -path './.agents/*' ! -path './.artifacts/*' | sed 's|^\./||' | LC_ALL=C sort > "${tmp}/files.list"
   fi
 fi
 
@@ -504,9 +532,14 @@ while IFS= read -r f; do
     d=$(detect_dialect "${f}")
   fi
   [ "${d}" = "other" ] && continue
+  if [ "${list_only}" -eq 1 ]; then
+    printf '%s\t%s\n' "${d}" "${f}"
+    continue
+  fi
   nfiles=$((nfiles + 1))
   lint_file "${f}" "${d}"
 done < "${tmp}/files.list"
+[ "${list_only}" -eq 1 ] && exit 0
 
 if [ "${external}" -eq 0 ]; then
   skipped="${skipped} external-tools(requested)"
@@ -514,7 +547,6 @@ fi
 if [ "${nfiles}" -eq 0 ]; then
   echo "NOTE no shell-like files found"
 fi
-cat "${out}"
 errors=$(grep -c '^ERROR ' "${out}" || true)
 warns=$(grep -c '^WARN ' "${out}" || true)
 infos=$(grep -c '^INFO ' "${out}" || true)
@@ -523,7 +555,21 @@ if [ -n "${skipped# }" ]; then
 else
   cov=full
 fi
-echo "SUMMARY files=${nfiles} errors=${errors} warnings=${warns} info=${infos} coverage=${cov} skipped=$(echo "${skipped# }" | tr ' ' ',')"
+summary="SUMMARY files=${nfiles} errors=${errors} warnings=${warns} info=${infos} coverage=${cov} skipped=$(echo "${skipped# }" | tr ' ' ',')"
+if [ -n "${outfile}" ]; then
+  mkdir -p "$(dirname "${outfile}")" || exit 2
+  {
+    cat "${out}"
+    echo "${summary}"
+  } > "${outfile}" || exit 2
+  case ${outfile} in
+    */.artifacts/*) [ -e "${outfile%%/.artifacts/*}/.artifacts/.gitignore" ] || printf '*\n' > "${outfile%%/.artifacts/*}/.artifacts/.gitignore" ;;
+  esac
+  echo "lint-shell: findings written to ${outfile}"
+else
+  cat "${out}"
+fi
+echo "${summary}"
 [ "${errors}" -gt 0 ] && exit 1
 [ "${strict}" -eq 1 ] && [ "${warns}" -gt 0 ] && exit 1
 exit 0

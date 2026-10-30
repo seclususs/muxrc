@@ -26,6 +26,11 @@ Options:
   --no-external      skip ShellCheck/shfmt/syntax tools (heuristics only)
   --strict           exit 1 on WARN as well
   --max-per-rule N   cap findings per rule per file (default 5)
+  --list             print DIALECT<TAB>FILE for each file that would be linted, then exit
+                     (used by format-shell.ps1)
+  --out FILE         write the findings to FILE (UTF-8, LF) and print only the
+                     SUMMARY line; use for output longer than about 200 lines
+                     (convention: .artifacts/lint/report.txt at the project root)
   -h, --help         show this help
 
 Output: LEVEL FILE:LINE [CODE] message, then one SUMMARY line.
@@ -38,18 +43,19 @@ ShellCheck notes count as WARN (judge new findings in changed files).
 }
 function Fail-Usage([string]$msg) { [Console]::Error.WriteLine($msg); exit 2 }
 
-$dialectForce = ''; $root = ''; $external = $true; $strict = $false; $maxPer = 5
+$dialectForce = ''; $root = ''; $external = $true; $strict = $false; $maxPer = 5; $outFile = ''; $listOnly = $false
 $argPaths = New-Object System.Collections.Generic.List[string]
 $i = 0
 while ($i -lt $args.Count) {
   $a = [string]$args[$i]
   if ($a -eq '-h' -or $a -eq '--help') { Show-Usage; exit 0 }
-  elseif ($a -eq '--dialect' -or $a -eq '--root' -or $a -eq '--max-per-rule') {
+  elseif ($a -eq '--dialect' -or $a -eq '--root' -or $a -eq '--max-per-rule' -or $a -eq '--out') {
     if ($i + 1 -ge $args.Count) { Fail-Usage "lint-shell: $a needs a value" }
     $v = [string]$args[$i + 1]
-    if ($a -eq '--dialect') { $dialectForce = $v } elseif ($a -eq '--root') { $root = $v } else { $maxText = $v }
+    if ($a -eq '--dialect') { $dialectForce = $v } elseif ($a -eq '--root') { $root = $v } elseif ($a -eq '--out') { $outFile = [System.IO.Path]::GetFullPath($v) } else { $maxText = $v }
     $i += 2
   }
+  elseif ($a -eq '--list') { $listOnly = $true; $i++ }
   elseif ($a -eq '--no-external') { $external = $false; $i++ }
   elseif ($a -eq '--strict') { $strict = $true; $i++ }
   elseif ($a -eq '--') { $i++; while ($i -lt $args.Count) { $argPaths.Add([string]$args[$i]); $i++ } }
@@ -379,9 +385,22 @@ function Lint-File([string]$f, [string]$d) {
     }
     else { Skip-Once 'zsh-syntax' 'zsh not installed (WSL or MSYS2 provide it); zsh files checked by heuristics only' }
     if ($f -cmatch '\.zsh$' -and $shfmt -and (Has-EditorConfig $f)) {
-      $fd = Invoke-Native $shfmt @('-d', $fp)
-      $hunks = @($fd | Where-Object { $_.StartsWith('@@') }).Count
-      if ($hunks -gt 0) { $out.Add("INFO ${f}:1 [FMT] shfmt advisory (zsh): $hunks hunk(s) differ from .editorconfig; review with shfmt -d, never write") }
+      # shfmt parses .zsh as bash unless it is a release with zsh support
+      if ($null -eq $script:shfmtZsh) {
+        $probeFile = [System.IO.Path]::GetTempFileName()
+        try {
+          [System.IO.File]::WriteAllText($probeFile, "echo hi`n")
+          $null = Invoke-Native $shfmt @('-ln', 'zsh', $probeFile)
+          $script:shfmtZsh = ($LASTEXITCODE -eq 0)
+        }
+        finally { Remove-Item -LiteralPath $probeFile -Force -ErrorAction SilentlyContinue }
+      }
+      if ($script:shfmtZsh) {
+        $fd = Invoke-Native $shfmt @('-d', $fp)
+        $hunks = @($fd | Where-Object { $_.StartsWith('@@') }).Count
+        if ($hunks -gt 0) { $out.Add("INFO ${f}:1 [FMT] shfmt advisory (zsh): $hunks hunk(s) differ from .editorconfig; review with shfmt -d, never write") }
+      }
+      else { Skip-Once 'shfmt-zsh' 'installed shfmt has no zsh support; zsh formatting not checked' }
     }
   }
 }
@@ -414,13 +433,13 @@ else {
   $inGit = $false
   if ($haveGit) { $null = & git rev-parse --is-inside-work-tree 2>$null; $inGit = ($LASTEXITCODE -eq 0) }
   if ($inGit) {
-    foreach ($x in @(& git -c core.quotepath=off ls-files -co --exclude-standard 2>$null)) { if ($x -and ($x -notmatch '^\.agents?/') -and ($x -notmatch '^\.termux-agent/')) { $fileList.Add($x) } }
+    foreach ($x in @(& git -c core.quotepath=off ls-files -co --exclude-standard 2>$null)) { if ($x -and ($x -notmatch '^\.agents?/') -and ($x -notmatch '^\.artifacts/')) { $fileList.Add($x) } }
   }
   else {
     $prefixLen = (Get-Location).Path.TrimEnd('\', '/').Length + 1
     foreach ($x in (Walk-Files (Get-Location).Path)) {
       $rel = $x.Substring($prefixLen).Replace('\', '/')
-      if ($rel -match '(^|/)node_modules/' -or $rel -match '^\.agents?/' -or $rel -match '^\.termux-agent/') { continue }
+      if ($rel -match '^\.agents?/' -or $rel -match '^\.artifacts/') { continue }
       $fileList.Add($rel)
     }
   }
@@ -431,18 +450,33 @@ foreach ($f in $fileList) {
   if (-not (Test-Path -LiteralPath $f -PathType Leaf)) { continue }
   if ($dialectForce) { $d = $dialectForce } else { $d = Get-Dialect $f }
   if ($d -eq 'other') { continue }
+  if ($listOnly) { Write-Output "$d`t$f"; continue }
   $nfiles++
   Lint-File $f $d
 }
+if ($listOnly) { exit 0 }
 
 if (-not $external) { $script:skipped += 'external-tools(requested)' }
 if ($nfiles -eq 0) { Write-Output 'NOTE no shell-like files found' }
-foreach ($l in $out) { Write-Output $l }
 $errors = @($out | Where-Object { $_.StartsWith('ERROR ') }).Count
 $warns = @($out | Where-Object { $_.StartsWith('WARN ') }).Count
 $infos = @($out | Where-Object { $_.StartsWith('INFO ') }).Count
 $cov = if ($script:skipped.Count -gt 0) { 'partial' } else { 'full' }
-Write-Output ("SUMMARY files=$nfiles errors=$errors warnings=$warns info=$infos coverage=$cov skipped=" + ($script:skipped -join ','))
+$summary = "SUMMARY files=$nfiles errors=$errors warnings=$warns info=$infos coverage=$cov skipped=" + ($script:skipped -join ',')
+if ($outFile -ne '') {
+  $dir = Split-Path -Parent $outFile
+  if ($dir) { $null = New-Item -ItemType Directory -Force -Path $dir }
+  [System.IO.File]::WriteAllText($outFile, ((@($out) + $summary) -join "`n") + "`n")
+  $norm = $outFile.Replace('\', '/')
+  $idx = $norm.IndexOf('/.artifacts/')
+  if ($idx -ge 0) {
+    $gi = $norm.Substring(0, $idx) + '/.artifacts/.gitignore'
+    if (-not (Test-Path -LiteralPath $gi)) { [System.IO.File]::WriteAllText($gi, "*`n") }
+  }
+  Write-Output "lint-shell: findings written to $outFile"
+}
+else { foreach ($l in $out) { Write-Output $l } }
+Write-Output $summary
 if ($errors -gt 0) { exit 1 }
 if ($strict -and $warns -gt 0) { exit 1 }
 exit 0

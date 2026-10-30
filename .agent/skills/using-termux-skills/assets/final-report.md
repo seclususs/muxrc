@@ -1,23 +1,27 @@
-# Final report format
+# Final report
 
-Use this order. Keep it short.
+Delete any section that does not apply. One fact per line.
 
-1) Changed files
-- <path>: <what and why, at most 12 words>
-Verification: <commands run and results; lint SUMMARY line; diff coverage when a review ran>
-Not verified on host: <items needing a Termux device, with exact commands>
+## Changes
+- `path`: what changed and why, in at most 12 words
 
-2) Draft commit
-<subject: imperative, at most 52 chars, no trailing period>
+## Verification
+- Command run: result (lint `SUMMARY` line, test output, review coverage)
+- Not verified on host: item that needs a Termux device, with the exact command to run there
 
-- <what changed and why>
-- <flat single-level bullets; wrap at 72>
+## Draft commit
+```text
+Imperative subject, at most 52 chars, no trailing period
 
-3) Approval request
-Stage and commit the files above with this message? <open decisions, if any>
+- What changed and why; flat single-level bullets, wrapped at 72
+```
 
-Do not run `git add` or `git commit` before approval.
+## Approval
+Stage and commit the files above with this message?
+Open decisions: none | list them.
 
-Commit examples
+`git add` and `git commit` wait for the answer.
+
+## Commit subject examples
 - Good: `Add idempotent storage setup check`
 - Bad: `feat: added storage check.` (prefix, past tense, trailing period)

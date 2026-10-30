@@ -1,15 +1,20 @@
+.vscode/
+.idea/
 *~
 *.swp
-.sudo_hash
+
+.DS_Store
+Thumbs.db
+
 .zsh_history
+.sudo_hash
 .gemini_ai_env
 
 .config/muxrc/ai.env
 .config/muxrc/sudo_hash
 .config/muxrc/presets/local-*.json
 
-tools/presets/local-*.json
+.artifacts/
+
 *.enc
 .nomedia
-
-.termux-agent/

@@ -17,7 +17,7 @@ Options:
                  default: from shebang/extension; posix -> dash, else busybox, else sh
   --tail N       lines shown per stream (default 30)
   --timeout S    kill after S seconds (default 60; needs the timeout command)
-  --out DIR      keep logs in DIR (default: a new temp dir, path printed)
+  --out DIR      keep logs in DIR (default: <project>/.artifacts/trace/<UTC time>, path printed)
   -h, --help     show this help
 
 Notes:
@@ -149,8 +149,11 @@ fi
 if [ -n "${outdir}" ]; then
   mkdir -p "${outdir}" || exit 2
 else
-  outdir=$(mktemp -d 2> /dev/null || echo "${TMPDIR:-/tmp}/trace-run.$$")
-  mkdir -p "${outdir}"
+  # Output convention: .artifacts/ at the project root ignores itself in git
+  root=$(git rev-parse --show-toplevel 2> /dev/null) || root=$(pwd)
+  outdir="${root}/.artifacts/trace/$(date -u +%Y%m%dT%H%M%SZ)-$$"
+  mkdir -p "${outdir}" || exit 2
+  [ -e "${root}/.artifacts/.gitignore" ] || printf '*\n' > "${root}/.artifacts/.gitignore"
 fi
 stdout_log="${outdir}/stdout.log"
 trace_log="${outdir}/trace.log"

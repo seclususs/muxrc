@@ -86,11 +86,11 @@ trap 'rm -rf "${tmp}"' EXIT INT TERM
 if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
   git -c core.quotepath=off ls-files -co --exclude-standard > "${tmp}/all.list" 2> /dev/null
 else
-  find . -type f ! -path './.git/*' ! -path '*/node_modules/*' 2> /dev/null | sed 's|^\./||' > "${tmp}/all.list"
+  find . -type f ! -path './.git/*' 2> /dev/null | sed 's|^\./||' > "${tmp}/all.list"
 fi
 
 # The agent tooling directory is not project code; leave it out of the facts.
-awk '!/^\.agents?\// && !/^\.termux-agent\//' "${tmp}/all.list" > "${tmp}/all.filtered"
+awk '!/^\.agents?\// && !/^\.artifacts\//' "${tmp}/all.list" > "${tmp}/all.filtered"
 mv "${tmp}/all.filtered" "${tmp}/all.list"
 
 cr=$(printf '\r')

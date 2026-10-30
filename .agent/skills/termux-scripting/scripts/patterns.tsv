@@ -34,6 +34,7 @@ zsh	WARN	Z004	\$\{?[A-Za-z_][A-Za-z0-9_]*\[0\]	zsh arrays are 1-indexed; element
 zsh	WARN	Z005	(^|[;&|({]|[ ]then|[ ]do|[ ]else)[ ]*(shopt|mapfile|readarray|compgen|complete|bind)[ ]	bash-only builtin in zsh
 *	WARN	T001	(^|[ "'=:(])/(usr|etc|var|tmp|bin|sbin|lib|lib64|opt|home|root|mnt|run|srv)(/|[ "';)]|$)	hard-coded FHS path (absent in Termux): use $PREFIX/..., $TMPDIR, $HOME
 *	INFO	T002	/data/data/com\.termux	literal Termux path; prefer $PREFIX or $HOME (literal expected only in shebangs)
-*	INFO	T003	(^|[;&|]|[ ]then|[ ]do|[ ]else)[ ]*(sudo|su|apt|apt-get|systemctl|service|yum|dnf|pacman|apk|snap)[ ]	command not native in Termux; verify the package or a project wrapper provides it
+*	INFO	T003	(^|[;&|]|[ ]then|[ ]do|[ ]else)[ ]*(sudo|doas|systemctl|journalctl|service|loginctl|timedatectl|hostnamectl|lsb_release|yum|dnf|zypper|apk|snap|flatpak|brew|pbcopy|pbpaste|osascript|xclip|xsel|notify-send)[ ]	command absent from a default Termux install: guard with command -v, install a package, or use a project wrapper
 *	INFO	T004	/system/bin/(sh|bash)	Android system shell, not Termux dash/bash
+*	INFO	T005	(command -v|which|type)[ ]+su([ ;&|)"'`]|$)	su exists in Termux as a wrapper even without root; command -v su succeeds on non-root devices, test with su -c true (exit status)
 *	COUNT	L001	(^|[^A-Za-z0-9_])\[[*+!?-]\]([^}]|$)	UI log prefix tokens present; allowed only in installers/general utilities, never in command wrappers or CLI integrations

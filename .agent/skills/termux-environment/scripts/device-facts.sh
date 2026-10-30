@@ -15,7 +15,8 @@ what sh resolves to, shell feature probes (pipefail, LINENO), package versions
 boot setup, and tool presence. Nothing is changed and no Termux:API call is made.
 
 Use: copy this file to the device (or paste its content), run `sh device-facts.sh`
-in Termux, and give the output to the agent.
+in Termux, and give the output to the agent. Inside termux-sim the output carries
+sim=yes and describes the simulation profile, not a device.
 Exit codes: 0 ok, 2 usage error.
 EOF
 }
@@ -45,6 +46,8 @@ else
   esac
 fi
 val termux "${is_termux}"
+# termux-sim sets TERMUX_SIM; the values below then come from a simulation profile
+if [ -n "${TERMUX_SIM:-}" ]; then val sim yes; fi
 if [ "${is_termux}" != yes ]; then
   echo "note=not inside Termux; run this script in Termux to collect device facts"
   exit 0
@@ -64,7 +67,13 @@ if have getprop; then
   val android.sdk "$(getprop ro.build.version.sdk 2> /dev/null)"
 fi
 val sh.link "$(readlink "${PREFIX:-/nonexistent}/bin/sh" 2> /dev/null || echo unknown)"
-if [ -x /system/bin/sh ]; then val android.system_sh present; else val android.system_sh absent; fi # lint-ignore: T004
+if [ -n "${TERMUX_SIM:-}" ]; then
+  val android.system_sh not-simulated
+elif [ -x /system/bin/sh ]; then
+  val android.system_sh present
+else
+  val android.system_sh absent
+fi # lint-ignore: T004
 
 # Shell feature probes through the shell that `sh` resolves to
 sh_bin="${PREFIX:-}/bin/sh"

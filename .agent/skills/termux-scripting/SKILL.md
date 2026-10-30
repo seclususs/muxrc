@@ -1,13 +1,11 @@
 ---
 name: termux-scripting
-description: Writes, modifies, and hardens zsh, POSIX sh, and bash code for Termux - dialect choice, Termux-safe constructs, idempotent defensive structure, stream and logging rules for utilities versus wrappers versus CLI integrations, a cross-platform lint gate, and a sandbox test harness. Use for any *.sh, *.zsh, installer, utility, shell function, alias, or wrapper, and to make shell code portable, safer, faster, or lint-clean. Not for read-only audits (code-review), restructuring without behavior change (code-refactoring), or Termux config files (termux-customization).
+description: Writes, modifies, and hardens zsh, POSIX sh, and bash code for Termux - dialect choice, Termux-safe constructs, idempotent defensive structure, stream and logging rules for utilities versus wrappers versus CLI integrations, a cross-platform lint gate and formatter, and a sandbox and Termux-simulation test harness. Use for any *.sh, *.zsh, installer, utility, shell function, alias, or wrapper, and to make shell code portable, safer, faster, or lint-clean. Not for read-only audits (code-review), restructuring without behavior change (code-refactoring), or Termux config files (termux-customization).
 ---
 
 # Termux scripting
 
 Paths are relative to this skill directory. Run scripts through their interpreter (`sh x.sh` or `powershell -NoProfile -ExecutionPolicy Bypass -File x.ps1`). Runtime facts: skill `termux-environment`. Host tools missing: skill `platform-detection`.
-
-Research authority: search the web yourself when docs or dependency facts are missing or stale (primary sources first: Termux wiki, termux-packages, termux-app, Android and shell manuals); cite URLs; never guess.
 
 ## 1. Pick the dialect (facts first)
 - Existing file: keep its dialect (shebang, else extension). Convert only when asked.
@@ -30,26 +28,28 @@ Research authority: search the web yourself when docs or dependency facts are mi
 ## 3. Output and logging
 | Code kind | Output rule |
 |---|---|
-| Installer, general utility | project logger, prefixes `[*] [+] [-] [!] [?]`, flat, lowercase, to stderr |
-| Wrapper of a system command (sudo-like, Linux-like standard commands) | mimic the native command exactly: wording, streams, exit codes; no prefixes, no restyling |
-| CLI integration (for example an AI CLI) | pure data on stdout, plain messages on stderr, conventional exit codes; no prefixes |
-Pipes stay clean: data on stdout, everything else on stderr (`>&2`). Identify wrappers and CLI integrations by role (search definitions and call sites), not by file name. Restyling their messages is out of scope.
+| Installer, general utility | the project's logger and prefix convention (`logui.*` in repo-map); default prefixes `[*] [+] [-] [!] [?]`, flat, lowercase, to stderr |
+| Wrapper that shadows a system command (for example `sudo`, `ls`, `grep`) | mimic the native command exactly: wording, streams, exit codes; no prefixes, no restyling |
+| Integration with an external CLI | pure data on stdout, plain messages on stderr, conventional exit codes; no prefixes |
+Pipes stay clean: data on stdout, everything else on stderr (`>&2`). Identify wrappers and integrations by role (search definitions and call sites), not by file name. Restyling their messages is out of scope.
 
 Comments: only for non-obvious reasons, Termux or Android constraints, workarounds, and hazards; never for what the code does. Section banners use exact-length hash borders (core policy).
 
 ## 4. Quality gate (run after every edit)
 `sh scripts/lint-shell.sh [paths]` or `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/lint-shell.ps1 [paths]`
-- Format modified `.sh` files with shfmt through `.editorconfig` (no style flags) before running the gate.
-- No paths = every shell-like file of the repository (agent directories excluded). Output: `LEVEL file:line [CODE] message` and one `SUMMARY ... coverage=full|partial skipped=...` line. Options: `--dialect`, `--no-external`, `--strict`, `--max-per-rule`, `--root`.
+- Format modified sh/bash files first: `sh scripts/format-shell.sh --write PATH...` (or the `.ps1` flavor). Without `--write` it prints the diff and exits 1 when files differ. It uses shfmt through `.editorconfig` with no style flags, skips files without an `.editorconfig`, and never rewrites zsh. `--out FILE` stores the diff; exit 3 means shfmt is missing (format by hand following `.editorconfig`).
+- No paths = every shell-like file of the repository (agent directories and `.artifacts/` excluded). Output: `LEVEL file:line [CODE] message` and one `SUMMARY ... coverage=full|partial skipped=...` line. Options: `--dialect`, `--no-external`, `--strict`, `--max-per-rule`, `--root`, `--list` (print dialect and file only), `--out FILE` (write findings to a file and print only SUMMARY; use for more than about 200 lines, for example `.artifacts/lint/report.txt`).
 - Uses ShellCheck (+ `.shellcheckrc`), shfmt (+ `.editorconfig`, only when one exists), dialect syntax checks, and heuristics from `scripts/patterns.tsv` (bashisms in sh, zsh pitfalls, FHS paths, banner borders, CRLF, log-prefix evidence). Missing tools give `SKIP` lines and `coverage=partial`: say so in the report.
 - Heuristic hits are leads: confirm against the code. Suppress a confirmed false positive with a trailing `# lint-ignore: CODE`. Here-document bodies are skipped; `H001` means a delimiter never closed and later lines were not checked.
 - ERROR must be fixed; WARN fixed or justified. ShellCheck info/style notes count as WARN (the project baseline is clean): judge by new findings in the files you changed, not by the repo total.
-- `L002` (WARN) = a log prefix or logger call inside a function named like a system command or CLI integration (`scripts/wrapper-names.txt`; a trailing `*` matches a prefix). The standard list covers system commands; add this project's wrapper and integration names there (find them with repo-map definitions; do not guess). Remove the prefix and keep native output. `L001` (INFO) is evidence: confirm prefixed output exists only in installers and utilities.
-- ShellCheck skips zsh by design. For `.zsh` files the gate prints an advisory `FMT` line with the shfmt hunk count. shfmt on zsh: run `shfmt -d FILE.zsh` with no flags (dialect from the extension, `.editorconfig` applied), review each hunk, never write: it can turn `$+commands[a-b]` into `$+commands[a - b]`. Match the existing zsh style by hand.
+- `T003` (INFO) flags commands that a default Termux install lacks (`sudo`, `systemctl`, `lsb_release`, ...); `T005` (INFO) flags `command -v su`, which succeeds without root because Termux ships a `su` wrapper (test `su -c true` instead).
+- `L002` (WARN) = a log prefix or logger call inside a function named like a system command or CLI integration (`scripts/wrapper-names.txt`; a trailing `*` matches a prefix). The standard list covers system commands; add the project's wrapper and integration names there (find them with repo-map definitions; do not guess). Remove the prefix and keep native output. `L001` (INFO) is evidence: confirm prefixed output exists only where the project's convention uses prefixes (default: installers and utilities).
+- ShellCheck skips zsh by design. For `.zsh` files the gate prints an advisory `FMT` line with the shfmt hunk count, or a `SKIP shfmt-zsh` line when the installed shfmt has no zsh support (it would parse the file as bash). shfmt on zsh: run `shfmt -d FILE.zsh` with no flags (dialect from the extension, `.editorconfig` applied), review each hunk, never write: it can turn `$+commands[a-b]` into `$+commands[a - b]`. Match the existing zsh style by hand.
 - Never pass shfmt style or parser flags (`-i`, `-ci`, `-ln`, ...): any flag makes it ignore `.editorconfig`.
 
 ## 5. Test
-- `sh scripts/sandbox-run.sh --stub-termux --twice -- path/to/script [args]` runs a script in a Termux-like sandbox (fake `HOME`/`PREFIX`/`TMPDIR`, recorded `termux-*` stubs, cleared environment) and reports idempotency. `--stub NAME=EXIT:TEXT` fakes one command; `--seed SRC[:DEST]` pre-populates `HOME`. Literal `/data/data/com.termux` paths are not remapped.
+- `sh scripts/sandbox-run.sh --stub-termux --twice -- path/to/script [args]` runs a script in a Termux-like sandbox (fake `HOME`/`PREFIX`/`TMPDIR`, recorded `termux-*` stubs, cleared environment) and reports idempotency. `--stub NAME=EXIT:TEXT` fakes one command; `--seed SRC[:DEST]` pre-populates `HOME`; `--env NAME=VALUE` adds a variable; `--overlay DIR` copies a prepared tree in; `--keep` stores the sandbox under `.artifacts/sandbox/`. `sudo` and `doas` are always stubbed (exit 127). Literal `/data/data/com.termux` paths are not remapped.
+- A script that reads Termux facts (`uname -o`, `getprop`, `id`, `su`, `pkg`, `dpkg`, storage) runs through `termux-environment/scripts/termux-sim.sh` instead (`--root` for root paths): same sandbox, plus stand-ins for those commands. Report such results as simulated.
 - Sourced modules and libraries have no entry point: test them through a 3-line driver run in the sandbox (zsh: `source "${0:A:h}/mod.zsh"; fn args`; sh: `. "$(dirname "$0")/mod.sh"; fn args`; add `--dialect`).
 - Tests: `assets/templates/test-harness.sh.tpl`, only when the change is risky or the project already has tests. Behavior-preserving changes: skill `code-refactoring` (`behavior-snapshot`).
 - Real Termux behavior (permissions, termux-exec, Android, Termux:API) cannot be proven on a host. Use the Termux container (no Android runtime) or a device, and give the user exact commands for what remains.
@@ -66,3 +66,4 @@ Comments: only for non-obvious reasons, Termux or Android constraints, workaroun
 - CRLF breaks shebangs (`bad interpreter`) and values: LF only.
 - BSD (macOS host) and GNU utilities differ in `sed -i`, `date`, `readlink`, `stat`; verify flags on Termux (`pkg show coreutils`).
 - `chmod` and `ln -s` fail inside shared storage; `/bin/sh` is Android's shell unless termux-exec intercepts.
+- `command -v su` is true on a non-rooted Termux (a wrapper script); `su -c true` fails there. Keep root paths optional.
