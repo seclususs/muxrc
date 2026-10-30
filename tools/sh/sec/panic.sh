@@ -17,11 +17,14 @@ usage() {
 }
 
 get_targets() {
-  local data_dir="${XDG_DATA_HOME:-${HOME}/.local/share}/muxrc"
+  local data_dir="${XDG_DATA_HOME:-${HOME}/.local/share}"
+  local config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}"
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}"
+  local cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}"
   local -a candidates=()
 
   # Vault and encrypted storage
-  candidates+=("${data_dir}/vault")
+  candidates+=("${data_dir}/muxrc/vault")
   candidates+=("${HOME}/.vault")
 
   # Cryptographic keys and identities
@@ -33,14 +36,24 @@ get_targets() {
   candidates+=("${HOME}/.netrc")
   candidates+=("${HOME}/.config/gh/hosts.yml")
   candidates+=("${HOME}/.aws/credentials")
+  candidates+=("${config_dir}/muxrc/ai.env")
+  candidates+=("${HOME}/.gemini_ai_env")
+  candidates+=("${config_dir}/muxrc/sudo_hash")
+  candidates+=("${HOME}/.sudo_hash")
 
   # Shell histories and project trash
+  candidates+=("${state_dir}/zsh/history")
+  candidates+=("${state_dir}/zsh/history_root")
   candidates+=("${HOME}/.zsh_history")
+  candidates+=("${HOME}/.zsh_history_root")
   candidates+=("${HOME}/.bash_history")
   if [[ -n "${HISTFILE:-}" && "${HISTFILE}" != "${HOME}/.zsh_history" && "${HISTFILE}" != "${HOME}/.bash_history" ]]; then
     candidates+=("${HISTFILE}")
   fi
-  candidates+=("${data_dir}/trash")
+  candidates+=("${state_dir}/muxrc/ai-audit.log")
+  candidates+=("${cache_dir}/muxrc/clip_history.log")
+  candidates+=("${data_dir}/Trash")
+  candidates+=("${HOME}/.trash")
 
   local item
   for item in "${candidates[@]}"; do

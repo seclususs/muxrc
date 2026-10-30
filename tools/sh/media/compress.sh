@@ -103,22 +103,26 @@ compress_video() {
   local new_size
   new_size=$(stat -c '%s' "${temp_file}" 2> /dev/null || wc -c < "${temp_file}")
 
-  mv -f "${temp_file}" "${target_file}"
-  CURRENT_TEMP=""
-
   local orig_fmt
   orig_fmt=$(format_bytes "${orig_size}")
   local new_fmt
   new_fmt=$(format_bytes "${new_size}")
 
-  if ((orig_size > 0 && new_size < orig_size)); then
-    local saved_pct
-    saved_pct=$(awk -v o="${orig_size}" -v n="${new_size}" 'BEGIN { printf "%.1f", ((o - n) / o) * 100 }')
-    log_success "done: ${orig_fmt} -> ${new_fmt} (${saved_pct}% saved)"
-  elif ((new_size >= orig_size)); then
-    log_warn "done: ${orig_fmt} -> ${new_fmt} (larger or equal)"
+  if ((orig_size > 0 && new_size >= orig_size)); then
+    rm -f "${temp_file}" 2> /dev/null || true
+    CURRENT_TEMP=""
+    log_warn "done: ${orig_fmt} -> ${new_fmt} (larger or equal, original preserved)"
   else
-    log_success "done: ${new_fmt}"
+    mv -f "${temp_file}" "${target_file}"
+    CURRENT_TEMP=""
+
+    if ((orig_size > 0 && new_size < orig_size)); then
+      local saved_pct
+      saved_pct=$(awk -v o="${orig_size}" -v n="${new_size}" 'BEGIN { printf "%.1f", ((o - n) / o) * 100 }')
+      log_success "done: ${orig_fmt} -> ${new_fmt} (${saved_pct}% saved)"
+    else
+      log_success "done: ${new_fmt}"
+    fi
   fi
 }
 

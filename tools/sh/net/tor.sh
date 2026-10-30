@@ -133,7 +133,7 @@ terminate_tor_process() {
 
   trap 'cleanup_spinner' EXIT
   start_spinner "stopping tor (pid: ${tpid})"
-  kill -INT "${tpid}"
+  kill -INT "${tpid}" 2> /dev/null || true
 
   for ((i = 0; i < 30; i++)); do
     if ! kill -0 "${tpid}" 2> /dev/null; then

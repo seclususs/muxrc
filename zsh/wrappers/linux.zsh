@@ -415,11 +415,6 @@ ping() {
     return 0
   fi
 
-  if command -v su > /dev/null 2>&1; then
-    su -c "/system/bin/ping ${(q)args[@]}"
-    return $?
-  fi
-
   return $code
 }
 
@@ -497,10 +492,10 @@ command_not_found_handler() {
   matches=$(pkg search "$cmd" 2> /dev/null | grep "^$cmd/")
 
   if [[ -n "$matches" ]]; then
-    echo "zsh: command not found: $cmd"
-    echo "Did you mean to install it? Try: pkg install $cmd"
+    print -u2 "zsh: command not found: $cmd"
+    print -u2 "Did you mean to install it? Try: pkg install $cmd"
   else
-    echo "zsh: command not found: $cmd"
+    print -u2 "zsh: command not found: $cmd"
   fi
 
   return 127

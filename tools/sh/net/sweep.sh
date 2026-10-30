@@ -8,7 +8,7 @@ set -euo pipefail
 source "$(dirname "$(realpath "$0")")/../../../lib/init.sh"
 
 check_dependencies() {
-  require_cmd nmap awk
+  require_cmd nmap awk jq
 }
 
 validate_cidr() {

@@ -9,7 +9,7 @@ source "${MUXRC_DIR}/lib/init.sh"
 _muxrc_run_as_root() {
   if [[ "$EUID" -eq 0 ]]; then
     bash "$@"
-  elif whence -p sudo > /dev/null 2>&1; then
+  elif (( $+functions[sudo] )) || whence sudo > /dev/null 2>&1; then
     sudo bash "$@"
   else
     log_error "root access required (sudo not found)"
@@ -52,7 +52,7 @@ net() {
         bash "${MUXRC_DIR}/tools/sh/net/sweep.sh" -h
         return 0
       fi
-      if whence -p sudo > /dev/null 2>&1; then
+      if (( $+functions[sudo] )) || whence sudo > /dev/null 2>&1; then
         sudo bash "${MUXRC_DIR}/tools/sh/net/sweep.sh" "$@"
       else
         bash "${MUXRC_DIR}/tools/sh/net/sweep.sh" "$@"

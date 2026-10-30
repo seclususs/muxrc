@@ -88,7 +88,6 @@ shred_main() {
   fi
 
   validate_file_writable "${target_file}" || return 1
-  require_cmd shred || return 1
 
   if ((force == 1)) || confirm_destruction "${target_file}"; then
     shred_file "${target_file}" 0

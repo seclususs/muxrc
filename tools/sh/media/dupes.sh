@@ -103,7 +103,7 @@ display_duplicates_and_collect_deletions() {
       log_success "keep: ${file}"
     else
       log_warn "del : ${file}"
-      echo "${file}" >> "${tmp_dir}/to_delete.txt"
+      printf '%s\n' "${file}" >> "${tmp_dir}/to_delete.txt"
     fi
   done < "${tmp_dir}/dup_files.txt"
 }

@@ -118,7 +118,9 @@ setup_sudo_wrapper() {
     read -r -s sudo_pass_confirm
     echo ""
 
-    if [[ "${sudo_pass}" == "${sudo_pass_confirm}" ]]; then
+    if [[ -z "${sudo_pass}" ]]; then
+      log_error "password cannot be empty. please retry."
+    elif [[ "${sudo_pass}" == "${sudo_pass_confirm}" ]]; then
       echo -n "${sudo_pass}" | sha256sum | awk '{print $1}' > "${sudo_hash_file}"
       chmod 600 "${sudo_hash_file}"
       log_success "sudo hash generated."

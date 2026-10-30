@@ -73,7 +73,12 @@ set_wifi_framework_state() {
   if command -v cmd > /dev/null 2>&1; then
     cmd wifi set-wifi-enabled "${state}" > /dev/null 2>&1 || true
   elif command -v svc > /dev/null 2>&1; then
-    svc wifi "${state}" > /dev/null 2>&1 || true
+    local svc_state="${state}"
+    case "${state}" in
+      enable | enabled) svc_state="enable" ;;
+      disable | disabled) svc_state="disable" ;;
+    esac
+    svc wifi "${svc_state}" > /dev/null 2>&1 || true
   fi
 }
 
