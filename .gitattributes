@@ -10,4 +10,4 @@ install.sh linguist-language=Shell
 
 *.enc binary
 
-.agent/** linguist-vendored
+.agents/** linguist-vendored
