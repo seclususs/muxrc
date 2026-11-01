@@ -12,7 +12,7 @@ Paths are relative to this skill directory. Script invocation and the `.artifact
 2. Route: classify the message with the routing table and open the `SKILL.md` of every skill it names before the first edit or script run. Open it again when its text is no longer in context; a summary of a skill is not the skill.
 3. If the request touches repository code or config: `sh scripts/repo-map.sh` (or `.ps1`). Read the config files it lists (`.editorconfig`, `.shellcheckrc`, `.gitattributes`) when style or line endings matter.
 4. If a fact is missing or may be stale (package, flag, API, version, platform behavior): search the web, primary sources first, cite URLs, then continue.
-5. Plan when the task is not trivial (`assets/task-plan.md`), apply the delegation gate, do the work, run the lint gate and `code-review`, report.
+5. Plan when the task is not trivial (`assets/task-plan.md`) and apply the delegation gate. High risk: stop here and wait for the user's go. Then do the work, run the lint gate and `code-review`, report.
 
 A subagent that received a brief skips this procedure and follows the brief (`subagent-development`).
 
@@ -30,12 +30,15 @@ Questions, one-line requests, and read-only analysis follow the same procedure. 
 | I know where bash or zsh is | Call the tool by its `tool.NAME` path from the detector output. |
 | I will run the script to see what happens | Only through `sandbox-run` or `termux-sim`, never directly on the host. |
 | I checked it by hand | Verification is the lint gate and `code-review`; ad-hoc commands do not replace them. |
+| I was asked to find bugs, so I must report some | A finding needs evidence and an intent check (`code-review`, finding gate). No findings is a valid result. |
+| It looks wrong or inconsistent | Run the intent check (core policy): history and comments may record why. |
+| The linter reports INFO | INFO is a lead, not a defect: do not edit only to silence it. |
 
 ## Routing
 | Request | Open, in order |
 |---|---|
 | What changed; explain or analyze a diff, commit, or file | `code-review` (change analysis) |
-| Review, audit, "is this correct", pre-commit check | `code-review` |
+| Review, audit, "find bugs", "is this correct", pre-commit check | `code-review` |
 | Error, crash, wrong output, hang, "not working" | `systematic-debugging` (+ `termux-environment`) |
 | Restructure without behavior change: rename, extract, move, split, merge, deduplicate, simplify | `code-refactoring` (+ `termux-scripting`) |
 | Write or change a script, function, wrapper, installer, alias | `termux-scripting` (+ `termux-environment`) |
@@ -45,7 +48,7 @@ Questions, one-line requests, and read-only analysis follow the same procedure. 
 | A host tool is missing or failing | `platform-detection` |
 | Delegation gate met (below), or the user asks for subagents, parallel work, delegation, or a second opinion | `subagent-development` |
 
-A request that matches several rows opens all of them. Process skills (`systematic-debugging`, `code-refactoring`, `feature-ideation`) come before implementation skills (`termux-scripting`, `termux-customization`). Every code change ends with `code-review` and the lint gate.
+A request that matches several rows opens all of them. Process skills (`systematic-debugging`, `code-refactoring`, `feature-ideation`) come before implementation skills (`termux-scripting`, `termux-customization`). Every code change ends with `code-review` and the lint gate. A review that also asks for fixes reports first (`code-review`); edit only the findings that pass its finding gate.
 
 ## Delegation gate
 Defined in core policy. Evaluate it after the plan exists, before the first edit, and record `Delegation gate: met | not met` in the plan. Met: open `subagent-development`. Not met: work directly.
@@ -53,7 +56,7 @@ Defined in core policy. Evaluate it after the plan exists, before the first edit
 ## Scale to risk
 - Trivial (one file, about 10 lines, no behavior change): do it inline, run the lint gate, no plan, no subagents.
 - Standard: research, plan, implement, review, test.
-- High (wrappers, installers, destructive or network actions, many files): Standard, plus two review stages and a user checkpoint after the plan.
+- High (wrappers, installers, destructive or network actions, many files, a repository-wide review with fixes): Standard, plus two review stages and a user checkpoint: stop after the plan and wait for the user's go before the first edit.
 
 ## Reporting
 - Tasks that change files: `assets/final-report.md`.

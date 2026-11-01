@@ -6,13 +6,13 @@ Delete a section that does not apply.
 Exact error text and exit status.
 
 ## Environment
-Host or Termux (rooted or not); shell and dialect; versions if known.
+Host or Termux (rooted or not); shell, dialect, and shell version.
 
 ## Reproducer
 The command or minimal script, and where it was run (host, termux-sim profile, device).
 
 ## Evidence
-Trace excerpt with file:line, and relevant outputs. Full logs: `.artifacts/trace/<time>/`.
+Trace excerpt with file:line, and relevant outputs. Intent check of the lines to change (history, comments). Full logs: `.artifacts/trace/<time>/`.
 
 ## Root cause
 One sentence.

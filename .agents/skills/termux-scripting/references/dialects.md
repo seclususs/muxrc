@@ -1,6 +1,6 @@
 # Dialect matrix
 
-Termux `sh` is dash (verify on device). (t) = tested here: dash 0.5.12 and 0.5.13.5 (built from the upstream tarball), busybox ash 1.36.1, bash 5.2, zsh 5.9; other cells follow documented behavior.
+Termux `sh` is dash (verify on device). (t) = tested here: dash 0.5.12 and 0.5.13.5 (built from the upstream tarball), busybox ash 1.36.1, bash 4.3.0 and 4.4.18 (built from the upstream tarballs) and 5.2, zsh 5.9; other cells follow documented behavior.
 
 | Feature | POSIX sh (dash) | bash | zsh |
 |---|---|---|---|
@@ -20,6 +20,8 @@ Termux `sh` is dash (verify on device). (t) = tested here: dash 0.5.12 and 0.5.1
 | `$LINENO` | empty in dash 0.5.12 (t); set in dash 0.5.13.5 and busybox ash (t) | yes | yes |
 | Unmatched glob | stays literal (t) | literal | error `no matches found` (t); `(N)` qualifier |
 | `set -e` in `a && b` | not triggered (t) | not triggered | not triggered |
+| `"${a[@]}"` of an empty array under `set -u` | no arrays | error before 4.4 (4.3.0 (t)); valid from 4.4 (4.4.18, 5.2 (t)) | valid (t) |
+| `${v,,}`, `${v^^}` | `bad substitution` (t, also busybox) | yes, bash 4+ (4.3.0, 4.4.18, 5.2 (t)) | `bad substitution` (t); use `${(L)v}` or `${v:l}` (t) |
 
 Notes
 - Repositories using bash shebangs keep bash for those files (`dialect.*` in repo-map). Start from the POSIX template and add bash features deliberately.

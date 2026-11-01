@@ -15,6 +15,7 @@ Keep it to what the task needs. Delete a section that does not apply.
 
 ## Risk and checks
 - Risk level: trivial | standard | high, with the reason
+- Checkpoint: high risk: stop and wait for the user's go before the first edit | not required
 - Needs a Termux device: item and exact command, or none
 - Delegation gate: met | not met, with the reason (see core policy)
 

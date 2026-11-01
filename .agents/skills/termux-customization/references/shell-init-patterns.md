@@ -6,12 +6,12 @@ Load when changing how the shell starts, prompts, completes, or loads modules.
 Find the rc file, how it sources modules (search for `source`), and the load order; add new code as a module in that mechanism, not inline in the rc file.
 
 ## Module rules
-- Guard against double sourcing; define functions only; no output, prompts, or slow work at source time.
+- Source-time rules (double-source guard, definitions only, no output): `termux-scripting` `references/zsh.md`.
 - One concern per module; the loader decides order. Name modules by concern, not by feature.
 - Aliases for fixed command lines; functions when arguments, conditions, or quoting matter. Replacing a system command is a wrapper: keep native behavior and output.
 
 ## Performance
-- Measure: `time zsh -i -c exit`; profile with `zmodload zsh/zprof` at the top of the rc and `zprof` at the end.
+- Measure first: `termux-scripting` `references/zsh.md`.
 - Remove `$(...)` and external commands from startup; test command presence with `(( $+commands[tool] ))`.
 - Defer heavy plugins to first use (a stub function that sources the plugin, then calls it).
 - Cache generated completion dumps and skip regeneration when fresh; compile large files with `zcompile`. Verify with the timing again.

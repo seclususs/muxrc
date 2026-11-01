@@ -12,7 +12,7 @@ Delete a section that does not apply.
 - What: code facts (functions, options, or commands added, removed, or altered)
 - Where: function or section, file:line
 - Effect: behavior change, or "none observed"
-- Intent: from the request, a commit subject, or a comment; "inferred" when not stated
+- Intent: from the request, a commit message, or a comment; "inferred" when not stated
 
 ## Risks and open points
 - Behavior, Termux compatibility, wrapper or integration contract

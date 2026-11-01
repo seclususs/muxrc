@@ -8,6 +8,7 @@ Load when a Termux claim must be justified or extended. Re-verify with a web sea
 | termux-exec through `LD_PRELOAD`, `/bin` and `/usr/bin` shebang behavior, app data exec restrictions, external storage limits (noexec, no symlinks, case-insensitive) | https://github.com/termux/termux-packages/wiki/Termux-execution-environment , https://github.com/termux/termux-exec |
 | Hard-coded FHS paths must be patched or avoided | https://github.com/termux/termux-packages/wiki/Common-porting-problems |
 | `sh` is dash, `TERMUX_PKG_ESSENTIAL=true`, version | https://github.com/termux/termux-packages/blob/master/packages/dash/build.sh |
+| `bash` essential and its version; `zsh` version | https://github.com/termux/termux-packages/blob/master/packages/bash/build.sh , https://github.com/termux/termux-packages/blob/master/packages/zsh/build.sh |
 | `pipefail` in POSIX.1-2024, and the probe pattern | https://github.com/koalaman/shellcheck/wiki/SC3040 |
 | dash 0.5.13.5 accepts `pipefail` and sets `$LINENO`; 0.5.12 does neither (tested by building the upstream tarball) | http://archive.ubuntu.com/ubuntu/pool/main/d/dash/ (`dash_0.5.13.5.orig.tar.gz`) |
 | Architectures aarch64 (default), arm, i686, x86_64 | https://github.com/termux/termux-packages/wiki/Building-packages |

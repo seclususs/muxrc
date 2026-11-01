@@ -25,6 +25,6 @@ Paste assets/policy-digest.md here.
 - No behavior change outside the goal; no new dependency unless the goal requires it.
 
 ## Output
-- Changed files: path, one-line reason
+- Changed files: path, one-line reason with its evidence (reproducer or rule)
 - Commands run, with exit codes
 - Residual risks

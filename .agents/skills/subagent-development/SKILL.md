@@ -50,6 +50,5 @@ Parallelize only independent units with disjoint files; otherwise run sequential
 
 ## Gotchas
 - Subagent output is a claim, not evidence: re-run the lint gate and `diff-collect` yourself before reporting. Tool restrictions are settings, not proof; the diff shows what actually changed.
-- A missing tool is not a blocker: use the fallback and state the reduced coverage.
 - Briefs drift from policy when written from memory: paste the digest.
 - An unscoped subagent edits what it should only read: set tool access per role and list the files in scope.

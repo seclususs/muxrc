@@ -26,7 +26,7 @@ The host is where code is edited and checked; the target is Termux. Do not assum
 
 ## Host command rules
 - Every host script exists as `.sh` (needs a POSIX shell) and `.ps1` (Windows PowerShell 5.1+ or PowerShell 7+) with the same options, output, and exit codes. Exceptions: `device-facts.sh` runs inside Termux; `termux-shim.sh` is internal to `termux-sim`. `behavior-snapshot.ps1`, `sandbox-run.ps1`, `trace-run.ps1`, and `termux-sim.ps1` are launchers that need a POSIX shell; without one they exit 3 and say so.
-- Windows PowerShell 5.1 has no `&&`, `||`, or `?:`: run commands separately. Pass forward slashes to POSIX tools. Its `>` and `Out-File` write UTF-16, so scripts let git or .NET write files.
+- Windows PowerShell 5.1 has no `&&`, `||`, or `?:`: run commands separately. Pass forward slashes to POSIX tools. Its `>` and `Out-File` write UTF-16, so scripts let git or .NET write files. It does not preserve embedded double quotes or empty arguments when it starts a native program (also PowerShell 7 with `$PSNativeCommandArgumentPassing = 'Legacy'`; see about_Parsing): a snippet passed as an argument can run as different text and still exit 0, so put it in a file.
 - Git for Windows bundles `sh`, `bash`, `awk`, `sed` but may not put them on PATH; the `.ps1` scripts search its install directories, and `tool.*` prints the path they found.
 - `host.env=termux` means you run inside the target: host-only assumptions do not apply.
 

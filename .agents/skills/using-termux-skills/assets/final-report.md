@@ -9,6 +9,7 @@ Delete any section that does not apply. One fact per line.
 - Host: `host.os`/`host.env` and `run.scripts` from platform-detection; reduced coverage, if any
 - Lint gate: the `SUMMARY` line
 - Review: the coverage line of `code-review`
+- Evidence: per fix, the failing reproducer (shell and version) or the rule and source it violates; the intent check result when existing behavior changed
 - Other command run: result (test output, harness report)
 - Not verified on host: item that needs a Termux device, with the exact command to run there
 

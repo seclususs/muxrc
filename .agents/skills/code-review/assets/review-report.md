@@ -17,11 +17,15 @@ Order by severity: blocker, major, minor, nit. One block per finding.
 
 ### 1. blocker: short title (`path:line`)
 - Fact: what the code does, as observed.
+- Evidence: reproducer command and result (shell and version), or the rule violated and its source.
+- Intent check: the commit or comment found for these lines, or none.
 - Fix: the concrete change.
 
 ### 2. minor: short title (`path:line`)
-- Fact: ...
-- Fix: ...
+- Same fields as finding 1.
+
+## Unverified leads
+- `path:line`: the suspicion and what would confirm it (no severity, no edit)
 
 ## Needs device (unverified)
 - Item: exact command to run in Termux, and the expected result

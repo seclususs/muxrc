@@ -19,7 +19,7 @@ After planning and before editing, open `subagent-development` when any of these
 ## Target and host
 - Target: Termux on Android (aarch64 primary; also arm, i686, x86_64), rooted or not. Use `$PREFIX`, `$HOME`, `$TMPDIR`; do not rely on FHS paths (`/usr`, `/etc`, `/tmp`, `/bin`). Files use LF.
 - Host (Linux, macOS, Windows) is only the development environment. Do not assume its OS or tools. Take them from the `platform-detection` output: call a host tool by its `tool.NAME` path, not by bare name, and run the detector again when a path, flag, or version is not visible in context. State reduced coverage.
-- Do not run project scripts or snippets directly on the host. Run them with `sandbox-run` or `termux-sim`; `-n` syntax checks and lint are the exception. These harnesses redirect `HOME`, `PREFIX`, and `TMPDIR` and stub commands; they are not a security boundary, so read a script for destructive commands first. With no POSIX shell on the host, do not run it; list it as a device check.
+- Do not run project scripts or snippets directly on the host. Run them with `sandbox-run` or `termux-sim`; `-n` syntax checks and lint are the exception. A snippet is a file: write it under `.artifacts/` and run it as `-- FILE` (`-c TEXT` only for short text without double quotes). These harnesses redirect `HOME`, `PREFIX`, and `TMPDIR` and stub commands; they are not a security boundary, so read a script for destructive commands first. With no POSIX shell on the host, do not run it; list it as a device check.
 - Host runs, including `termux-sim`, show syntax, logic, and documented behavior, not Termux itself; list what needs a device check.
 - Skill scripts print options with `--help`. Skill paths are relative to the skill directory (`.agents/skills/<name>/` from the project root). Run `.sh` with `sh`; run `.ps1` with `powershell -NoProfile -ExecutionPolicy Bypass -File <path> <args>` (`pwsh -NoProfile -File <path> <args>` on PowerShell 7).
 
@@ -28,7 +28,10 @@ Files written by skill tools go to `.artifacts/<tool>/` at the project root, nex
 
 ## Workflow
 - Do not assume: verify in the repository or on the web, primary sources first.
+- Evidence before change: a defect claim or a fix needs a failing reproducer run through a harness, or a documented rule it violates (cite the source). Lint INFO, style notes, and "could fail" are leads, not defects. "No findings" is a valid result.
+- Intent check before changing or reporting code that looks wrong: `git --no-pager log -S'TEXT' --format='%h %s%n%b' -- PATH` (commits that added or removed TEXT; the reason is usually in the body) or `git --no-pager log -L START,END:PATH -s --format='%h %s%n%b'` (history of a line range), then read the nearby comments. No output means no matching commit. A recorded decision stands unless new evidence contradicts its reason.
 - A code change is done after the lint gate and `code-review` ran on it. The report quotes each `SUMMARY` and coverage line; "verified" without a command and its result is not evidence.
+- High risk (defined in `using-termux-skills`): stop after the plan and wait for the user's go before the first edit.
 - Never commit automatically; pause before `git add`. Final output: 1) Changed files 2) Draft commit 3) Approval request.
 - Smallest correct change; no speculative options, abstractions, or dependencies.
 - Discover paths and names by searching the repository. Do not hard-code file names in rules, skills, or scripts.
@@ -42,7 +45,7 @@ Files written by skill tools go to `.artifacts/<tool>/` at the project root, nex
 
 ## Code standards
 - KISS, DRY, SRP, reusable, idempotent, fail-fast. No side effects on source; single-purpose functions.
-- Defensive: scope variables (`local` where supported), quote `"$VAR"`, validate arguments up front.
+- Defensive: scope variables (`local` where supported), quote `"${VAR}"`, validate arguments up front.
 - Streams: data on stdout; logs and errors on stderr (`>&2`).
 - Lint sh/bash with ShellCheck (project `.shellcheckrc`); skip zsh. Format with `format-shell` (shfmt through `.editorconfig`, no style flags because flags disable it); zsh is diff-only because shfmt can corrupt zsh syntax.
 - Lean and fast: no needless forks in loops or at shell startup.

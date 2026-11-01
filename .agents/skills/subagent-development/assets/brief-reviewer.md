@@ -9,7 +9,7 @@ Run diff-collect (skill code-review), read every printed range of every part fil
 Paste them here.
 
 ## Stages
-- Stage A, spec compliance: per criterion, met or unmet with evidence; list behavior that was not requested.
+- Stage A, spec compliance: per criterion, met or unmet with evidence; map every hunk to a criterion, and list an unmapped hunk as behavior that was not requested.
 - Stage B, quality and safety: apply the checklist of skill code-review.
 - Run the lint gate (skill termux-scripting) and quote its SUMMARY line.
 
@@ -17,4 +17,4 @@ Paste them here.
 Paste assets/policy-digest.md here.
 
 ## Output
-Use the format of code-review/assets/review-report.md: coverage line, findings (severity, file:line, fact, fix), verdict (approve | changes needed).
+Use the format of code-review/assets/review-report.md: coverage line, findings (severity, file:line, fact, evidence, intent check, fix), unverified leads, verdict (approve | changes needed | no findings).
