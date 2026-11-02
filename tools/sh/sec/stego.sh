@@ -79,7 +79,7 @@ embed_data() {
     read -r secret_text
     touch "${embed_file}"
     chmod 600 "${embed_file}"
-    echo "${secret_text}" > "${embed_file}"
+    printf '%s\n' "${secret_text}" > "${embed_file}"
   elif [[ "${embed_opt}" == "2" ]]; then
     log_prompt "path to file to hide: "
     read -r embed_file

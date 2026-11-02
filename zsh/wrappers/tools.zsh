@@ -52,7 +52,9 @@ net() {
         bash "${MUXRC_DIR}/tools/sh/net/sweep.sh" -h
         return 0
       fi
-      if (( $+functions[sudo] )) || whence sudo > /dev/null 2>&1; then
+      if [[ "$EUID" -eq 0 ]]; then
+        bash "${MUXRC_DIR}/tools/sh/net/sweep.sh" "$@"
+      elif [[ -x /system/bin/su || -x /system/xbin/su || -n "$(whence -p sudo 2>/dev/null)" ]]; then
         sudo bash "${MUXRC_DIR}/tools/sh/net/sweep.sh" "$@"
       else
         bash "${MUXRC_DIR}/tools/sh/net/sweep.sh" "$@"

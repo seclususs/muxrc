@@ -34,7 +34,7 @@ get_targets() {
   # Auth credentials and tokens
   candidates+=("${HOME}/.git-credentials")
   candidates+=("${HOME}/.netrc")
-  candidates+=("${HOME}/.config/gh/hosts.yml")
+  candidates+=("${config_dir}/gh/hosts.yml")
   candidates+=("${HOME}/.aws/credentials")
   candidates+=("${config_dir}/muxrc/ai.env")
   candidates+=("${HOME}/.gemini_ai_env")

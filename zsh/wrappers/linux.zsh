@@ -144,7 +144,13 @@ sudo() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -E | --preserve-env) shift ;;
-      -u | --user) shift 2 ;;
+      -u | --user)
+        if [[ $# -lt 2 ]]; then
+          print -u2 "sudo: option requires an argument -- 'u'"
+          return 1
+        fi
+        shift 2
+        ;;
       --) shift; break ;;
       *) break ;;
     esac

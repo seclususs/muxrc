@@ -74,16 +74,18 @@ sync_plugins() {
     fi
   done
 
-  for plugin_name in "${custom_plugins[@]}"; do
-    idx=$((idx + 1))
-    target_dir="${plugins_dir}/${plugin_name}"
-    start_spinner "updating ${plugin_name} (${idx}/${total})"
-    if git -C "${target_dir}" pull -q --rebase; then
-      stop_spinner "success" "updated ${plugin_name}"
-    else
-      stop_spinner "error" "failed to update ${plugin_name}"
-    fi
-  done
+  if [[ ${#custom_plugins[@]} -gt 0 ]]; then
+    for plugin_name in "${custom_plugins[@]}"; do
+      idx=$((idx + 1))
+      target_dir="${plugins_dir}/${plugin_name}"
+      start_spinner "updating ${plugin_name} (${idx}/${total})"
+      if git -C "${target_dir}" pull -q --rebase; then
+        stop_spinner "success" "updated ${plugin_name}"
+      else
+        stop_spinner "error" "failed to update ${plugin_name}"
+      fi
+    done
+  fi
 
   trap - EXIT
 }

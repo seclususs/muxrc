@@ -87,7 +87,7 @@ compress_video() {
 
   if ! ffmpeg -hide_banner -loglevel error -stats -y -i "${target_file}" \
     -map 0 -c copy -c:v libx265 -preset slow -crf 18 \
-    -map_metadata 0 "${mov_opts[@]}" \
+    -map_metadata 0 ${mov_opts[@]+"${mov_opts[@]}"} \
     "${temp_file}"; then
     log_error "ffmpeg encoding failed"
     return 1
