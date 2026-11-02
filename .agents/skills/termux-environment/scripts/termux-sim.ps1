@@ -46,7 +46,10 @@ if (-not $sh) {
 # Make the shell's sibling tools (env, mktemp, sed, ...) resolvable first on Windows.
 if ($onWindows) { $env:PATH = (Split-Path -Parent $sh) + ';' + $env:PATH }
 
-if ($args -contains '--help' -or $args -contains '-h') { Write-Output "Run via: powershell -NoProfile -ExecutionPolicy Bypass -File termux-sim.ps1 [options] -- SCRIPT [ARGS...] | -c TEXT | --facts  (options below)" }
+# Only an option before the first -- is the launcher's own; later -h/--help belong to the target script.
+$own = @()
+foreach ($a in $args) { if ([string]$a -eq '--') { break }; $own += $a }
+if ($own -contains '--help' -or $own -contains '-h') { Write-Output "Run via: powershell -NoProfile -ExecutionPolicy Bypass -File termux-sim.ps1 [options] -- SCRIPT [ARGS...] | -c TEXT | --facts  (options below)" }
 $target = (Join-Path $PSScriptRoot 'termux-sim.sh')
 if ($onWindows) { $target = $target.Replace('\', '/') }
 $fwd = @()

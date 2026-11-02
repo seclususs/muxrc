@@ -5,7 +5,7 @@ description: Read-only review and change analysis of shell and Termux code with 
 
 # Code review
 
-Paths are relative to this skill directory. Read-only: report findings, do not edit. A request to review and fix: report first, then fix only the findings that pass the finding gate (`termux-scripting` or `code-refactoring`); at high risk wait for the user's go.
+Read-only: report findings, do not edit. A request to review and fix: report first, then fix only the findings that pass the finding gate (`termux-scripting` or `code-refactoring`); at high risk wait for the user's go.
 
 ## Modes
 - Review: findings by severity and a verdict (`assets/review-report.md`).
@@ -14,11 +14,12 @@ Both modes use the same evidence procedure.
 
 ## Evidence procedure
 1. Scope: `git --no-pager status --short`. A clean tree, or a request about existing code (a file, a directory, the repository), has no diff: the scope is the files the user named, else the files listed by `lint-shell --list` (`termux-scripting`). Skip steps 2-4, read each file whole (step 5), and list the files in the coverage line.
-2. Collect the diff to disk: `sh scripts/diff-collect.sh` (or `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/diff-collect.ps1`). Options: `--staged`, `--unstaged`, `--range A..B`, `--include-agent`, `--out DIR`, `--chunk N`. Default scope: working tree vs HEAD plus untracked files, without `.agent`, `.agents`, and `.artifacts` (agent tooling and its output are not project code).
+2. Collect the diff to disk: `sh .agents/skills/code-review/scripts/diff-collect.sh` (or `powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/code-review/scripts/diff-collect.ps1`). Options: `--staged`, `--unstaged`, `--range A..B`, `--include-agent`, `--out DIR`, `--chunk N`. Default scope: working tree vs HEAD plus untracked files, without `.agent`, `.agents`, and `.artifacts` (agent tooling and its output are not project code).
 3. Check the script output:
    - It ends with `END`. No `END` means the terminal cut it: read `MANIFEST.tsv` from disk.
    - `verify=ok`. `verify=mismatch` (exit 1) means a patch file is incomplete or git output changed: re-run; if it persists, report it and read the changed files directly.
-4. Read every part file completely with the file viewer, in the `ranges` the script printed (at most 250 lines each). If the viewer returns fewer lines than requested, split the range. Keep a ledger: part file, ranges read, total lines. Read `skipped` manifest rows directly, in ranges.
+   - `excluded=N` means the default filter left out N paths under `.agent` or `.agents`; `files=0` next to it is not "nothing changed". Add `--include-agent` when the task edits agent files.
+4. Read every part file completely with the file viewer, in the `ranges` the script printed (at most 250 lines each). If the viewer returns fewer lines than requested, split the range. Note each range as you read it; the coverage line of step 8 reports them. Read `skipped` manifest rows directly, in ranges.
 5. Read each changed (or in-scope) file whole in its current state, not only the hunks. Read callers of every changed function (search by name), every file that sources a changed library with its shebang, and the project config (`.editorconfig`, `.shellcheckrc`).
 6. Run the lint gate (`termux-scripting` `lint-shell`) on the changed files; read every ERROR and WARN and the SUMMARY line.
 7. Review: Stage A, spec (diff only): does the diff do exactly what was asked? Map every hunk to a criterion or a finding; an unmapped hunk is extra behavior. Stage B, quality: apply the checklist. Each finding must pass the finding gate and carries a concrete fix; mark device-only items UNVERIFIED.
@@ -30,7 +31,7 @@ Both modes use the same evidence procedure.
 ## Finding gate
 An item is a finding only when all three hold; anything else goes under "Unverified leads", with no severity and no edit.
 1. Fact: `path:line` and what the code does.
-2. Evidence: a failing reproducer run through a harness (`systematic-debugging` step 2, with shell and version), or the documented rule or primary source it violates, cited. Lint INFO, style notes, and "could fail" are not evidence.
+2. Evidence: a failing reproducer run through a harness (`systematic-debugging` step 2, with shell and version), or the documented rule or primary source it violates, cited; for a non-behavioral defect (dead code, an unused variable) the deterministic check named in the core policy, and the finding is minor or nit. Lint INFO, style notes, and "could fail" are not evidence.
 3. Intent check (core policy): no recorded reason covers the code, or new evidence contradicts it.
 No findings is a valid verdict: report it with the coverage line.
 

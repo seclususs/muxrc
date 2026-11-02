@@ -5,7 +5,7 @@ description: Restructures shell and Termux code without changing behavior - rena
 
 # Code refactoring
 
-Paths are relative to this skill directory. Open `termux-scripting` for dialect and style rules and `code-review` for the final review.
+Open `termux-scripting` for dialect and style rules and `code-review` for the final review.
 
 ## Contract
 - Behavior is fixed: same stdout, stderr, exit codes, files written, environment variables set, and names defined (functions, aliases, variables, hooks, widgets, `source` order). A change to any of them is a feature or a fix; make it a separate task.
@@ -19,13 +19,13 @@ Paths are relative to this skill directory. Open `termux-scripting` for dialect 
 2. Baseline, before any edit. Keep baseline files under `.artifacts/refactor/<topic>/` at the project root (inside the workspace, outside tracked files; the directory ignores itself in git).
    - `git --no-pager status --short`: unrelated edits are listed, not mixed in.
    - `lint-shell` (`termux-scripting`) on the files in scope: keep the SUMMARY line and findings.
-   - `sh scripts/def-index.sh --out .artifacts/refactor/before.tsv` (`.ps1` flavor available).
-   - Behavior cases from `assets/cases.tpl` for each public command, function, and wrapper, then `sh scripts/behavior-snapshot.sh record --dir .artifacts/refactor/snap --cases <cases> --source <module> ... [--stub-termux]`. List `--source` files in load order. Cases are deterministic. Device-only behavior stays UNVERIFIED with commands for the user.
+   - `sh .agents/skills/code-refactoring/scripts/def-index.sh --out .artifacts/refactor/before.tsv` (`.ps1` flavor available).
+   - Behavior cases from `assets/cases.tpl` for each public command, function, and wrapper, then `sh .agents/skills/code-refactoring/scripts/behavior-snapshot.sh record --dir .artifacts/refactor/snap --cases <cases> --source <module> ... [--stub-termux]`. List `--source` files in load order. Cases are deterministic. Device-only behavior stays UNVERIFIED with commands for the user.
 3. Plan ordered steps. Each names one refactoring type (rename, extract function, inline, move, split file, merge files, remove duplication, replace construct) and its expected `def-index` effect (none, moved, renamed, added).
 4. Apply one step. Then, before the next step:
    - `lint-shell` on touched files: no finding that the baseline did not have.
-   - `sh scripts/def-index.sh --compare .artifacts/refactor/before.tsv [--rename OLD=NEW]`: the result matches the step's expected effect. An unexpected `removed`, `added`, or `duplicate` stops the step.
-   - `sh scripts/behavior-snapshot.sh compare --dir .artifacts/refactor/snap --cases <cases> --source <module> ...`: every case is `same` unless the plan declared a difference.
+   - `sh .agents/skills/code-refactoring/scripts/def-index.sh --compare .artifacts/refactor/before.tsv [--rename OLD=NEW]`: the result matches the step's expected effect. An unexpected `removed`, `added`, or `duplicate` stops the step.
+   - `sh .agents/skills/code-refactoring/scripts/behavior-snapshot.sh compare --dir .artifacts/refactor/snap --cases <cases> --source <module> ...`: every case is `same` unless the plan declared a difference.
    - After a rename or move, search the whole repository for the old name (code, docs, completions, install scripts).
    Fix or revert a failing step before continuing.
 5. Moves and splits:

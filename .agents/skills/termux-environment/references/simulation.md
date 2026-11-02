@@ -1,12 +1,12 @@
 # termux-sim: what it models
 
-`scripts/termux-sim.sh` builds a temporary Termux-like tree, installs command stand-ins, and runs the target through `termux-scripting/scripts/sandbox-run.sh`. Use it when a check would otherwise need a device. It does not replace one.
+`.agents/skills/termux-environment/scripts/termux-sim.sh` builds a temporary Termux-like tree, installs command stand-ins, and runs the target through `.agents/skills/termux-scripting/scripts/sandbox-run.sh`. Use it when a check would otherwise need a device. It does not replace one.
 
 ## Run
 ```text
-sh scripts/termux-sim.sh [options] -- SCRIPT [ARGS...]
-sh scripts/termux-sim.sh [options] -c 'SHELL TEXT'
-sh scripts/termux-sim.sh [options] --facts
+sh .agents/skills/termux-environment/scripts/termux-sim.sh [options] -- SCRIPT [ARGS...]
+sh .agents/skills/termux-environment/scripts/termux-sim.sh [options] -c 'SHELL TEXT'
+sh .agents/skills/termux-environment/scripts/termux-sim.sh [options] --facts
 ```
 Options: `--root`, `--profile FILE`, `--arch A`, `--sdk N`, `--android V`, plus the sandbox-run options `--stub`, `--stub-termux`, `--seed`, `--env`, `--timeout`, `--dialect`, `--twice`, `--keep` (kept sandboxes go to `.artifacts/sandbox/`). Exit status is the script's own. On Windows, `termux-sim.ps1` needs a POSIX shell (Git for Windows or WSL).
 

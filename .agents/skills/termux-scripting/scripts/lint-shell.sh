@@ -35,7 +35,7 @@ Options:
 
 Output: LEVEL FILE:LINE [CODE] message, then one SUMMARY line.
   LEVEL: ERROR | WARN | INFO | NOTE | SKIP
-Exit: 0 no ERROR (and no WARN with --strict), 1 findings, 2 usage error.
+Exit: 0 no ERROR (with --strict: no ERROR and no WARN); 1 otherwise; 2 usage error. INFO and NOTE never change the exit status.
 Suppress a heuristic on one line with a trailing comment: lint-ignore: CODE
 L002 flags log prefixes inside wrapper-like functions; names: scripts/wrapper-names.txt
 ShellCheck notes count as WARN (judge new findings in changed files).

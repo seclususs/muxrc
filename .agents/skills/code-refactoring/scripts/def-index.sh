@@ -207,9 +207,31 @@ function process(line, f, ln,    s, name, n, w, fn) {
   }
 }
 BEGIN {
+  # Here-document bodies are data, not definitions: skip them (same rule as lint-shell).
+  HDPAT = "(^|[^<])<<-?[ ]*[\"'\\\\]?[A-Za-z_][A-Za-z0-9_]*"
+  HDSTRIP = "[ \"'\\\\]"
   while ((getline f < LIST) > 0) {
     ln = 0
-    while ((getline line < f) > 0) { ln++; process(line, f, ln) }
+    inhd = 0
+    while ((getline line < f) > 0) {
+      ln++
+      if (inhd) {
+        t = line
+        if (hdtab) sub(/^\t+/, "", t)
+        if (t == hdterm) inhd = 0
+        continue
+      }
+      process(line, f, ln)
+      if (line !~ /^[ \t]*#/ && line !~ /\(\(/ && match(line, HDPAT)) {
+        hd = substr(line, RSTART, RLENGTH)
+        sub(/^[^<]*<</, "", hd)
+        hdtab = (substr(hd, 1, 1) == "-")
+        if (hdtab) hd = substr(hd, 2)
+        gsub(HDSTRIP, "", hd)
+        hdterm = hd
+        inhd = 1
+      }
+    }
     close(f)
   }
 }

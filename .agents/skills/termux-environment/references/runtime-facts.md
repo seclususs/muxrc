@@ -34,5 +34,5 @@ Load when a Termux claim must be justified or extended. Re-verify with a web sea
 | `~/storage/*` link names | https://github.com/termux/termux-app (`TermuxInstaller.java`) |
 
 ## Verification commands (on a device)
-One shot: `sh scripts/device-facts.sh` (skill directory). Individually:
+One shot: copy `.agents/skills/termux-environment/scripts/device-facts.sh` to the device and run `sh device-facts.sh`. Individually:
 `echo "$PREFIX $HOME $TMPDIR"` / `readlink "$PREFIX/bin/sh"` / `dpkg -s dash | grep Version` / `dpkg --print-architecture` / `command -v termux-toast` / `termux-info` / `command -v getprop` / `id -u` / `su -c id` (rooted devices)

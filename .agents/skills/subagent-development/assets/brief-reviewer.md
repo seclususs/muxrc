@@ -14,7 +14,7 @@ Paste them here.
 - Run the lint gate (skill termux-scripting) and quote its SUMMARY line.
 
 ## Policy
-Paste assets/policy-digest.md here.
+Read `.agents/rules/core-policy.md` in full before acting, unless it is already in your instructions. This brief overrides its Entry gate and Delegation gate.
 
 ## Output
-Use the format of code-review/assets/review-report.md: coverage line, findings (severity, file:line, fact, evidence, intent check, fix), unverified leads, verdict (approve | changes needed | no findings).
+Use the format of .agents/skills/code-review/assets/review-report.md: coverage line, findings (severity, file:line, fact, evidence, intent check, fix), unverified leads, verdict (approve | changes needed | no findings).

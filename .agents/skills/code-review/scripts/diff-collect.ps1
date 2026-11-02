@@ -174,6 +174,13 @@ try {
   $names = Invoke-Git (@('diff') + $dopts + @('--name-status') + $sargs + @('--') + $pspec)
   if ($script:gitExit -ne 0) { exit 3 }
 
+  # Count what the default filter hides, so files=0 is never read as "nothing changed".
+  $hidden = 0
+  if (-not $agent) {
+    $hiddenFiles = Invoke-Git (@('diff') + $dopts + @('--name-only') + $sargs + @('--', '.agent', '.agents'))
+    $hidden = @($hiddenFiles | Where-Object { $_ }).Count
+  }
+
   $ulist = New-Object System.Collections.ArrayList
   $skippedList = New-Object System.Collections.ArrayList
   $ufs = New-Object System.IO.FileStream($untrackedPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write)
@@ -187,7 +194,8 @@ try {
         $f = [string]$f
         if ($f.Length -eq 0) { continue }
         if (Test-Path -LiteralPath $f -PathType Container) { continue }
-        if (-not $agent -and ($f.StartsWith('.agent/') -or $f.StartsWith('.agents/') -or $f.StartsWith('.artifacts/'))) { continue }
+        if (-not $agent -and ($f.StartsWith('.agent/') -or $f.StartsWith('.agents/'))) { $hidden++; continue }
+        if (-not $agent -and $f.StartsWith('.artifacts/')) { continue }
         if ($f.StartsWith('"')) { [void]$skippedList.Add($f); continue }
         $size = -1
         try { $size = (Get-Item -LiteralPath $f -Force).Length } catch { }
@@ -276,6 +284,7 @@ try {
     foreach ($e in $verifyErrors) { Out-Line $e }
     $exitCode = 1
   }
+  if ($hidden -gt 0) { Out-Line "excluded=$hidden path(s) under .agent/.agents (--include-agent adds them)" }
   Out-Line "chunk=$chunk"
   if ($trackedLines -gt 0) { Out-Line ('ranges tracked.diff: ' + (Get-RangePlan $trackedLines ([int]$chunk))) }
   if ($untrackedLines -gt 0) { Out-Line ('ranges untracked.diff: ' + (Get-RangePlan $untrackedLines ([int]$chunk))) }

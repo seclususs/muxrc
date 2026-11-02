@@ -155,6 +155,13 @@ g diff ${dopts} --numstat ${sargs} -- ${pspec} > "${tmp}/numstat" || exit 3
 # shellcheck disable=SC2086
 g diff ${dopts} --name-status ${sargs} -- ${pspec} > "${tmp}/names" || exit 3
 
+# Count what the default filter hides, so files=0 is never read as "nothing changed".
+hidden=0
+if [ "${agent}" -eq 0 ]; then
+  # shellcheck disable=SC2086
+  hidden=$(g diff ${dopts} --name-only ${sargs} -- .agent .agents | awk 'END { print NR }')
+fi
+
 : > "${out}/untracked.diff"
 : > "${tmp}/ulist"
 : > "${tmp}/skipped"
@@ -165,7 +172,13 @@ if [ "${untracked}" -eq 1 ] && { [ "${scope}" = all ] || [ "${scope}" = unstaged
     [ -n "${f}" ] || continue
     [ -d "${f}" ] && continue
     if [ "${agent}" -eq 0 ]; then
-      case ${f} in .agent/* | .agents/* | .artifacts/*) continue ;; esac
+      case ${f} in
+        .agent/* | .agents/*)
+          hidden=$((hidden + 1))
+          continue
+          ;;
+        .artifacts/*) continue ;;
+      esac
     fi
     case ${f} in
       '"'*)
@@ -317,6 +330,7 @@ else
   echo "verify=mismatch"
   cat "${tmp}/verify.err"
 fi
+[ "${hidden}" -gt 0 ] && echo "excluded=${hidden} path(s) under .agent/.agents (--include-agent adds them)"
 echo "chunk=${chunk}"
 [ "${tracked_lines}" -gt 0 ] && echo "ranges tracked.diff: $(ranges "${tracked_lines}" "${chunk}")"
 [ "${untracked_lines}" -gt 0 ] && echo "ranges untracked.diff: $(ranges "${untracked_lines}" "${chunk}")"

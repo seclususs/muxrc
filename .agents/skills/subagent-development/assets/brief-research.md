@@ -15,7 +15,7 @@ repo-map excerpt, platform-detection result, earlier findings.
 Read code and run read-only commands. For external facts, search the web, primary sources first (Termux wiki, termux-packages, termux-app, Android docs, shell manuals, platform docs). Cite file:line or URL.
 
 ## Policy
-Paste assets/policy-digest.md here.
+Read `.agents/rules/core-policy.md` in full before acting, unless it is already in your instructions. This brief overrides its Entry gate and Delegation gate.
 
 ## Output (at most 25 lines)
 - FACTS: id | statement | evidence

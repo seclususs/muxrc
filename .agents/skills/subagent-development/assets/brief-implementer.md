@@ -17,7 +17,7 @@ The behavior to deliver, in one paragraph.
 - Skills to follow: termux-scripting | termux-customization | systematic-debugging | code-refactoring
 
 ## Policy
-Paste assets/policy-digest.md here.
+Read `.agents/rules/core-policy.md` in full before acting, unless it is already in your instructions. This brief overrides its Entry gate and Delegation gate.
 
 ## Definition of done
 - The lint gate reports no ERROR.

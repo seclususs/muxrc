@@ -159,6 +159,8 @@ function Unquote([string]$s) {
   return [regex]::Replace($s, '["'']$', '', 'None')
 }
 function Rx([string]$s, [string]$pat) { return [regex]::IsMatch($s, $pat) }
+$reHdPat = New-Object System.Text.RegularExpressions.Regex('(^|[^<])<<-?[ ]*["''\\]?[A-Za-z_][A-Za-z0-9_]*')
+$reHdStrip = New-Object System.Text.RegularExpressions.Regex('[ "''\\]')
 function Rr([string]$s, [string]$pat, [string]$rep) { return [regex]::Replace($s, $pat, $rep) }
 
 function Read-DefLine([string]$line, [string]$f, [int]$ln) {
@@ -240,7 +242,29 @@ function Build-Index {
     $lines = $text.Split([char]10)
     $n = $lines.Length
     if ($n -gt 0 -and $lines[$n - 1].Length -eq 0) { $n-- }
-    for ($i = 0; $i -lt $n; $i++) { Read-DefLine ([string]$lines[$i]) $f ($i + 1) }
+    # Here-document bodies are data, not definitions: skip them (same rule as lint-shell).
+    $inhd = $false; $hdterm = ''; $hdtab = $false
+    for ($i = 0; $i -lt $n; $i++) {
+      $cur = [string]$lines[$i]
+      if ($inhd) {
+        $cmp = $cur
+        if ($hdtab) { $cmp = $cmp.TrimStart([char]9) }
+        if ($cmp -ceq $hdterm) { $inhd = $false }
+        continue
+      }
+      Read-DefLine $cur $f ($i + 1)
+      if (-not $cur.Contains('((') -and -not (Rx $cur '^[ \t]*#')) {
+        $hm = $reHdPat.Match($cur)
+        if ($hm.Success) {
+          $hd = $hm.Value
+          $hd = $hd.Substring($hd.IndexOf('<<') + 2)
+          $hdtab = $hd.StartsWith('-')
+          if ($hdtab) { $hd = $hd.Substring(1) }
+          $hdterm = $reHdStrip.Replace($hd, '')
+          $inhd = $true
+        }
+      }
+    }
   }
   $arr = $rows.ToArray()
   [Array]::Sort($arr, $ord)

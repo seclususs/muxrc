@@ -37,15 +37,15 @@ Facts were verified against official Termux, Android, and root-tool sources (lis
 - Default: write code that works without root, detect root explicitly, and degrade when it is missing. A feature that needs root states so.
 
 ## Simulate on the host
-No device at hand: `sh scripts/termux-sim.sh` (or `.ps1`) runs a script, a snippet, or the fact collector in a simulated Termux. Details and limits: `references/simulation.md`.
-- Script: `sh scripts/termux-sim.sh [--root] -- path/to/script.sh args`
-- Snippet: `sh scripts/termux-sim.sh [--root] -c 'uname -o; su -c id'`
-- Facts: `sh scripts/termux-sim.sh [--root] --facts` (output carries `sim=yes`)
+No device at hand: `sh .agents/skills/termux-environment/scripts/termux-sim.sh` (or `.ps1`) runs a script, a snippet, or the fact collector in a simulated Termux. Details and limits: `references/simulation.md`.
+- Script: `sh .agents/skills/termux-environment/scripts/termux-sim.sh [--root] -- path/to/script.sh args`
+- Snippet: `sh .agents/skills/termux-environment/scripts/termux-sim.sh [--root] -c 'uname -o; su -c id'`
+- Facts: `sh .agents/skills/termux-environment/scripts/termux-sim.sh [--root] --facts` (output carries `sim=yes`)
 - Match a real device: pass the output of `device-facts.sh` as `--profile FILE`.
 It reproduces documented behavior (paths, variables, `uname -o`, `getprop`, `id`, `su`, `pkg`, `dpkg`, `termux-info`, storage refusals). It does not reproduce the Android kernel, SELinux, bionic, termux-exec, or Termux:API; anything that depends on those is listed as "needs device".
 
 ## Device facts
-Have the user run `sh scripts/device-facts.sh` in Termux (copy the file or paste its content) and paste the output. It is read-only, makes no Termux:API call, and settles device-only questions: dash version (`pipefail`), `LINENO`, architecture, Android SDK, termux-exec, Termux:API presence, storage setup.
+Have the user copy `.agents/skills/termux-environment/scripts/device-facts.sh` to the device (or paste its content), run it with `sh`, and paste the output. It is read-only, makes no Termux:API call, and settles device-only questions: dash version (`pipefail`), `LINENO`, architecture, Android SDK, termux-exec, Termux:API presence, storage setup.
 
 ## Decision table
 | Situation | Do |

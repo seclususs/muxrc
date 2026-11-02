@@ -23,6 +23,8 @@ Options:
 Notes:
   dash 0.5.12 does not set LINENO, so dash traces carry no line numbers;
   use --shell busybox or bash/zsh for line numbers.
+  HOME, PREFIX, and TMPDIR point to throwaway directories under the output directory.
+  This is not a sandbox: host commands and paths still work.
 Exit: the script's status (124 on timeout); 2 usage error; 3 no suitable shell.
 EOF
 }
@@ -155,8 +157,17 @@ else
   mkdir -p "${outdir}" || exit 2
   [ -e "${root}/.artifacts/.gitignore" ] || printf '*\n' > "${root}/.artifacts/.gitignore"
 fi
+outdir=$(cd "${outdir}" && pwd) || exit 2
 stdout_log="${outdir}/stdout.log"
 trace_log="${outdir}/trace.log"
+
+# Same redirect as the sandbox harnesses, so traces never show the real home directory.
+# Not a sandbox: host commands and paths still work.
+mkdir -p "${outdir}/home" "${outdir}/prefix/tmp" || exit 2
+HOME="${outdir}/home"
+PREFIX="${outdir}/prefix"
+TMPDIR="${PREFIX}/tmp"
+export HOME PREFIX TMPDIR
 
 timeout_bin=""
 have timeout && timeout_bin=timeout

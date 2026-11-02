@@ -5,19 +5,19 @@ description: Entry skill for every user message in this workspace, including que
 
 # Using Termux skills
 
-Paths are relative to this skill directory. Script invocation and the `.artifacts/` location: core policy.
+Script invocation and the `.artifacts/` location: core policy.
 
 ## Procedure
-1. Host: open `../platform-detection/SKILL.md` and follow it. It holds the detector command, how to read its output, and the fallbacks; `run.scripts` in the output picks `.sh` or `.ps1` for every other script. Do this before the first host command, and again after a "not found" failure.
+1. Host: open `.agents/skills/platform-detection/SKILL.md` and follow it. It holds the detector command, how to read its output, and the fallbacks; `run.scripts` in the output picks `.sh` or `.ps1` for every other script. Do this before the first host command, and again after a "not found" failure.
 2. Route: classify the message with the routing table and open the `SKILL.md` of every skill it names before the first edit or script run. Open it again when its text is no longer in context; a summary of a skill is not the skill.
-3. If the request touches repository code or config: `sh scripts/repo-map.sh` (or `.ps1`). Read the config files it lists (`.editorconfig`, `.shellcheckrc`, `.gitattributes`) when style or line endings matter.
+3. When the task needs repository facts that are not in context (conventions, definitions, config, logger use, commit style): `sh .agents/skills/using-termux-skills/scripts/repo-map.sh` (or `.ps1`). Skip it for a read-only question about files already read and for a trivial edit. Read the config files it lists (`.editorconfig`, `.shellcheckrc`, `.gitattributes`) when style or line endings matter.
 4. If a fact is missing or may be stale (package, flag, API, version, platform behavior): search the web, primary sources first, cite URLs, then continue.
 5. Plan when the task is not trivial (`assets/task-plan.md`) and apply the delegation gate. High risk: stop here and wait for the user's go. Then do the work, run the lint gate and `code-review`, report.
 
 A subagent that received a brief skips this procedure and follows the brief (`subagent-development`).
 
 ## No exemptions
-Questions, one-line requests, and read-only analysis follow the same procedure. Do not ask the user whether to use a skill. When no domain skill matches (a greeting, a general question), step 1 is the minimum.
+Questions, one-line requests, and read-only analysis open this skill and its routing table like any other message. Do not ask the user whether to use a skill. The only fast path is the one in the core policy Entry gate.
 
 | Thought | Action |
 |---|---|
@@ -54,9 +54,10 @@ A request that matches several rows opens all of them. Process skills (`systemat
 Defined in core policy. Evaluate it after the plan exists, before the first edit, and record `Delegation gate: met | not met` in the plan. Met: open `subagent-development`. Not met: work directly.
 
 ## Scale to risk
-- Trivial (one file, about 10 lines, no behavior change): do it inline, run the lint gate, no plan, no subagents.
+Risk follows the impact of the change, not the file or its role.
+- Trivial (one file, about 10 lines, no behavior change, in any code role): do it inline, run the lint gate, no plan, no subagents.
 - Standard: research, plan, implement, review, test.
-- High (wrappers, installers, destructive or network actions, many files, a repository-wide review with fixes): Standard, plus two review stages and a user checkpoint: stop after the plan and wait for the user's go before the first edit.
+- High (destructive or irreversible actions, network or system-modifying installs, a behavior change to a wrapper or installer, many files, a repository-wide review with fixes): Standard, plus two review stages and a user checkpoint: stop after the plan and wait for the user's go before the first edit.
 
 ## Reporting
 - Tasks that change files: `assets/final-report.md`.

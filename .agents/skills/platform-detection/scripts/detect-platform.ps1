@@ -133,7 +133,7 @@ $extraTools = @()
 if ($extra) { $extraTools = $extra.Split(',') | Where-Object { $_ } }
 $missing = @()
 $found = @{}
-foreach ($t in ($defaultTools + $extraTools)) {
+foreach ($t in (($defaultTools + $extraTools) | Select-Object -Unique)) {
   $p = Find-Tool $t
   $found[$t] = $p
   if (-not $brief) { Write-Output "tool.$t=$p" }

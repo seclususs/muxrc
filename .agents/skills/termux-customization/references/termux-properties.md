@@ -36,7 +36,7 @@ extra-keys = [[ \
   'TAB', 'CTRL', 'ALT' \
 ]]
 ```
-Rows are arrays; a popup `macro` is a space-separated key sequence; keep each line ending in `\` except the last. Validate with `scripts/check-termux-config.sh` (or `.ps1`) of skill `termux-customization`.
+Rows are arrays; a popup `macro` is a space-separated key sequence; keep each line ending in `\` except the last. Validate with `.agents/skills/termux-customization/scripts/check-termux-config.sh` (or `.ps1`) of skill `termux-customization`.
 
 ## colors.properties
 Keys: `foreground`, `background`, `cursor`, `color0` ... `color15`; values `#RGB` or `#RRGGBB`.

@@ -135,7 +135,10 @@ fi
 default_tools="git sh dash bash zsh busybox shellcheck shfmt checkbashisms rg jq python3 node pwsh powershell.exe docker adb zip unzip tar curl"
 extra_tools=$(printf '%s' "${extra}" | tr ',' ' ')
 missing=""
+seen=" "
 for t in ${default_tools} ${extra_tools}; do
+  case ${seen} in *" ${t} "*) continue ;; esac
+  seen="${seen}${t} "
   p=$(path_of "${t}")
   [ "${brief}" -eq 1 ] || echo "tool.${t}=${p}"
   [ "${p}" = "-" ] && missing="${missing} ${t}"

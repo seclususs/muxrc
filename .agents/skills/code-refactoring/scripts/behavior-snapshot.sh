@@ -25,7 +25,8 @@ which exposes a source line that went missing during a file split.
 Options:
   --dir DIR          snapshot directory
   --cases FILE       cases file
-  --dialect D        posix | bash | zsh (default: zsh when a --source ends in .zsh, else posix)
+  --dialect D        posix | bash | zsh (default: from each --source shebang, else its extension
+                     .zsh/.bash, else posix; zsh beats bash beats posix; .sh alone means posix)
   --source FILE      file sourced before every case (repeatable, order preserved)
   --stub SPEC        sandbox stub NAME[=EXIT[:TEXT]] (repeatable)
   --stub-termux      stub the common termux-* API commands
@@ -99,9 +100,34 @@ done
 [ -n "${cases}" ] || die_usage "--cases is required"
 [ -f "${cases}" ] || die_usage "cases file not found: ${cases}"
 case ${timeout_s} in '' | *[!0-9]*) die_usage "--timeout needs a positive integer" ;; esac
+# .sh is shared by POSIX sh, dash, and bash, so the extension cannot decide: the shebang does, the extension is the fallback.
+dialect_of() {
+  first=""
+  [ -f "$1" ] && { IFS= read -r first < "$1" || :; }
+  case ${first} in
+    '#!'*zsh*) echo zsh ;;
+    '#!'*bash*) echo bash ;;
+    '#!'*) echo posix ;;
+    *)
+      case $1 in
+        *.zsh) echo zsh ;;
+        *.bash) echo bash ;;
+        *) echo posix ;;
+      esac
+      ;;
+  esac
+}
 if [ -z "${dialect}" ]; then
   dialect=posix
-  case ${sources} in *.zsh"${nl}"*) dialect=zsh ;; esac
+  while IFS= read -r s; do
+    [ -n "${s}" ] || continue
+    case $(dialect_of "${s}") in
+      zsh) dialect=zsh ;;
+      bash) [ "${dialect}" = zsh ] || dialect=bash ;;
+    esac
+  done << SRCLIST
+${sources}
+SRCLIST
 fi
 case ${dialect} in posix | bash | zsh) ;; *) die_usage "--dialect must be posix, bash, or zsh" ;; esac
 
@@ -196,9 +222,15 @@ EOF
 }
 
 tab=$(printf '\t')
+cr=$(printf '\r')
+bom=$(printf '\357\273\277')
 : > "${tmp}/names"
 total=0
 while IFS="${tab}" read -r name cmd; do
+  # A cases file written on Windows may start with a UTF-8 BOM and end its lines with CR.
+  name=${name#"${bom}"}
+  name=${name%"${cr}"}
+  cmd=${cmd%"${cr}"}
   case ${name} in '' | '#'*) continue ;; esac
   case ${name} in *[!A-Za-z0-9._-]*) die_usage "invalid case name: ${name}" ;; esac
   [ -n "${cmd}" ] || die_usage "case ${name} has no command"

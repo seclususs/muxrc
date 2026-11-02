@@ -11,24 +11,26 @@ Every user message, including questions, clarifications, and read-only requests,
 2. Classify the message with its routing table and open the `SKILL.md` of every skill it names before the first edit or script run. Naming or remembering a skill is not reading it.
 3. Before the first host command, follow `platform-detection` (open its `SKILL.md`).
 
+A message that needs no host command, no edit, and no uncertain fact (a greeting, a general question, an answer from files already read with the viewer) ends after step 2. Anything else follows the whole procedure.
+
 A subagent that received a brief follows the brief instead.
 
 ## Delegation gate
-After planning and before editing, open `subagent-development` when any of these holds: three or more files will change; two or more independent research questions exist; the task is high risk; the user asks for parallel work, delegation, or an independent review. Otherwise work directly.
+After planning and before editing, open `subagent-development` when any of these holds: three or more files will change with separate logic (one mechanical edit repeated across files, such as a rename, counts as one unit); two or more independent research questions exist; the task is high risk; the user asks for parallel work, delegation, or an independent review. Otherwise work directly.
 
 ## Target and host
 - Target: Termux on Android (aarch64 primary; also arm, i686, x86_64), rooted or not. Use `$PREFIX`, `$HOME`, `$TMPDIR`; do not rely on FHS paths (`/usr`, `/etc`, `/tmp`, `/bin`). Files use LF.
 - Host (Linux, macOS, Windows) is only the development environment. Do not assume its OS or tools. Take them from the `platform-detection` output: call a host tool by its `tool.NAME` path, not by bare name, and run the detector again when a path, flag, or version is not visible in context. State reduced coverage.
-- Do not run project scripts or snippets directly on the host. Run them with `sandbox-run` or `termux-sim`; `-n` syntax checks and lint are the exception. A snippet is a file: write it under `.artifacts/` and run it as `-- FILE` (`-c TEXT` only for short text without double quotes). These harnesses redirect `HOME`, `PREFIX`, and `TMPDIR` and stub commands; they are not a security boundary, so read a script for destructive commands first. With no POSIX shell on the host, do not run it; list it as a device check.
+- Do not run project scripts or snippets directly on the host. Run them with `sandbox-run`, `termux-sim`, or `trace-run`; `-n` syntax checks and lint are the exception. A snippet is a file: write it under `.artifacts/` and run it as `-- FILE` (`termux-sim -c TEXT` accepts short text without double quotes; `sandbox-run` has no `-c`). These harnesses redirect `HOME`, `PREFIX`, and `TMPDIR`; `sandbox-run` and `termux-sim` also stub commands. None is a security boundary, so read a script for destructive commands first. With no POSIX shell on the host, do not run it; list it as a device check.
 - Host runs, including `termux-sim`, show syntax, logic, and documented behavior, not Termux itself; list what needs a device check.
-- Skill scripts print options with `--help`. Skill paths are relative to the skill directory (`.agents/skills/<name>/` from the project root). Run `.sh` with `sh`; run `.ps1` with `powershell -NoProfile -ExecutionPolicy Bypass -File <path> <args>` (`pwsh -NoProfile -File <path> <args>` on PowerShell 7).
+- Skill scripts print options with `--help`. Run every skill command from the project root with its full path, `.agents/skills/<name>/scripts/<file>`; the `assets/` and `references/` names inside a `SKILL.md` are relative to that skill's directory. Run `.sh` with `sh`; run `.ps1` with `powershell -NoProfile -ExecutionPolicy Bypass -File <path> <args>` (`pwsh -NoProfile -File <path> <args>` on PowerShell 7).
 
 ## Artifacts
 Files written by skill tools go to `.artifacts/<tool>/` at the project root, next to `.agents/`. Tools create the directory and put a `.gitignore` containing `*` inside it, so the content stays out of git. Do not stage or commit `.artifacts/`, and do not treat it as project code.
 
 ## Workflow
 - Do not assume: verify in the repository or on the web, primary sources first.
-- Evidence before change: a defect claim or a fix needs a failing reproducer run through a harness, or a documented rule it violates (cite the source). Lint INFO, style notes, and "could fail" are leads, not defects. "No findings" is a valid result.
+- Evidence before change: a defect claim or a fix needs a failing reproducer run through a harness, or a documented rule it violates (cite the source). A non-behavioral defect (dead code, an unused variable) can instead rest on a deterministic check: a repository-wide search with no references, or a ShellCheck code such as SC2034 or SC2317. Lint INFO, style notes, and "could fail" are leads, not defects. "No findings" is a valid result.
 - Intent check before changing or reporting code that looks wrong: `git --no-pager log -S'TEXT' --format='%h %s%n%b' -- PATH` (commits that added or removed TEXT; the reason is usually in the body) or `git --no-pager log -L START,END:PATH -s --format='%h %s%n%b'` (history of a line range), then read the nearby comments. No output means no matching commit. A recorded decision stands unless new evidence contradicts its reason.
 - A code change is done after the lint gate and `code-review` ran on it. The report quotes each `SUMMARY` and coverage line; "verified" without a command and its result is not evidence.
 - High risk (defined in `using-termux-skills`): stop after the plan and wait for the user's go before the first edit.
@@ -72,6 +74,7 @@ Match the style of recent commits when the history has one. Defaults:
 - Subject: imperative (`Add`, `Fix`, `Drop`), at most 52 chars, no trailing period.
 - Body: blank line after the subject, wrap at 72. Flat single-level `-` bullets. Explain what changed and why, briefly.
 - Do not split bullets into separate `-m` flags (git inserts blank lines between them); pass the body via a file (`git commit -F <file>`) or a single multiline argument.
+- Write the message file with the file-edit tool (Windows PowerShell redirection adds a BOM or UTF-16) and measure its line lengths with a command such as `awk '{ print length($0) }' FILE`, not by eye.
 
 ## Writing style
 - Reply in the user's language. Rules, skills, templates, and code comments are English.

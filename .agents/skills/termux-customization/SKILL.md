@@ -5,13 +5,13 @@ description: Customizes and personalizes Termux - termux.properties, extra keys,
 
 # Termux customization
 
-Paths are relative to this skill directory. Code goes through `termux-scripting`; runtime facts through `termux-environment`.
+Code goes through `termux-scripting`; runtime facts through `termux-environment`.
 
 ## Workflow
 1. Facts: run repo-map (skill `using-termux-skills`); read the existing config and how the shell loads modules. Do not assume file locations.
 2. Place the change (table below). One concern per file; extend, do not duplicate.
 3. Edit minimally, keeping the existing style and banner comments.
-4. Validate: `sh scripts/check-termux-config.sh FILE...` (or `.ps1`) for `.properties`; the lint gate for shell code.
+4. Validate: `sh .agents/skills/termux-customization/scripts/check-termux-config.sh FILE...` (or `.ps1`) for `.properties`; the lint gate for shell code.
 5. Install idempotently: symlink with `ln -sfn`; back up an existing user file before replacing it; never overwrite user config silently.
 6. Tell the user how to apply it on the device (`termux-reload-settings`, new session, or app restart) and what you could not verify.
 

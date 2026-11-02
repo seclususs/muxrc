@@ -13,7 +13,7 @@ Changed files and acceptance criteria.
 5. Wrappers and CLI integrations: compare output and exit code with the native command's documented behavior for the cases touched.
 
 ## Policy
-Paste assets/policy-digest.md here.
+Read `.agents/rules/core-policy.md` in full before acting, unless it is already in your instructions. This brief overrides its Entry gate and Delegation gate.
 
 ## Output
 - Table: command | exit | key output line

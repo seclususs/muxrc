@@ -5,7 +5,7 @@ description: Detects the development host (Linux, macOS, Windows, WSL, Git Bash,
 
 # Platform detection
 
-The host is where code is edited and checked; the target is Termux. Do not assume host OS, shell, or tools. Commands in this file run from the project root.
+The host is where code is edited and checked; the target is Termux. Do not assume host OS, shell, or tools.
 
 ## Steps
 1. Run the detector with no options:
@@ -17,9 +17,6 @@ The host is where code is edited and checked; the target is Termux. Do not assum
 4. For each step you need, read `cap.*` (best provider, or the fallback). Order and coverage effects: `references/fallback-matrix.md`.
 5. Missing tool: use the fallback; do not stop. Report which checks ran with reduced coverage.
 6. `hint.*` lines are suggestions. Offer them only if the user wants the tool; do not install system packages without approval; verify package ids with the package manager first.
-
-## Verify the tools on this host
-`sh .agents/skills/platform-detection/scripts/selftest.sh` (and `powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/platform-detection/scripts/selftest.ps1`) builds a throwaway repository, runs each skill tool once, and prints PASS, FAIL, or SKIP per tool plus `SELFTEST pass=N fail=N skip=N`. Run it once on a new host, after installing or updating a tool, or when a script behaves unexpectedly. A SKIP names a missing prerequisite; a FAIL is a defect on this host: report it with the printed lines.
 
 ## Output keys
 `host.os` linux|macos|windows|android; `host.env` native|wsl|git-bash|msys|cygwin|termux; `host.arch`; `host.pkgmgr`; `tool.NAME` full path or `-` (`--brief`: one `tool.missing` line, no paths); `ver.shellcheck`, `ver.shfmt`; `cap.NAME` provider or `none`; `hint.NAME`; `run.scripts` sh|ps1. `--tools a,b` probes extra tools.

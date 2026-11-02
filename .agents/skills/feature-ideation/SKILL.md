@@ -5,8 +5,6 @@ description: Proposes new, evidence-based features for a Termux shell environmen
 
 # Feature ideation
 
-Paths are relative to this skill directory.
-
 ## Workflow
 1. Ground: run repo-map (skill `using-termux-skills`). Read the README and the definitions index; list existing commands, aliases, and tools by name. Check recent commit subjects and TODO/FIXME comments for direction. Infer the project's theme and audience from the code, not from assumptions.
 2. Find gaps from evidence (sources below). Skip ideas the repository already covers; note overlaps instead.

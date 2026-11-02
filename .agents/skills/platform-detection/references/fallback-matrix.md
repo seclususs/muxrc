@@ -19,7 +19,6 @@ Resolve each need from the `cap.*` keys of the detection output. "Partial" means
 | Real device check | `adb push` to shared storage, then copy into Termux `$HOME` | user runs the commands | |
 | POSIX shell on Windows | Git Bash, WSL, MSYS2 | skip sandbox-run, termux-sim, trace-run, behavior-snapshot; use a container or device | partial |
 | LF endings | `.gitattributes` plus editor setting; verify with lint `E001` | | |
-| Tool self-check | `selftest.sh` or `selftest.ps1` | run each tool with `--help` and one fixture by hand | partial |
 
 ## Notes
 - Termux container: the official `termux/termux-docker` project (https://github.com/termux/termux-docker); verify image name and tags in its README. It has no Android runtime, so `termux-*` API commands are absent; `aarch64` or `arm` images on x86 hosts need QEMU and may need privileged mode.
