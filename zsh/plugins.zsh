@@ -7,8 +7,14 @@ ZSH_PLUGINS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins"
 
 fpath=($ZSH_PLUGINS_DIR/zsh-completions/src $fpath)
 
+typeset -g _zcompdump="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-${ZSH_VERSION}"
+[[ ! -d "${_zcompdump:h}" ]] && mkdir -p "${_zcompdump:h}"
 autoload -Uz compinit
-compinit
+if [[ -f "$_zcompdump" ]]; then
+  compinit -C -d "$_zcompdump"
+else
+  compinit -d "$_zcompdump"
+fi
 
 [ -f $PREFIX/share/fzf/completion.zsh ] && source $PREFIX/share/fzf/completion.zsh
 [ -f $PREFIX/share/fzf/key-bindings.zsh ] && source $PREFIX/share/fzf/key-bindings.zsh

@@ -20,12 +20,12 @@ trap 'cleanup; exit 130' INT
 trap 'cleanup; exit 143' TERM
 
 check_dependencies() {
-  require_cmd ffmpeg touch mv stat
+  require_cmd ffmpeg touch mv stat find
 }
 
 usage() {
-  echo "usage: media compress <video_file>"
-  echo "re-compress video file using ffmpeg libx265"
+  echo "usage: media compress <file_or_directory>"
+  echo "re-compress video file or directory using ffmpeg libx265"
   echo "hevc crf 18 with original audio/metadata copy."
 }
 
@@ -126,14 +126,83 @@ compress_video() {
   fi
 }
 
+compress_batch() {
+  local target_dir="${1}"
+  local -a video_files=()
+  local f
+
+  while IFS= read -r -d '' f; do
+    video_files+=("${f}")
+  done < <(find "${target_dir}" -maxdepth 1 -type f \( -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.mov" -o -iname "*.webm" -o -iname "*.m4v" -o -iname "*.avi" \) -print0 2> /dev/null | sort -z)
+
+  local total=${#video_files[@]}
+  if [[ "${total}" -eq 0 ]]; then
+    log_info "no supported video files found in '${target_dir}'"
+    return 0
+  fi
+
+  local total_bytes=0
+  local f_size
+  for f in "${video_files[@]}"; do
+    f_size=$(stat -c '%s' "${f}" 2> /dev/null || wc -c < "${f}")
+    total_bytes=$((total_bytes + f_size))
+  done
+  local total_fmt
+  total_fmt=$(format_bytes "${total_bytes}")
+
+  log_info "found ${total} video(s) in '${target_dir}' (${total_fmt})"
+  local confirm=""
+  log_prompt "start batch compression? [y/N]: "
+  read -r confirm
+  if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
+    log_warn "aborted"
+    return 1
+  fi
+
+  local idx=0
+  local failed=0
+  for f in "${video_files[@]}"; do
+    idx=$((idx + 1))
+    log_info "[${idx}/${total}] processing $(basename "${f}")..."
+    if ! compress_video "${f}"; then
+      failed=$((failed + 1))
+    fi
+  done
+
+  if [[ "${failed}" -eq 0 ]]; then
+    log_success "batch compression complete (${total}/${total} processed)"
+  else
+    log_warn "batch compression finished with ${failed} failure(s)"
+  fi
+}
+
 main() {
   if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     usage
     exit 0
   fi
 
+  local target="${1:-}"
+  if [[ -z "${target}" ]]; then
+    log_error "usage: media compress <file_or_directory> (see -h)"
+    exit 1
+  fi
+
+  if [[ ! -e "${target}" ]]; then
+    log_error "target '${target}' not found"
+    exit 1
+  fi
+
   check_dependencies || exit 1
-  compress_video "$@"
+
+  if [[ -d "${target}" ]]; then
+    compress_batch "${target}"
+  elif [[ -f "${target}" ]]; then
+    compress_video "${target}"
+  else
+    log_error "unsupported target type: ${target}"
+    exit 1
+  fi
 }
 
 main "$@"

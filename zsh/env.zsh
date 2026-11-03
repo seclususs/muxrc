@@ -15,6 +15,7 @@ export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 
 [ -x $PREFIX/bin/lesspipe ] && eval "$(SHELL=$PREFIX/bin/sh lesspipe)"
 
+typeset -U PATH
 export PATH="$HOME/bin:$HOME/.local/bin:$PREFIX/bin:$PREFIX/sbin:/system/bin:/system/xbin:$PATH"
 
 hash -d etc=$PREFIX/etc

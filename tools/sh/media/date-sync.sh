@@ -8,7 +8,7 @@ set -euo pipefail
 source "$(dirname "$(realpath "$0")")/../../../lib/init.sh"
 
 check_dependencies() {
-  require_cmd exiftool
+  require_cmd exiftool find
 }
 
 validate_target() {
@@ -51,6 +51,23 @@ setup_timezone() {
 
 sync_metadata_dates() {
   local target="$1"
+
+  if [[ -d "${target}" ]]; then
+    local file_count=0
+    file_count=$(find "${target}" -type f 2> /dev/null | wc -l || echo 0)
+    if [[ "${file_count}" -eq 0 ]]; then
+      log_info "no files found in '${target}'"
+      return 0
+    fi
+
+    local confirm=""
+    log_prompt "sync metadata dates for ${file_count} files in '${target}'? [y/N]: "
+    read -r confirm
+    if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
+      log_warn "aborted"
+      return 1
+    fi
+  fi
 
   setup_timezone
 

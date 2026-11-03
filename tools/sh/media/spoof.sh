@@ -8,7 +8,7 @@ set -euo pipefail
 source "$(dirname "$(realpath "$0")")/../../../lib/init.sh"
 
 check_dependencies() {
-  require_cmd exiftool jq
+  require_cmd exiftool jq find
 }
 
 usage() {
@@ -103,6 +103,22 @@ execute_spoof() {
   fi
 
   if [[ -d "${target_path}" ]]; then
+    local file_count=0
+    file_count=$(find "${target_path}" -maxdepth 1 -type f 2> /dev/null | wc -l || echo 0)
+
+    if [[ "${file_count}" -eq 0 ]]; then
+      log_info "no files found in '${target_path}'"
+      return 0
+    fi
+
+    local confirm=""
+    log_prompt "inject decoy metadata into ${file_count} files in '${target_path}'? [y/N]: "
+    read -r confirm
+    if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
+      log_warn "aborted"
+      return 1
+    fi
+
     output_target="${output_dir}/"
     msg_target="dir $(basename "${target_path}")"
   elif [[ -f "${target_path}" ]]; then

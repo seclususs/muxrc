@@ -113,11 +113,11 @@ usage: media <command> [args]
 
 commands:
   dupes <dir>          find duplicate files
-  strip <dir>          strip exif metadata
-  spoof [pre] <target> inject decoy metadata
-  sync <target>        sync dates to exif
+  strip <target>       strip exif metadata (file/dir)
+  spoof [pre] <target> inject decoy metadata (file/dir)
+  sync <target>        sync dates to exif (file/dir)
   rename <dir> <pfx>   rename photos by date
-  compress <video>     compress video to hevc
+  compress <target>    compress video to hevc (file/dir)
 
 run 'media <command> -h' for subcommand details
 EOF

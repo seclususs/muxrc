@@ -50,6 +50,7 @@ _muxrc_sync() {
   if [[ -f "$muxrc_dir/lib/sync.sh" ]]; then
     log_info "syncing zsh plugins..."
     bash "$muxrc_dir/lib/sync.sh" "$plugins_dir"
+    rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump"* 2> /dev/null || true
   fi
 
   if [[ -f "$install_script" ]]; then
