@@ -32,6 +32,7 @@ commands:
   identity [action]    rotate opsec identity
   killswitch [act]     firewall leak killswitch
   tor [action]         tor opsec service
+  remote [action]      ssh & tmux remote manager
 
 run 'net <command> -h' for subcommand details
 EOF
@@ -90,6 +91,10 @@ net() {
     tor)
       shift
       bash "${MUXRC_DIR}/tools/sh/net/tor.sh" "$@"
+      ;;
+    remote)
+      shift
+      bash "${MUXRC_DIR}/tools/sh/net/remote.sh" "$@"
       ;;
     "")
       _net_help
