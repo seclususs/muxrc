@@ -43,8 +43,7 @@ source "$ZSH_CONFIG_DIR/plugins.zsh"
 
 source "$ZSH_CONFIG_DIR/motd.zsh"
 
-# Remote SSH interactive auto-attach to persistent tmux session
-if [[ -t 0 && -t 1 ]] && [[ -n "${SSH_CONNECTION:-}${SSH_CLIENT:-}" ]] && [[ -z "${TMUX:-}" ]]; then
+if [[ -t 0 && -t 1 ]] && [[ -n "${SSH_CONNECTION:-}${SSH_CLIENT:-}" ]] && [[ -z "${TMUX:-}" ]] && [[ -z "${NO_TMUX:-}" ]]; then
   if command -v tmux > /dev/null 2>&1; then
     exec tmux new-session -A -s main
   fi

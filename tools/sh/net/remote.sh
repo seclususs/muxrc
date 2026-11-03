@@ -5,7 +5,7 @@
 ################################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/../../../lib/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../../lib/init.sh"
 
 check_dependencies() {
   require_cmd sshd ssh-keygen awk grep
@@ -13,15 +13,15 @@ check_dependencies() {
 
 usage() {
   echo "usage: net remote <command> [args]"
-  echo "secure ssh remote and persistent session management."
   echo ""
   echo "commands:"
-  echo "  status               display sshd, wakelock, ip, and tmux status"
-  echo "  setup                harden sshd config and configure permissions"
-  echo "  pair [key|file]      register client public key into authorized_keys"
-  echo "  sessions [subcmd]    manage tmux sessions (list, attach, kill)"
-  echo "  start                start ssh daemon and acquire wake lock"
-  echo "  stop                 stop ssh daemon and release wake lock"
+  echo "  status               display status"
+  echo "  setup                sshd config"
+  echo "  pair [key|file]      register public key"
+  echo "  config               open sshd cfg in editor"
+  echo "  sessions [subcmd]    manage tmux sessions"
+  echo "  start                start ssh daemon"
+  echo "  stop                 stop ssh daemon"
 }
 
 get_sshd_port() {
@@ -39,74 +39,83 @@ get_sshd_port() {
   printf "%s\n" "${port}"
 }
 
+get_device_ip() {
+  local ip_addr=""
+
+  if command -v ip > /dev/null 2>&1; then
+    ip_addr=$(ip -4 route get 1.1.1.1 2> /dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1); exit}' || true)
+
+    if [[ -z "${ip_addr}" ]]; then
+      local iface
+      iface=$(detect_interface 2> /dev/null || true)
+      if [[ -n "${iface}" ]]; then
+        ip_addr=$(ip -4 -o addr show "${iface}" 2> /dev/null | awk '{print $4; exit}' | cut -d/ -f1 || true)
+      fi
+    fi
+
+    if [[ -z "${ip_addr}" ]]; then
+      ip_addr=$(ip -4 -o addr show scope global 2> /dev/null | awk '$2 !~ /^(dummy|lo)/ {print $4; exit}' | cut -d/ -f1 || true)
+    fi
+  fi
+
+  if [[ -z "${ip_addr}" ]]; then
+    ip_addr=$(getprop dhcp.wlan0.ipaddress 2> /dev/null || true)
+  fi
+
+  printf "%s\n" "${ip_addr}"
+}
+
 status_remote() {
   log_info "remote service status"
 
   local port
   port=$(get_sshd_port)
 
-  # SSH daemon status
   if pgrep -x sshd > /dev/null 2>&1; then
     local sshd_pid
     sshd_pid=$(pgrep -x sshd | head -n 1)
-    log_success "sshd: active (pid ${sshd_pid}, listening on port ${port})"
+    log_success "sshd: active (pid ${sshd_pid}, port ${port})"
   else
-    log_warn "sshd: inactive (start with: net remote start)"
+    log_warn "sshd: inactive"
   fi
 
-  # Wake lock status
-  if pgrep -f "termux-wake-lock" > /dev/null 2>&1; then
-    log_success "wake-lock: held (cpu sleep prevented)"
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+  if [[ -f "${state_dir}/wakelock" ]]; then
+    log_success "wake-lock: held"
+  elif pgrep -f "termux-wake-lock" > /dev/null 2>&1; then
+    log_success "wake-lock: held"
   elif [[ -f "/sys/power/wake_lock" ]] && grep -qi "termux" "/sys/power/wake_lock" 2> /dev/null; then
     log_success "wake-lock: active in kernel"
   else
-    log_info "wake-lock: standard (acquire with: wakelock or net remote start)"
+    log_info "wake-lock: standard"
   fi
 
-  # Network IP addresses
-  local wifi_iface=""
-  wifi_iface=$(detect_interface 2> /dev/null || true)
-  local lan_ip=""
-
-  if [[ -n "${wifi_iface}" ]]; then
-    lan_ip=$(ip -4 -o addr show "${wifi_iface}" 2> /dev/null | awk '{print $4}' | cut -d/ -f1 | head -n 1 || true)
-  fi
-
+  local lan_ip
+  lan_ip=$(get_device_ip)
   if [[ -n "${lan_ip}" ]]; then
-    log_info "lan ip (${wifi_iface}): ${lan_ip} -> ssh -p ${port} $(whoami)@${lan_ip}"
+    log_info "ip: ${lan_ip} -> ssh -p ${port} $(whoami)@${lan_ip}"
   else
-    log_warn "lan ip: no wireless connection detected"
+    log_warn "ip: no network connection"
   fi
 
-  # VPN / Mesh network addresses (Tailscale, WireGuard, Tun)
-  local vpn_lines=""
-  vpn_lines=$(ip -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $2 " " $4}' | cut -d/ -f1 || true)
-  if [[ -n "${vpn_lines}" ]]; then
-    while read -r vpn_iface vpn_addr; do
-      if [[ -n "${vpn_iface}" && -n "${vpn_addr}" ]]; then
-        log_info "vpn ip (${vpn_iface}): ${vpn_addr} -> ssh -p ${port} $(whoami)@${vpn_addr}"
-      fi
-    done <<< "${vpn_lines}"
+  if command -v ip > /dev/null 2>&1; then
+    local vpn_lines=""
+    vpn_lines=$(ip -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $2 " " $4}' | cut -d/ -f1 || true)
+    if [[ -n "${vpn_lines}" ]]; then
+      while read -r vpn_iface vpn_addr; do
+        if [[ -n "${vpn_iface}" && -n "${vpn_addr}" ]]; then
+          log_info "vpn (${vpn_iface}): ${vpn_addr}"
+        fi
+      done <<< "${vpn_lines}"
+    fi
   fi
 
-  # Android 12+ Phantom Process Killer check
-  local sdk_ver=""
-  sdk_ver=$(getprop ro.build.version.sdk 2> /dev/null || true)
-  if [[ -n "${sdk_ver}" ]] && ((sdk_ver >= 31)); then
-    log_info "android ${sdk_ver}+: verify phantom process killer is disabled if running many panes"
-  fi
-
-  # Tmux sessions status
   if command -v tmux > /dev/null 2>&1; then
     if tmux list-sessions > /dev/null 2>&1; then
       echo ""
       log_info "active tmux sessions:"
-      tmux list-sessions -F "  * #{session_name}: #{session_windows} window(s) (created #{session_created_string}) #{?session_attached,(attached),(detached)}" >&2
-    else
-      log_info "tmux: server running, no active sessions"
+      tmux list-sessions -F "  * #{session_name}: #{session_windows} win #{?session_attached,(attached),(detached)}" >&2
     fi
-  else
-    log_warn "tmux: not installed (pkg install tmux)"
   fi
 }
 
@@ -115,10 +124,12 @@ set_config_value() {
   local key="${2}"
   local value="${3}"
 
-  if grep -qE "^[#[:space:]]*${key}[[:space:]]+" "${file}"; then
-    sed -i "s|^[#[:space:]]*${key}[[:space:]].*|${key} ${value}|" "${file}"
+  if grep -qE "^[[:space:]]*${key}[[:space:]]+" "${file}"; then
+    sed -i -E "s|^[[:space:]]*${key}[[:space:]].*|${key} ${value}|" "${file}"
+  elif grep -qE "^[[:space:]]*#[[:space:]]*${key}[[:space:]]+" "${file}"; then
+    sed -i -E "0,/^[[:space:]]*#[[:space:]]*${key}[[:space:]].*/s|^[[:space:]]*#[[:space:]]*${key}[[:space:]].*|${key} ${value}|" "${file}"
   else
-    echo "${key} ${value}" >> "${file}"
+    printf "%s %s\n" "${key}" "${value}" >> "${file}"
   fi
 }
 
@@ -136,17 +147,23 @@ setup_remote() {
     touch "${config_file}"
   fi
 
-  # Apply hardened settings
   set_config_value "${config_file}" "Port" "8022"
   set_config_value "${config_file}" "PasswordAuthentication" "no"
   set_config_value "${config_file}" "PubkeyAuthentication" "yes"
+  set_config_value "${config_file}" "KbdInteractiveAuthentication" "no"
   set_config_value "${config_file}" "PermitEmptyPasswords" "no"
+  set_config_value "${config_file}" "PermitRootLogin" "no"
+  set_config_value "${config_file}" "MaxAuthTries" "3"
+  set_config_value "${config_file}" "LoginGraceTime" "30"
+  set_config_value "${config_file}" "X11Forwarding" "no"
+  set_config_value "${config_file}" "AllowAgentForwarding" "no"
   set_config_value "${config_file}" "ClientAliveInterval" "30"
   set_config_value "${config_file}" "ClientAliveCountMax" "3"
 
-  log_success "sshd_config updated (port 8022, pubkey-only, keepalive active)."
+  if ! compgen -G "${ssh_dir}/ssh_host_*_key" > /dev/null 2>&1; then
+    ssh-keygen -A > /dev/null 2>&1 || true
+  fi
 
-  # Setup ~/.ssh directory with strict permissions
   local user_ssh="${HOME}/.ssh"
   local auth_keys="${user_ssh}/authorized_keys"
 
@@ -158,74 +175,113 @@ setup_remote() {
   fi
   chmod 600 "${auth_keys}"
 
-  log_success "ssh directory permissions secured (700 ~/.ssh, 600 authorized_keys)."
+  log_success "sshd secured (port 8022, pubkey-only, 700/600 permissions)"
 }
 
 pair_client_key() {
-  local target_key="${1:-}"
+  local target_key="${*:-}"
   local user_ssh="${HOME}/.ssh"
   local auth_keys="${user_ssh}/authorized_keys"
+  local key_regex='^(ssh-[a-z0-9-]+|ecdsa-[a-z0-9-]+|sk-[a-z0-9@.-]+)[[:space:]]+[A-Za-z0-9+/=]+([[:space:]]+.*)?$'
+
+  if [[ -z "${target_key}" ]] && command -v termux-clipboard-get > /dev/null 2>&1; then
+    local clip_content
+    clip_content=$(termux-clipboard-get 2> /dev/null | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || true)
+    if [[ -n "${clip_content}" && "${clip_content}" =~ ${key_regex} ]]; then
+      log_prompt "use clipboard key? [y/N]: "
+      local use_clip=""
+      read -r use_clip || true
+      if [[ "${use_clip}" =~ ^[Yy]$ ]]; then
+        target_key="${clip_content}"
+      fi
+    fi
+  fi
 
   if [[ -z "${target_key}" ]]; then
-    log_prompt "paste client public key: "
+    log_prompt "paste public key: "
     read -r target_key
     echo ""
   elif [[ -f "${target_key}" ]]; then
     target_key=$(< "${target_key}")
   fi
 
-  # Trim leading/trailing whitespace
-  target_key=$(echo "${target_key}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+  target_key=$(printf "%s\n" "${target_key}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | grep -v '^[[:space:]]*$' || true)
 
   if [[ -z "${target_key}" ]]; then
-    log_error "empty public key provided."
+    log_error "empty public key."
     return 1
   fi
 
-  # Validate OpenSSH key signature format
-  local key_regex='^(ssh-(ed25519|rsa)|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh.com)[[:space:]]+[A-Za-z0-9+/=]+([[:space:]]+.*)?$'
-  if [[ ! "${target_key}" =~ ${key_regex} ]]; then
+  local line_count
+  line_count=$(printf "%s\n" "${target_key}" | wc -l)
+  if [[ "${line_count}" -ne 1 || ! "${target_key}" =~ ${key_regex} ]] || ! ssh-keygen -l -f - <<< "${target_key}" > /dev/null 2>&1; then
     log_error "invalid openssh public key format."
     return 1
   fi
 
   mkdir -p "${user_ssh}"
   chmod 700 "${user_ssh}"
-  touch "${auth_keys}"
+  printf "%s\n" "${target_key}" > "${auth_keys}"
   chmod 600 "${auth_keys}"
-
-  # Extract key token without comment to prevent duplicates
-  local key_token
-  key_token=$(echo "${target_key}" | awk '{print $1 " " $2}')
-
-  if grep -qF "${key_token}" "${auth_keys}" 2> /dev/null; then
-    log_warn "public key is already present in authorized_keys."
-    return 0
-  fi
-
-  echo "${target_key}" >> "${auth_keys}"
-  log_success "public key successfully added to ${auth_keys}."
+  log_success "key registered to ~/.ssh/authorized_keys"
 
   local port
   port=$(get_sshd_port)
-  local wifi_iface=""
-  wifi_iface=$(detect_interface 2> /dev/null || true)
-  local lan_ip="<device-ip>"
-  if [[ -n "${wifi_iface}" ]]; then
-    lan_ip=$(ip -4 -o addr show "${wifi_iface}" 2> /dev/null | awk '{print $4}' | cut -d/ -f1 | head -n 1 || true)
+  local lan_ip
+  lan_ip=$(get_device_ip)
+
+  if [[ -n "${lan_ip}" ]]; then
+    log_info "connect: ssh -p ${port} $(whoami)@${lan_ip}"
+  fi
+}
+
+edit_ssh_config() {
+  local config_file="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh/sshd_config"
+  local editor="${EDITOR:-nano}"
+
+  if ! command -v "${editor}" > /dev/null 2>&1; then
+    if command -v nano > /dev/null 2>&1; then
+      editor="nano"
+    elif command -v vi > /dev/null 2>&1; then
+      editor="vi"
+    else
+      log_error "no editor found."
+      return 1
+    fi
   fi
 
-  log_info "you can now connect from client:"
-  log_info "  ssh -p ${port} $(whoami)@${lan_ip:-<device-ip>}"
+  if [[ ! -f "${config_file}" ]]; then
+    setup_remote
+  fi
+
+  "${editor}" "${config_file}"
+
+  if command -v sshd > /dev/null 2>&1; then
+    if ! sshd -t > /dev/null 2>&1; then
+      log_warn "sshd_config syntax error"
+    fi
+  fi
+}
+
+sessions_usage() {
+  echo "usage: net remote sessions <command> [args]"
+  echo ""
+  echo "commands:"
+  echo "  list, ls             list active tmux sessions"
+  echo "  attach, a [name]     attach to session (default: main)"
+  echo "  kill, k <name>       terminate specific session"
+  echo "  kill-all             terminate all tmux sessions"
 }
 
 manage_sessions() {
-  if ! command -v tmux > /dev/null 2>&1; then
-    log_error "tmux is not installed (pkg install tmux)"
-    return 1
+  local action="${1:-list}"
+
+  if [[ "${action}" == "-h" || "${action}" == "--help" || "${action}" == "help" ]]; then
+    sessions_usage
+    return 0
   fi
 
-  local action="${1:-list}"
+  require_cmd tmux || return 1
 
   case "${action}" in
     list | ls)
@@ -237,13 +293,20 @@ manage_sessions() {
       ;;
     attach | a)
       local session_name="${2:-main}"
-      log_info "attaching to session '${session_name}'..."
-      exec tmux new-session -A -s "${session_name}"
+      log_info "attaching to '${session_name}'..."
+      if [[ -n "${TMUX:-}" ]]; then
+        if ! tmux has-session -t "${session_name}" 2> /dev/null; then
+          tmux new-session -d -s "${session_name}"
+        fi
+        tmux switch-client -t "${session_name}"
+      else
+        exec tmux new-session -A -s "${session_name}"
+      fi
       ;;
     kill | k)
       local session_name="${2:-}"
       if [[ -z "${session_name}" ]]; then
-        log_error "usage: net remote sessions kill <session-name>"
+        log_error "usage: net remote sessions kill <name>"
         return 1
       fi
       if tmux has-session -t "${session_name}" 2> /dev/null; then
@@ -259,7 +322,7 @@ manage_sessions() {
       log_success "all tmux sessions terminated."
       ;;
     *)
-      log_error "unknown session action: ${action} (use: list, attach, kill, kill-all)"
+      log_error "unknown command: ${action} (see: net remote sessions -h)"
       return 1
       ;;
   esac
@@ -268,16 +331,29 @@ manage_sessions() {
 start_remote() {
   log_info "starting remote services..."
 
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+  mkdir -p "${state_dir}"
+
   if command -v termux-wake-lock > /dev/null 2>&1; then
     termux-wake-lock 2> /dev/null || true
+    touch "${state_dir}/wakelock"
     log_success "wake-lock acquired."
   fi
 
   if ! pgrep -x sshd > /dev/null 2>&1; then
-    sshd
-    log_success "sshd started."
+    local ssh_dir="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh"
+    if ! compgen -G "${ssh_dir}/ssh_host_*_key" > /dev/null 2>&1; then
+      ssh-keygen -A > /dev/null 2>&1 || true
+    fi
+
+    if sshd; then
+      log_success "sshd started."
+    else
+      log_error "sshd failed to start."
+      return 1
+    fi
   else
-    log_info "sshd is already running."
+    log_info "sshd already running."
   fi
 
   status_remote
@@ -286,29 +362,33 @@ start_remote() {
 stop_remote() {
   log_info "stopping remote services..."
 
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+
   if pgrep -x sshd > /dev/null 2>&1; then
     pkill sshd 2> /dev/null || true
     log_success "sshd stopped."
   else
-    log_info "sshd was not running."
+    log_info "sshd not running."
   fi
 
   if command -v termux-wake-unlock > /dev/null 2>&1; then
     termux-wake-unlock 2> /dev/null || true
+    rm -f "${state_dir}/wakelock"
     log_success "wake-lock released."
   fi
 }
 
 main() {
-  check_dependencies
-
   local cmd="${1:-status}"
 
+  if [[ "${cmd}" == "-h" || "${cmd}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
+  check_dependencies || exit 1
+
   case "${cmd}" in
-    -h | --help)
-      usage
-      return 0
-      ;;
     status)
       status_remote
       ;;
@@ -317,7 +397,10 @@ main() {
       ;;
     pair)
       shift
-      pair_client_key "${1:-}"
+      pair_client_key "${*:-}"
+      ;;
+    config)
+      edit_ssh_config
       ;;
     sessions)
       shift
@@ -331,7 +414,7 @@ main() {
       ;;
     *)
       log_error "unknown command: ${cmd} (see: net remote -h)"
-      return 1
+      exit 1
       ;;
   esac
 }
