@@ -5,7 +5,7 @@
 ##################
 set -euo pipefail
 
-SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
 source "${SCRIPT_DIR}/lib/init.sh"
 
 setup_storage() {

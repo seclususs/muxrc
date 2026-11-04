@@ -27,8 +27,9 @@ alias pbpaste='termux-clipboard-get'
 alias wakelock='termux-wake-lock && echo "Wakelock acquired: Termux background session secured."'
 alias wakelock-off='termux-wake-unlock && echo "Wakelock released."'
 
-alias ssh-start='sshd && echo "SSH daemon started on port 8022."'
-alias ssh-stop='pkill sshd && echo "SSH daemon stopped."'
+alias ssh-start='net remote start'
+alias ssh-stop='net remote stop'
+alias ssh-status='net remote status'
 
 ##################################
 # Android file handlers & suffixes

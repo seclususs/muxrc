@@ -5,7 +5,7 @@
 #######################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/../../../lib/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../../lib/init.sh"
 
 check_dependencies() {
   require_cmd exiftool

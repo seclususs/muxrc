@@ -5,7 +5,7 @@
 ######################
 set -euo pipefail
 
-source "$(dirname "$(realpath "$0")")/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 migrate_sudo_hash() {
   local config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/muxrc"
