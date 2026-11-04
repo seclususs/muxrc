@@ -57,6 +57,29 @@ _muxrc_verify_password() {
   return 1
 }
 
+_muxrc_read_secret() {
+  local _prompt="${1:-}"
+  local _target_var="$2"
+  local orig_tty
+  orig_tty=$(stty -g 2> /dev/null)
+
+  local _rc=0
+  {
+    trap '[[ -n "$orig_tty" ]] && stty "$orig_tty" 2>/dev/null || stty sane 2>/dev/null; return 130' INT TERM
+    if [[ -n "$_prompt" ]]; then
+      read -rs "${_target_var}?$_prompt"
+    else
+      read -rs "${_target_var}"
+    fi
+    _rc=$?
+  } always {
+    trap - INT TERM
+    [[ -n "$orig_tty" ]] && stty "$orig_tty" 2> /dev/null || stty sane 2> /dev/null
+  }
+
+  return $_rc
+}
+
 #####################
 # Root access wrapper
 #####################
@@ -128,9 +151,9 @@ sudo() {
 
   if ((authenticated == 0)); then
     while ((attempts < max_attempts)); do
-      if ! read -rs "user_pass?[sudo] password for $current_user: "; then
+      if ! _muxrc_read_secret "[sudo] password for $current_user: " user_pass; then
         print -u2 ""
-        return 1
+        return 130
       fi
       print -u2 ""
 
@@ -214,10 +237,11 @@ sudo() {
   fi
 
   if [[ -n "$su_bin" ]]; then
+    local _cmd_payload="${(j: :)${(q)@}}"
     if [[ "$1" =~ ^(pm|cmd|am|svc|settings|content|input|dpm)$ ]]; then
-      print -r "$env_vars ${(q)@}" | command "$su_bin"
+      print -r -- "$env_vars $_cmd_payload" | command "$su_bin"
     else
-      command "$su_bin" -c "$env_vars exec ${(q)@}"
+      command "$su_bin" -c "$env_vars exec $_cmd_payload"
       return $?
     fi
   elif whence -p sudo > /dev/null 2>&1; then
@@ -301,9 +325,9 @@ EOF
 
   if ((authenticated == 0)); then
     local user_pass
-    if ! read -rs "user_pass?Password: "; then
+    if ! _muxrc_read_secret "Password: " user_pass; then
       print -u2 ""
-      return 1
+      return 130
     fi
     print -u2 ""
 
@@ -452,9 +476,9 @@ passwd() {
 
   if [[ "$EUID" -ne 0 && -n "$stored_hash" ]]; then
     local current_pass=""
-    if ! read -rs "current_pass?Current password: "; then
+    if ! _muxrc_read_secret "Current password: " current_pass; then
       print -u2 ""
-      return 1
+      return 130
     fi
     print -u2 ""
 
@@ -467,9 +491,9 @@ passwd() {
   local new_pass=""
   local confirm_pass=""
 
-  if ! read -rs "new_pass?New password: "; then
+  if ! _muxrc_read_secret "New password: " new_pass; then
     print -u2 ""
-    return 1
+    return 130
   fi
   print -u2 ""
 
@@ -478,9 +502,9 @@ passwd() {
     return 1
   fi
 
-  if ! read -rs "confirm_pass?Retype new password: "; then
+  if ! _muxrc_read_secret "Retype new password: " confirm_pass; then
     print -u2 ""
-    return 1
+    return 130
   fi
   print -u2 ""
 

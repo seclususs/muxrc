@@ -237,13 +237,19 @@ sec() {
         return 1
       fi
 
-      local pass1 pass2
+      local pass1="" pass2=""
       log_prompt "enter encryption password: "
-      read -rs pass1
+      if ! _muxrc_read_secret "" pass1; then
+        print -u2 ""
+        return 130
+      fi
       print -u2 ""
 
       log_prompt "confirm password: "
-      read -rs pass2
+      if ! _muxrc_read_secret "" pass2; then
+        print -u2 ""
+        return 130
+      fi
       print -u2 ""
 
       if [[ -z "$pass1" ]]; then
@@ -277,9 +283,12 @@ sec() {
         return 1
       fi
 
-      local pass
+      local pass=""
       log_prompt "enter decryption password: "
-      read -rs pass
+      if ! _muxrc_read_secret "" pass; then
+        print -u2 ""
+        return 130
+      fi
       print -u2 ""
 
       if [[ -z "$pass" ]]; then
