@@ -70,6 +70,7 @@ status_remote() {
 
   local port
   port=$(get_sshd_port)
+  local current_user="${USER:-$(whoami)}"
 
   if pgrep -x sshd > /dev/null 2>&1; then
     local sshd_pid
@@ -82,10 +83,8 @@ status_remote() {
   local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
   if [[ -f "${state_dir}/wakelock" ]]; then
     log_success "wake-lock: held"
-  elif pgrep -f "termux-wake-lock" > /dev/null 2>&1; then
+  elif pgrep -u "${EUID:-$(id -u)}" -x termux-wake-lock > /dev/null 2>&1; then
     log_success "wake-lock: held"
-  elif [[ -f "/sys/power/wake_lock" ]] && grep -qi "termux" "/sys/power/wake_lock" 2> /dev/null; then
-    log_success "wake-lock: active in kernel"
   else
     log_info "wake-lock: standard"
   fi
@@ -93,7 +92,7 @@ status_remote() {
   local lan_ip
   lan_ip=$(get_device_ip)
   if [[ -n "${lan_ip}" ]]; then
-    log_info "ip: ${lan_ip} -> ssh -p ${port} $(whoami)@${lan_ip}"
+    log_info "ip: ${lan_ip} -> ssh -p ${port} ${current_user}@${lan_ip}"
   else
     log_warn "ip: no network connection"
   fi
@@ -104,7 +103,7 @@ status_remote() {
     if [[ -n "${vpn_lines}" ]]; then
       while read -r vpn_iface vpn_addr; do
         if [[ -n "${vpn_iface}" && -n "${vpn_addr}" ]]; then
-          log_info "vpn (${vpn_iface}): ${vpn_addr}"
+          log_info "vpn (${vpn_iface}): ${vpn_addr} -> ssh -p ${port} ${current_user}@${vpn_addr}"
         fi
       done <<< "${vpn_lines}"
     fi
@@ -134,8 +133,6 @@ set_config_value() {
 }
 
 setup_remote() {
-  log_info "hardening sshd configuration..."
-
   local ssh_dir="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh"
   local config_file="${ssh_dir}/sshd_config"
 
@@ -175,7 +172,7 @@ setup_remote() {
   fi
   chmod 600 "${auth_keys}"
 
-  log_success "sshd secured (port 8022, pubkey-only, 700/600 permissions)"
+  echo "sshd configured"
 }
 
 pair_client_key() {
@@ -227,11 +224,20 @@ pair_client_key() {
 
   local port
   port=$(get_sshd_port)
+  local current_user="${USER:-$(whoami)}"
   local lan_ip
   lan_ip=$(get_device_ip)
 
   if [[ -n "${lan_ip}" ]]; then
-    log_info "connect: ssh -p ${port} $(whoami)@${lan_ip}"
+    log_info "connect: ssh -p ${port} ${current_user}@${lan_ip}"
+  fi
+
+  if command -v ip > /dev/null 2>&1; then
+    local vpn_ip
+    vpn_ip=$(ip -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $4}' | cut -d/ -f1 | head -n 1 || true)
+    if [[ -n "${vpn_ip}" && "${vpn_ip}" != "${lan_ip}" ]]; then
+      log_info "connect: ssh -p ${port} ${current_user}@${vpn_ip}"
+    fi
   fi
 }
 
