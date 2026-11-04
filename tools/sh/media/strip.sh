@@ -43,7 +43,7 @@ clean_metadata() {
   local output_dir="${2:-}"
 
   if [[ -z "${target}" || -z "${output_dir}" ]]; then
-    log_error "missing parameters for metadata cleaning"
+    log_error "missing strip parameters"
     return 1
   fi
 
@@ -61,7 +61,7 @@ clean_metadata() {
     fi
 
     local confirm=""
-    log_prompt "strip metadata from ${file_count} files in '${target}'? [y/N]: "
+    log_prompt "strip metadata from ${file_count} files? [y/N]: "
     read -r confirm
     if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
       log_warn "aborted"

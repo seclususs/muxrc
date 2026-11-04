@@ -465,6 +465,8 @@ start_remote() {
 }
 
 stop_remote() {
+  confirm_ssh_hazard "this will terminate your ssh session" || return 1
+
   log_info "stopping remote services..."
 
   local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"

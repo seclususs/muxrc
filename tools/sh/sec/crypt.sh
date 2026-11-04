@@ -24,7 +24,7 @@ validate_target_file() {
 
 validate_password() {
   if [[ -z "${MUXRC_CRYPT_PASS:-}" ]]; then
-    log_error "password not provided in MUXRC_CRYPT_PASS"
+    log_error "missing password in MUXRC_CRYPT_PASS"
     return 1
   fi
   return 0
@@ -72,7 +72,7 @@ encrypt_target_file() {
 
   if [[ -e "${out_file}" ]]; then
     local overwrite=""
-    log_prompt "vault file '${out_file}' exists. overwrite? [y/N]: "
+    log_prompt "'${out_file}' exists. overwrite? [y/N]: "
     read -r overwrite
     if [[ ! "${overwrite:-}" =~ ^[Yy]$ ]]; then
       log_warn "aborted"
@@ -115,7 +115,7 @@ decrypt_target_file() {
 
   if [[ -e "${out_file}" ]]; then
     local overwrite=""
-    log_prompt "output '${out_file}' exists. overwrite? [y/N]: "
+    log_prompt "'${out_file}' exists. overwrite? [y/N]: "
     read -r overwrite
     if [[ ! "${overwrite:-}" =~ ^[Yy]$ ]]; then
       log_warn "aborted"

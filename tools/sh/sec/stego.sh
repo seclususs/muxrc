@@ -123,7 +123,7 @@ extract_data() {
   local extract_dir="${1:-}"
 
   if [[ -z "${extract_dir}" ]]; then
-    log_error "missing extraction directory parameter"
+    log_error "missing extraction directory"
     return 1
   fi
 

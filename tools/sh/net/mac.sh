@@ -97,6 +97,8 @@ apply_mac() {
     return 0
   fi
 
+  confirm_ssh_hazard "this will drop your ssh connection" || return 1
+
   save_original_mac "${iface}"
 
   trap 'cleanup_spinner' EXIT

@@ -58,10 +58,10 @@ start_tor() {
   existing_pid=$(pgrep -x tor 2> /dev/null | head -n 1 || true)
   if [[ -n "${existing_pid}" ]]; then
     if [[ -f "${pid_file}" ]] && [[ "$(< "${pid_file}")" == "${existing_pid}" ]]; then
-      log_warn "tor already running (pid: ${existing_pid})"
+      log_warn "tor already running (pid ${existing_pid})"
       return 0
     else
-      log_error "external tor detected (pid: ${existing_pid}), stop it first"
+      log_error "external tor running (pid ${existing_pid}), stop it first"
       return 1
     fi
   fi
@@ -246,7 +246,7 @@ check_tor_connection() {
   fi
 
   if [[ ${is_running} -eq 0 ]]; then
-    log_warn "tor is not running (start via: net tor start)"
+    log_warn "tor not running (run: net tor start)"
     return 1
   fi
 

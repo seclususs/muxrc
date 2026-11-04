@@ -37,7 +37,7 @@ resolve_preset() {
     return 0
   fi
 
-  log_error "preset '${preset_input}' not found in presets or path"
+  log_error "preset not found: ${preset_input}"
   return 1
 }
 
@@ -74,7 +74,7 @@ select_random_preset() {
   fi
 
   if [[ ${#candidates[@]} -eq 0 ]]; then
-    log_error "no metadata templates found in presets"
+    log_error "no presets found"
     return 1
   fi
 
@@ -88,7 +88,7 @@ execute_spoof() {
   local output_dir="${3:-}"
 
   if [[ -z "${preset_file}" || -z "${target_path}" || -z "${output_dir}" ]]; then
-    log_error "missing parameters for spoof execution"
+    log_error "missing spoof parameters"
     return 1
   fi
 
@@ -112,7 +112,7 @@ execute_spoof() {
     fi
 
     local confirm=""
-    log_prompt "inject decoy metadata into ${file_count} files in '${target_path}'? [y/N]: "
+    log_prompt "inject metadata into ${file_count} files? [y/N]: "
     read -r confirm
     if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
       log_warn "aborted"
@@ -132,14 +132,14 @@ execute_spoof() {
 
   while IFS="=" read -r key val; do
     if [[ ! "${key}" =~ ^[A-Za-z0-9_]+$ ]]; then
-      log_warn "skipping invalid metadata key: ${key}"
+      log_warn "skipping invalid key: ${key}"
       continue
     fi
     args+=("-${key}=${val}")
   done < <(jq -r 'to_entries | .[] | "\(.key)=\(.value)"' "${preset_file}")
 
   if [[ ${#args[@]} -eq 0 ]]; then
-    log_error "no valid metadata keys found in preset"
+    log_error "no valid keys in preset"
     return 1
   fi
 

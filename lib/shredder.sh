@@ -41,7 +41,7 @@ confirm_destruction() {
   local target_file="${1:-}"
   local confirm=""
 
-  log_warn "permanently destroying: ${target_file}"
+  log_warn "destroying: ${target_file}"
   log_prompt "type 'shred' to confirm: "
   read -r confirm
 

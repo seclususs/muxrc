@@ -53,7 +53,7 @@ compress_video() {
   fi
 
   if [[ ! -s "${target_file}" ]]; then
-    log_error "file '${target_file}' is empty (0 bytes)"
+    log_error "file is empty: ${target_file}"
     return 1
   fi
 
@@ -64,7 +64,7 @@ compress_video() {
 
   local ext="${file_name##*.}"
   if [[ "${ext}" == "${file_name}" ]]; then
-    log_error "file '${target_file}' has no extension"
+    log_error "no file extension: ${target_file}"
     return 1
   fi
 
@@ -77,7 +77,7 @@ compress_video() {
   local orig_size
   orig_size=$(stat -c '%s' "${target_file}" 2> /dev/null || wc -c < "${target_file}")
 
-  log_info "compressing '${file_name}' to hevc..."
+  log_info "compressing ${file_name} to hevc..."
 
   local -a mov_opts=()
   local ext_lower="${ext,,}"
@@ -111,7 +111,7 @@ compress_video() {
   if ((orig_size > 0 && new_size >= orig_size)); then
     rm -f "${temp_file}" 2> /dev/null || true
     CURRENT_TEMP=""
-    log_warn "done: ${orig_fmt} -> ${new_fmt} (larger or equal, original preserved)"
+    log_warn "done: ${orig_fmt} -> ${new_fmt} (kept original)"
   else
     mv -f "${temp_file}" "${target_file}"
     CURRENT_TEMP=""
@@ -137,7 +137,7 @@ compress_batch() {
 
   local total=${#video_files[@]}
   if [[ "${total}" -eq 0 ]]; then
-    log_info "no supported video files found in '${target_dir}'"
+    log_info "no supported videos in ${target_dir}"
     return 0
   fi
 
@@ -150,7 +150,7 @@ compress_batch() {
   local total_fmt
   total_fmt=$(format_bytes "${total_bytes}")
 
-  log_info "found ${total} video(s) in '${target_dir}' (${total_fmt})"
+  log_info "found ${total} video(s) in ${target_dir} (${total_fmt})"
   local confirm=""
   log_prompt "start batch compression? [y/N]: "
   read -r confirm
@@ -170,9 +170,9 @@ compress_batch() {
   done
 
   if [[ "${failed}" -eq 0 ]]; then
-    log_success "batch compression complete (${total}/${total} processed)"
+    log_success "batch compression complete (${total} files)"
   else
-    log_warn "batch compression finished with ${failed} failure(s)"
+    log_warn "batch finished with ${failed} failure(s)"
   fi
 }
 

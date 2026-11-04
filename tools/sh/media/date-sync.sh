@@ -61,7 +61,7 @@ sync_metadata_dates() {
     fi
 
     local confirm=""
-    log_prompt "sync metadata dates for ${file_count} files in '${target}'? [y/N]: "
+    log_prompt "sync dates for ${file_count} files? [y/N]: "
     read -r confirm
     if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
       log_warn "aborted"

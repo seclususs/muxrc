@@ -172,6 +172,7 @@ rotate_identity() {
       log_warn "mac.sh not found, skipping mac rotation"
     fi
   else
+    confirm_ssh_hazard "this will drop your ssh connection" || return 1
     log_info "keeping mac, resetting link..."
     set_wifi_framework_state "disabled"
     sleep 0.5

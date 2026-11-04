@@ -115,7 +115,7 @@ main() {
   fi
 
   if [[ -z "${cidr}" ]]; then
-    log_error "could not auto-detect subnet. specify cidr: net sweep <cidr>"
+    log_error "subnet not detected. use: net sweep <cidr>"
     exit 1
   fi
 
