@@ -39,23 +39,51 @@ get_sshd_port() {
   printf "%s\n" "${port}"
 }
 
+_run_ip() {
+  local ip_bin="ip"
+  if ! command -v ip > /dev/null 2>&1; then
+    if [[ -x "/system/bin/ip" ]]; then
+      ip_bin="/system/bin/ip"
+    else
+      return 1
+    fi
+  fi
+
+  local out=""
+  out=$("${ip_bin}" "${@}" 2> /dev/null || true)
+  if [[ -n "${out}" ]]; then
+    printf "%s\n" "${out}"
+    return 0
+  fi
+
+  if [[ "${EUID:-$(id -u)}" -ne 0 ]] && command -v su > /dev/null 2>&1; then
+    local su_ip="/system/bin/ip"
+    [[ -x "${su_ip}" ]] || su_ip="ip"
+    out=$(su -c "${su_ip} $*" 2> /dev/null || true)
+    if [[ -n "${out}" ]]; then
+      printf "%s\n" "${out}"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
 get_device_ip() {
   local ip_addr=""
 
-  if command -v ip > /dev/null 2>&1; then
-    ip_addr=$(ip -4 route get 1.1.1.1 2> /dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1); exit}' || true)
+  ip_addr=$(_run_ip -4 route get 1.1.1.1 2> /dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1); exit}' || true)
 
-    if [[ -z "${ip_addr}" ]]; then
-      local iface
-      iface=$(detect_interface 2> /dev/null || true)
-      if [[ -n "${iface}" ]]; then
-        ip_addr=$(ip -4 -o addr show "${iface}" 2> /dev/null | awk '{print $4; exit}' | cut -d/ -f1 || true)
-      fi
+  if [[ -z "${ip_addr}" ]]; then
+    local iface
+    iface=$(detect_interface 2> /dev/null || true)
+    if [[ -n "${iface}" ]]; then
+      ip_addr=$(_run_ip -4 -o addr show "${iface}" 2> /dev/null | awk '{print $4; exit}' | cut -d/ -f1 || true)
     fi
+  fi
 
-    if [[ -z "${ip_addr}" ]]; then
-      ip_addr=$(ip -4 -o addr show scope global 2> /dev/null | awk '$2 !~ /^(dummy|lo)/ {print $4; exit}' | cut -d/ -f1 || true)
-    fi
+  if [[ -z "${ip_addr}" ]]; then
+    ip_addr=$(_run_ip -4 -o addr show scope global 2> /dev/null | awk '$2 !~ /^(dummy|lo|tun|tailscale|wg)/ {print $4; exit}' | cut -d/ -f1 || true)
   fi
 
   if [[ -z "${ip_addr}" ]]; then
@@ -93,20 +121,20 @@ status_remote() {
   lan_ip=$(get_device_ip)
   if [[ -n "${lan_ip}" ]]; then
     log_info "ip: ${lan_ip} -> ssh -p ${port} ${current_user}@${lan_ip}"
-  else
-    log_warn "ip: no network connection"
   fi
 
-  if command -v ip > /dev/null 2>&1; then
-    local vpn_lines=""
-    vpn_lines=$(ip -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $2 " " $4}' | cut -d/ -f1 || true)
-    if [[ -n "${vpn_lines}" ]]; then
-      while read -r vpn_iface vpn_addr; do
-        if [[ -n "${vpn_iface}" && -n "${vpn_addr}" ]]; then
-          log_info "vpn (${vpn_iface}): ${vpn_addr} -> ssh -p ${port} ${current_user}@${vpn_addr}"
-        fi
-      done <<< "${vpn_lines}"
-    fi
+  local vpn_lines=""
+  vpn_lines=$(_run_ip -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $2 " " $4}' | cut -d/ -f1 || true)
+  if [[ -n "${vpn_lines}" ]]; then
+    while read -r vpn_iface vpn_addr; do
+      if [[ -n "${vpn_iface}" && -n "${vpn_addr}" ]]; then
+        log_info "vpn (${vpn_iface}): ${vpn_addr} -> ssh -p ${port} ${current_user}@${vpn_addr}"
+      fi
+    done <<< "${vpn_lines}"
+  fi
+
+  if [[ -z "${lan_ip}" && -z "${vpn_lines}" ]]; then
+    log_warn "ip: no network connection"
   fi
 
   if command -v tmux > /dev/null 2>&1; then
@@ -172,7 +200,7 @@ setup_remote() {
   fi
   chmod 600 "${auth_keys}"
 
-  echo "sshd configured"
+  log_success "sshd configured"
 }
 
 pair_client_key() {
@@ -232,12 +260,10 @@ pair_client_key() {
     log_info "connect: ssh -p ${port} ${current_user}@${lan_ip}"
   fi
 
-  if command -v ip > /dev/null 2>&1; then
-    local vpn_ip
-    vpn_ip=$(ip -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $4}' | cut -d/ -f1 | head -n 1 || true)
-    if [[ -n "${vpn_ip}" && "${vpn_ip}" != "${lan_ip}" ]]; then
-      log_info "connect: ssh -p ${port} ${current_user}@${vpn_ip}"
-    fi
+  local vpn_ip
+  vpn_ip=$(_run_ip -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $4}' | cut -d/ -f1 | head -n 1 || true)
+  if [[ -n "${vpn_ip}" && "${vpn_ip}" != "${lan_ip}" ]]; then
+    log_info "connect: ssh -p ${port} ${current_user}@${vpn_ip}"
   fi
 }
 
