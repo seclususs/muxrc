@@ -32,7 +32,7 @@ commands:
   identity [action]    rotate opsec identity
   killswitch [act]     firewall leak killswitch
   tor [action]         tor opsec service
-  remote [action]      ssh & tmux remote manager
+  remote [action]      ssh remote manager
 
 run 'net <command> -h' for subcommand details
 EOF

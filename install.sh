@@ -36,7 +36,7 @@ install_packages() {
     zsh git wget curl ncurses-utils bc coreutils findutils grep sed gawk jq
     termux-exec termux-api termux-services nano fzf openssh unzip tar p7zip
     unrar exiftool steghide openssl-tool nmap tor proxychains-ng ffmpeg
-    sudo tmux
+    sudo
   )
   local -a missing_pkgs=()
   local pkg
@@ -202,7 +202,6 @@ symlink_configurations() {
   ln -sf "${dotfiles_dir}/termux/colors.properties" "${HOME}/.termux/colors.properties"
   ln -sf "${dotfiles_dir}/termux/termux.properties" "${HOME}/.termux/termux.properties"
   ln -sf "${dotfiles_dir}/nano/.nanorc" "${HOME}/.nanorc"
-  ln -sf "${dotfiles_dir}/tmux/.tmux.conf" "${HOME}/.tmux.conf"
 
   ln -sf "${dotfiles_dir}/boot/start-sshd" "${HOME}/.termux/boot/start-sshd"
   chmod +x "${dotfiles_dir}/boot/start-sshd" 2> /dev/null || true

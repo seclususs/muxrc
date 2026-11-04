@@ -19,7 +19,6 @@ usage() {
   echo "  setup                sshd config"
   echo "  pair [key|file]      register public key"
   echo "  config               open sshd cfg in editor"
-  echo "  sessions [subcmd]    manage remote & tmux sessions"
   echo "  start                start ssh daemon"
   echo "  stop                 stop ssh daemon"
 }
@@ -283,14 +282,6 @@ status_remote() {
       echo "  ${cmd}"
     done
   fi
-
-  if command -v tmux > /dev/null 2>&1; then
-    if tmux list-sessions > /dev/null 2>&1; then
-      echo ""
-      log_info "active tmux sessions:"
-      tmux list-sessions -F "  * #{session_name}: #{session_windows} win #{?session_attached,(attached),(detached)}" >&2
-    fi
-  fi
 }
 
 set_config_value() {
@@ -442,93 +433,6 @@ edit_ssh_config() {
   fi
 }
 
-sessions_usage() {
-  echo "usage: net remote sessions <command> [args]"
-  echo ""
-  echo "commands:"
-  echo "  list, ls             list active remote & tmux sessions"
-  echo "  attach, a [name]     attach to tmux session (default: main)"
-  echo "  kill, k <name>       terminate specific tmux session"
-  echo "  kill-all             terminate all tmux sessions"
-}
-
-manage_sessions() {
-  local action="${1:-list}"
-
-  if [[ "${action}" == "-h" || "${action}" == "--help" || "${action}" == "help" ]]; then
-    sessions_usage
-    return 0
-  fi
-
-  case "${action}" in
-    list | ls)
-      log_info "remote sessions"
-
-      local port
-      port=$(get_sshd_port)
-      if pgrep -x sshd > /dev/null 2>&1; then
-        local clients
-        clients=$(get_active_clients "${port}")
-        if [[ "${clients}" == "none" ]]; then
-          log_info "ssh: no active clients"
-        else
-          log_success "ssh: ${clients}"
-        fi
-      else
-        log_warn "ssh: daemon inactive"
-      fi
-
-      if command -v tmux > /dev/null 2>&1; then
-        if tmux list-sessions > /dev/null 2>&1; then
-          log_success "tmux sessions:"
-          tmux list-sessions -F "  * #{session_name}: #{session_windows} win #{?session_attached,(attached),(detached)}" >&2
-        else
-          log_info "tmux: no active sessions"
-        fi
-      else
-        log_info "tmux: not installed"
-      fi
-      ;;
-    attach | a)
-      require_cmd tmux || return 1
-      local session_name="${2:-main}"
-      log_info "attaching to '${session_name}'..."
-      if [[ -n "${TMUX:-}" ]]; then
-        if ! tmux has-session -t "${session_name}" 2> /dev/null; then
-          tmux new-session -d -s "${session_name}"
-        fi
-        tmux switch-client -t "${session_name}"
-      else
-        exec tmux new-session -A -s "${session_name}"
-      fi
-      ;;
-    kill | k)
-      require_cmd tmux || return 1
-      local session_name="${2:-}"
-      if [[ -z "${session_name}" ]]; then
-        log_error "usage: net remote sessions kill <name>"
-        return 1
-      fi
-      if tmux has-session -t "${session_name}" 2> /dev/null; then
-        tmux kill-session -t "${session_name}"
-        log_success "session '${session_name}' terminated."
-      else
-        log_error "session '${session_name}' not found."
-        return 1
-      fi
-      ;;
-    kill-all)
-      require_cmd tmux || return 1
-      tmux kill-server 2> /dev/null || true
-      log_success "all tmux sessions terminated."
-      ;;
-    *)
-      log_error "unknown command: ${action} (see: net remote sessions -h)"
-      return 1
-      ;;
-  esac
-}
-
 start_remote() {
   log_info "starting remote services..."
 
@@ -602,10 +506,6 @@ main() {
       ;;
     config)
       edit_ssh_config
-      ;;
-    sessions)
-      shift
-      manage_sessions "${@}"
       ;;
     start)
       start_remote
