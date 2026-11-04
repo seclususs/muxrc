@@ -32,7 +32,6 @@ setopt PUSHD_SILENT
 source "$ZSH_CONFIG_DIR/wrappers/linux.zsh"
 source "$ZSH_CONFIG_DIR/wrappers/muxrc.zsh"
 source "$ZSH_CONFIG_DIR/wrappers/tools.zsh"
-source "$ZSH_CONFIG_DIR/wrappers/ai.zsh"
 source "$ZSH_CONFIG_DIR/aliases.zsh"
 source "$ZSH_CONFIG_DIR/prompt.zsh"
 if [[ -f "$HOME/.dircolors" ]]; then

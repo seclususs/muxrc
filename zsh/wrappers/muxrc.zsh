@@ -104,12 +104,6 @@ tools:
   media <command>         media processing & exif (-h)
   sec <command>           data security & privacy (-h)
 
-ai:
-  cmd-fix [hint]          diagnose error & fix (??)
-  ai-toggle               toggle gemini assistant
-  ai-model [name]         view or switch model
-  ai-key [-c]             set or verify api key
-
 run 'muxrc <command> -h' or '<prefix> -h' for details
 EOF
 }

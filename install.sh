@@ -250,48 +250,6 @@ setup_default_shell() {
   fi
 }
 
-setup_gemini_env() {
-  local dotfiles_dir="${1:-}"
-  local reset_gemini="y"
-  local enable_ai=""
-  local gemini_key=""
-  local ai_config_dir="${HOME}/.config/muxrc"
-  local ai_env_file="${ai_config_dir}/ai.env"
-
-  if [[ -z "${dotfiles_dir}" ]]; then
-    log_error "dotfiles directory not specified."
-    return 1
-  fi
-
-  mkdir -p "${ai_config_dir}"
-
-  log_info "setting up gemini ai assistant..."
-  if [[ -f "${ai_env_file}" || -f "${HOME}/.gemini_ai_env" ]]; then
-    log_prompt "gemini config exists. overwrite? [y/N]: "
-    read -r reset_gemini
-  fi
-
-  if [[ "${reset_gemini:-}" =~ ^[Yy]$ ]]; then
-    log_prompt "setup gemini ai assistant? [y/N]: "
-    read -r enable_ai
-    if [[ "${enable_ai:-}" =~ ^[Yy]$ ]]; then
-      log_prompt "gemini api key: "
-      read -r -s gemini_key
-      echo
-      {
-        printf 'GEMINI_API_KEY=%q\n' "${gemini_key}"
-        echo "GEMINI_MODEL=\"gemini-3.5-flash-lite\""
-        echo "AI_ENABLED=1"
-        echo "AI_AUTOCORRECT_ENABLED=1"
-      } > "${ai_env_file}"
-      chmod 600 "${ai_env_file}"
-      log_success "gemini config saved."
-    fi
-  else
-    log_warn "keeping existing gemini config."
-  fi
-}
-
 main() {
   local dotfiles_dir="${SCRIPT_DIR}"
   local zsh_plugins_dir="${XDG_DATA_HOME:-${HOME}/.local/share}/zsh/plugins"
@@ -314,7 +272,6 @@ main() {
   symlink_configurations "${dotfiles_dir}"
   setup_nerd_font
   setup_default_shell
-  setup_gemini_env "${dotfiles_dir}"
 
   log_success "installation complete! please restart termux."
   trap - EXIT

@@ -36,8 +36,6 @@ get_targets() {
   candidates+=("${HOME}/.netrc")
   candidates+=("${config_dir}/gh/hosts.yml")
   candidates+=("${HOME}/.aws/credentials")
-  candidates+=("${config_dir}/muxrc/ai.env")
-  candidates+=("${HOME}/.gemini_ai_env")
 
   # Shell histories and project trash
   candidates+=("${state_dir}/zsh/history")
@@ -48,7 +46,6 @@ get_targets() {
   if [[ -n "${HISTFILE:-}" && "${HISTFILE}" != "${HOME}/.zsh_history" && "${HISTFILE}" != "${HOME}/.bash_history" ]]; then
     candidates+=("${HISTFILE}")
   fi
-  candidates+=("${state_dir}/muxrc/ai-audit.log")
   candidates+=("${cache_dir}/muxrc/clip_history.log")
   candidates+=("${data_dir}/Trash")
   candidates+=("${HOME}/.trash")

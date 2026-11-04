@@ -40,23 +40,6 @@ migrate_shadow() {
   fi
 }
 
-migrate_ai_env() {
-  local config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/muxrc"
-  local target_file="${config_dir}/ai.env"
-  local legacy_file="${HOME}/.gemini_ai_env"
-
-  if [[ -f "${legacy_file}" ]]; then
-    mkdir -p "${config_dir}"
-    if [[ ! -f "${target_file}" ]]; then
-      mv "${legacy_file}" "${target_file}"
-    else
-      rm -f "${legacy_file}" 2> /dev/null || true
-    fi
-    chmod 600 "${target_file}" 2> /dev/null || true
-    log_success "migrated gemini config to ~/.config/muxrc/ai.env"
-  fi
-}
-
 migrate_zsh_plugins() {
   local data_dir="${XDG_DATA_HOME:-${HOME}/.local/share}"
   local target_dir="${data_dir}/zsh/plugins"
@@ -160,10 +143,13 @@ migrate_vault() {
 
 cleanup_legacy_dirs() {
   local cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}"
+  local config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/muxrc"
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
 
-  if [[ -f "${cache_dir}/gemini_cooldown" ]]; then
-    rm -f "${cache_dir}/gemini_cooldown" 2> /dev/null || true
-  fi
+  rm -f "${cache_dir}/gemini_cooldown" "${cache_dir}/muxrc/gemini_cooldown" 2> /dev/null || true
+  rm -f "${cache_dir}/muxrc/last_model" 2> /dev/null || true
+  rm -f "${config_dir}/ai.env" "${HOME}/.gemini_ai_env" 2> /dev/null || true
+  rm -f "${state_dir}/ai-audit.log" 2> /dev/null || true
 
   local legacy_clip="${cache_dir}/clip_history.log"
   local new_clip="${cache_dir}/muxrc/clip_history.log"
@@ -206,7 +192,6 @@ main() {
   fi
 
   migrate_shadow
-  migrate_ai_env
   migrate_zsh_plugins
   migrate_zsh_history
   migrate_trash
