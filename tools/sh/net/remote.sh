@@ -19,7 +19,7 @@ usage() {
   echo "  setup                sshd config"
   echo "  pair [key|file]      register public key"
   echo "  config               open sshd cfg in editor"
-  echo "  sessions [subcmd]    manage tmux sessions"
+  echo "  sessions [subcmd]    manage remote & tmux sessions"
   echo "  start                start ssh daemon"
   echo "  stop                 stop ssh daemon"
 }
@@ -446,9 +446,9 @@ sessions_usage() {
   echo "usage: net remote sessions <command> [args]"
   echo ""
   echo "commands:"
-  echo "  list, ls             list active tmux sessions"
-  echo "  attach, a [name]     attach to session (default: main)"
-  echo "  kill, k <name>       terminate specific session"
+  echo "  list, ls             list active remote & tmux sessions"
+  echo "  attach, a [name]     attach to tmux session (default: main)"
+  echo "  kill, k <name>       terminate specific tmux session"
   echo "  kill-all             terminate all tmux sessions"
 }
 
@@ -460,17 +460,37 @@ manage_sessions() {
     return 0
   fi
 
-  require_cmd tmux || return 1
-
   case "${action}" in
     list | ls)
-      if tmux list-sessions > /dev/null 2>&1; then
-        tmux list-sessions
+      log_info "remote sessions"
+
+      local port
+      port=$(get_sshd_port)
+      if pgrep -x sshd > /dev/null 2>&1; then
+        local clients
+        clients=$(get_active_clients "${port}")
+        if [[ "${clients}" == "none" ]]; then
+          log_info "ssh: no active clients"
+        else
+          log_success "ssh: ${clients}"
+        fi
       else
-        log_info "no active tmux sessions."
+        log_warn "ssh: daemon inactive"
+      fi
+
+      if command -v tmux > /dev/null 2>&1; then
+        if tmux list-sessions > /dev/null 2>&1; then
+          log_success "tmux sessions:"
+          tmux list-sessions -F "  * #{session_name}: #{session_windows} win #{?session_attached,(attached),(detached)}" >&2
+        else
+          log_info "tmux: no active sessions"
+        fi
+      else
+        log_info "tmux: not installed"
       fi
       ;;
     attach | a)
+      require_cmd tmux || return 1
       local session_name="${2:-main}"
       log_info "attaching to '${session_name}'..."
       if [[ -n "${TMUX:-}" ]]; then
@@ -483,6 +503,7 @@ manage_sessions() {
       fi
       ;;
     kill | k)
+      require_cmd tmux || return 1
       local session_name="${2:-}"
       if [[ -z "${session_name}" ]]; then
         log_error "usage: net remote sessions kill <name>"
@@ -497,6 +518,7 @@ manage_sessions() {
       fi
       ;;
     kill-all)
+      require_cmd tmux || return 1
       tmux kill-server 2> /dev/null || true
       log_success "all tmux sessions terminated."
       ;;
