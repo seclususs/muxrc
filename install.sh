@@ -96,7 +96,6 @@ setup_directories() {
 }
 
 setup_sudo_wrapper() {
-  local reset_sudo="y"
   local sudo_pass=""
   local sudo_pass_confirm=""
   local prefix_dir="${PREFIX:-/data/data/com.termux/files/usr}"
@@ -107,49 +106,47 @@ setup_sudo_wrapper() {
 
   log_info "setting up sudo wrapper..."
   if [[ -f "${shadow_file}" || -f "${HOME}/.config/muxrc/sudo_hash" || -f "${HOME}/.sudo_hash" ]]; then
-    log_prompt "sudo pass configured. overwrite? [y/N]: "
-    read -r reset_sudo
+    log_info "sudo password already configured, skipping."
+    return 0
   fi
 
-  if [[ "${reset_sudo:-}" =~ ^[Yy]$ ]]; then
-    log_prompt "create your sudo password: "
-    read -r -s sudo_pass
-    echo ""
-    log_prompt "confirm sudo password: "
-    read -r -s sudo_pass_confirm
-    echo ""
+  log_prompt "create your sudo password: "
+  read -r -s sudo_pass
+  echo ""
+  log_prompt "confirm sudo password: "
+  read -r -s sudo_pass_confirm
+  echo ""
 
-    if [[ -z "${sudo_pass}" ]]; then
-      log_error "password cannot be empty. please retry."
-    elif [[ "${sudo_pass}" == "${sudo_pass_confirm}" ]]; then
-      local hash=""
-      if command -v openssl > /dev/null 2>&1; then
-        hash=$(printf '%s' "${sudo_pass}" | openssl passwd -6 -stdin 2> /dev/null || true)
-      fi
-      if [[ -z "${hash}" ]]; then
-        hash=$(printf '%s' "${sudo_pass}" | sha256sum | awk '{print $1}')
-      fi
-
-      local current_user="${USER:-$(whoami 2> /dev/null || id -un 2> /dev/null || echo "termux")}"
-      local days_since_epoch=$(($(date +%s 2> /dev/null || echo 0) / 86400))
-      local tmp_file
-      tmp_file=$(mktemp "${shadow_dir}/shadow.XXXXXX" 2> /dev/null || mktemp "${TMPDIR:-/tmp}/shadow.XXXXXX")
-      printf '%s:%s:%s:0:99999:7:::\n' "${current_user}" "${hash}" "${days_since_epoch}" > "${tmp_file}"
-      chmod 600 "${tmp_file}"
-      mv -f "${tmp_file}" "${shadow_file}"
-
-      local termux_passwd="${prefix_dir}/bin/passwd"
-      if [[ -x "${termux_passwd}" ]]; then
-        printf '%s\n%s\n' "${sudo_pass}" "${sudo_pass}" | "${termux_passwd}" > /dev/null 2>&1 || true
-      fi
-
-      rm -f "${HOME}/.config/muxrc/sudo_hash" "${HOME}/.sudo_hash" 2> /dev/null || true
-      log_success "shadow password configured."
-    else
-      log_error "passwords mismatch. please retry."
+  if [[ -z "${sudo_pass}" ]]; then
+    log_error "password cannot be empty. please retry."
+    return 1
+  elif [[ "${sudo_pass}" == "${sudo_pass_confirm}" ]]; then
+    local hash=""
+    if command -v openssl > /dev/null 2>&1; then
+      hash=$(printf '%s' "${sudo_pass}" | openssl passwd -6 -stdin 2> /dev/null || true)
     fi
+    if [[ -z "${hash}" ]]; then
+      hash=$(printf '%s' "${sudo_pass}" | sha256sum | awk '{print $1}')
+    fi
+
+    local current_user="${USER:-$(whoami 2> /dev/null || id -un 2> /dev/null || echo "termux")}"
+    local days_since_epoch=$(($(date +%s 2> /dev/null || echo 0) / 86400))
+    local tmp_file
+    tmp_file=$(mktemp "${shadow_dir}/shadow.XXXXXX" 2> /dev/null || mktemp "${TMPDIR:-/tmp}/shadow.XXXXXX")
+    printf '%s:%s:%s:0:99999:7:::\n' "${current_user}" "${hash}" "${days_since_epoch}" > "${tmp_file}"
+    chmod 600 "${tmp_file}"
+    mv -f "${tmp_file}" "${shadow_file}"
+
+    local termux_passwd="${prefix_dir}/bin/passwd"
+    if [[ -x "${termux_passwd}" ]]; then
+      printf '%s\n%s\n' "${sudo_pass}" "${sudo_pass}" | "${termux_passwd}" > /dev/null 2>&1 || true
+    fi
+
+    rm -f "${HOME}/.config/muxrc/sudo_hash" "${HOME}/.sudo_hash" 2> /dev/null || true
+    log_success "shadow password configured."
   else
-    log_warn "keeping existing sudo password."
+    log_error "passwords mismatch. please retry."
+    return 1
   fi
 }
 
@@ -223,9 +220,30 @@ symlink_configurations() {
   ln -sf "${dotfiles_dir}/termux/colors.properties" "${HOME}/.termux/colors.properties"
   ln -sf "${dotfiles_dir}/termux/termux.properties" "${HOME}/.termux/termux.properties"
   ln -sf "${dotfiles_dir}/nano/.nanorc" "${HOME}/.nanorc"
+}
 
+setup_boot_services() {
+  local dotfiles_dir="${1:-}"
+
+  if [[ -z "${dotfiles_dir}" ]]; then
+    log_error "dotfiles directory not specified."
+    return 1
+  fi
+
+  log_info "configuring boot services..."
+  mkdir -p "${HOME}/.termux/boot"
   ln -sf "${dotfiles_dir}/boot/start-sshd" "${HOME}/.termux/boot/start-sshd"
   chmod +x "${dotfiles_dir}/boot/start-sshd" 2> /dev/null || true
+
+  local magisk_service_dir="/data/adb/service.d"
+  local magisk_runner="${magisk_service_dir}/muxrc-boot.sh"
+
+  if command -v su > /dev/null 2>&1 && su -c true 2> /dev/null; then
+    if su -c "[ -d '${magisk_service_dir}' ]" 2> /dev/null; then
+      su -c "cp '${dotfiles_dir}/boot/magisk-boot.sh' '${magisk_runner}'" 2> /dev/null \
+        && su -c "chmod 755 '${magisk_runner}'" 2> /dev/null || true
+    fi
+  fi
 }
 
 setup_nerd_font() {
@@ -270,6 +288,7 @@ main() {
   setup_zsh_plugins "${zsh_plugins_dir}"
   setup_storage_symlinks
   symlink_configurations "${dotfiles_dir}"
+  setup_boot_services "${dotfiles_dir}"
   setup_nerd_font
   setup_default_shell
 

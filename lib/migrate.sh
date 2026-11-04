@@ -184,6 +184,23 @@ cleanup_legacy_dirs() {
   [[ -d "${HOME}/.sessions" ]] && rmdir "${HOME}/.sessions" 2> /dev/null || true
 }
 
+migrate_magisk_boot() {
+  local magisk_service_dir="/data/adb/service.d"
+  local magisk_runner="${magisk_service_dir}/muxrc-boot.sh"
+  local repo_dir
+  repo_dir="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")")"
+  local source_runner="${repo_dir}/boot/magisk-boot.sh"
+
+  if [[ -f "${source_runner}" ]] && command -v su > /dev/null 2>&1 && su -c true 2> /dev/null; then
+    if su -c "[ -d '${magisk_service_dir}' ]" 2> /dev/null; then
+      if su -c "[ -f '${magisk_runner}' ]" 2> /dev/null; then
+        su -c "cp '${source_runner}' '${magisk_runner}'" 2> /dev/null || true
+        su -c "chmod 755 '${magisk_runner}'" 2> /dev/null || true
+      fi
+    fi
+  fi
+}
+
 main() {
   if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     echo "usage: migrate.sh [-h|--help]"
@@ -196,6 +213,7 @@ main() {
   migrate_zsh_history
   migrate_trash
   migrate_vault
+  migrate_magisk_boot
   cleanup_legacy_dirs
 }
 
