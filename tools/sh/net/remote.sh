@@ -72,7 +72,15 @@ _run_ip() {
 get_device_ip() {
   local ip_addr=""
 
-  ip_addr=$(_run_ip -4 route get 1.1.1.1 2> /dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1); exit}' || true)
+  local route_out
+  route_out=$(_run_ip -4 route get 1.1.1.1 2> /dev/null || true)
+  if [[ -n "${route_out}" ]]; then
+    local r_dev
+    r_dev=$(awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1); exit}' <<< "${route_out}")
+    if ! [[ "${r_dev}" =~ ^(dummy|lo|tun|tailscale|wg) ]]; then
+      ip_addr=$(awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1); exit}' <<< "${route_out}")
+    fi
+  fi
 
   if [[ -z "${ip_addr}" ]]; then
     local iface
@@ -93,6 +101,111 @@ get_device_ip() {
   printf "%s\n" "${ip_addr}"
 }
 
+get_active_clients() {
+  local port="${1:-8022}"
+  local my_uid="${EUID:-$(id -u)}"
+  local total_count=0
+  local unique_ips=()
+
+  _add_unique_ip() {
+    local ip="${1}"
+    [[ -z "${ip}" ]] && return 0
+    case " ${unique_ips[*]:-} " in
+      *" ${ip} "*) ;;
+      *) unique_ips+=("${ip}") ;;
+    esac
+  }
+
+  local ss_bin=""
+  if command -v ss > /dev/null 2>&1; then
+    ss_bin="ss"
+  elif [[ -x "${PREFIX:-/data/data/com.termux/files/usr}/bin/ss" ]]; then
+    ss_bin="${PREFIX:-/data/data/com.termux/files/usr}/bin/ss"
+  fi
+
+  local ss_out=""
+  if [[ -n "${ss_bin}" ]]; then
+    ss_out=$("${ss_bin}" -tn state established "( sport = :${port} )" 2> /dev/null || true)
+  fi
+
+  if [[ -z "${ss_out}" && "${my_uid}" -ne 0 ]] && command -v su > /dev/null 2>&1; then
+    local su_ss="ss"
+    [[ -x "${PREFIX:-/data/data/com.termux/files/usr}/bin/ss" ]] && su_ss="${PREFIX:-/data/data/com.termux/files/usr}/bin/ss"
+    ss_out=$(su -c "${su_ss} -tn state established '( sport = :${port} )'" 2> /dev/null || true)
+  fi
+
+  if [[ -n "${ss_out}" ]]; then
+    while read -r raw_peer; do
+      [[ -z "${raw_peer}" ]] && continue
+      ((total_count++))
+      local peer_ip
+      peer_ip=$(printf "%s\n" "${raw_peer}" | sed -E 's/:[0-9]+$//; s/^\[::ffff://; s/^\[//; s/\]$//')
+      _add_unique_ip "${peer_ip}"
+    done < <(printf "%s\n" "${ss_out}" | awk 'NR>1 {print $NF}' || true)
+  fi
+
+  if [[ "${total_count}" -eq 0 ]]; then
+    local sshd_pid
+    sshd_pid=$(pgrep -u "${my_uid}" -x sshd 2> /dev/null | head -n 1 || true)
+    if [[ -n "${sshd_pid}" ]]; then
+      local child_pids
+      child_pids=$(pgrep -u "${my_uid}" -P "${sshd_pid}" 2> /dev/null || true)
+      if [[ -n "${child_pids}" ]]; then
+        for cpid in ${child_pids}; do
+          ((total_count++))
+          local pids_to_check="${cpid}"
+          local grand_pids
+          grand_pids=$(pgrep -u "${my_uid}" -P "${cpid}" 2> /dev/null || true)
+          if [[ -n "${grand_pids}" ]]; then
+            pids_to_check="${pids_to_check} ${grand_pids}"
+          fi
+
+          local found_ip=""
+          for p in ${pids_to_check}; do
+            if [[ -r "/proc/${p}/environ" ]]; then
+              local env_ip
+              env_ip=$(tr '\0' '\n' < "/proc/${p}/environ" 2> /dev/null | awk -F'[ =]' '$1=="SSH_CLIENT"{print $2; exit}' || true)
+              if [[ -n "${env_ip}" ]]; then
+                found_ip="${env_ip}"
+                break
+              fi
+            fi
+          done
+          _add_unique_ip "${found_ip}"
+        done
+      fi
+    fi
+  fi
+
+  if [[ -n "${SSH_CLIENT:-}" ]]; then
+    local cur_ip="${SSH_CLIENT%% *}"
+    if [[ -n "${cur_ip}" ]]; then
+      _add_unique_ip "${cur_ip}"
+      if [[ "${total_count}" -eq 0 ]]; then
+        total_count=1
+      fi
+    fi
+  fi
+
+  if [[ "${total_count}" -gt 0 ]]; then
+    local joined=""
+    for ip in "${unique_ips[@]}"; do
+      if [[ -z "${joined}" ]]; then
+        joined="${ip}"
+      else
+        joined="${joined}, ${ip}"
+      fi
+    done
+    if [[ -n "${joined}" ]]; then
+      printf "%s active (%s)\n" "${total_count}" "${joined}"
+    else
+      printf "%s active\n" "${total_count}"
+    fi
+  else
+    printf "none\n"
+  fi
+}
+
 status_remote() {
   log_info "remote service status"
 
@@ -100,7 +213,9 @@ status_remote() {
   port=$(get_sshd_port)
   local current_user="${USER:-$(whoami)}"
 
+  local sshd_active=0
   if pgrep -x sshd > /dev/null 2>&1; then
+    sshd_active=1
     local sshd_pid
     sshd_pid=$(pgrep -x sshd | head -n 1)
     log_success "sshd: active (pid ${sshd_pid}, port ${port})"
@@ -117,24 +232,56 @@ status_remote() {
     log_info "wake-lock: standard"
   fi
 
+  if [[ "${sshd_active}" -eq 1 ]]; then
+    local clients
+    clients=$(get_active_clients "${port}")
+    if [[ "${clients}" == "none" ]]; then
+      log_info "clients: none"
+    else
+      log_success "clients: ${clients}"
+    fi
+  fi
+
   local lan_ip
   lan_ip=$(get_device_ip)
   if [[ -n "${lan_ip}" ]]; then
-    log_info "ip: ${lan_ip} -> ssh -p ${port} ${current_user}@${lan_ip}"
+    log_info "ip (lan): ${lan_ip}"
   fi
 
+  local vpn_ips=()
   local vpn_lines=""
   vpn_lines=$(_run_ip -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $2 " " $4}' | cut -d/ -f1 || true)
   if [[ -n "${vpn_lines}" ]]; then
     while read -r vpn_iface vpn_addr; do
       if [[ -n "${vpn_iface}" && -n "${vpn_addr}" ]]; then
-        log_info "vpn (${vpn_iface}): ${vpn_addr} -> ssh -p ${port} ${current_user}@${vpn_addr}"
+        log_info "ip (vpn): ${vpn_addr} (${vpn_iface})"
+        vpn_ips+=("${vpn_addr}")
       fi
     done <<< "${vpn_lines}"
   fi
 
-  if [[ -z "${lan_ip}" && -z "${vpn_lines}" ]]; then
+  if [[ -z "${lan_ip}" && ${#vpn_ips[@]} -eq 0 ]]; then
     log_warn "ip: no network connection"
+  fi
+
+  local connect_cmds=()
+  for vip in "${vpn_ips[@]}"; do
+    connect_cmds+=("ssh -p ${port} ${current_user}@${vip}")
+  done
+  if [[ -n "${lan_ip}" ]]; then
+    local lan_cmd="ssh -p ${port} ${current_user}@${lan_ip}"
+    case " ${connect_cmds[*]:-} " in
+      *" ${lan_cmd} "*) ;;
+      *) connect_cmds+=("${lan_cmd}") ;;
+    esac
+  fi
+
+  if [[ ${#connect_cmds[@]} -gt 0 ]]; then
+    echo ""
+    log_info "connect:"
+    for cmd in "${connect_cmds[@]}"; do
+      echo "  ${cmd}"
+    done
   fi
 
   if command -v tmux > /dev/null 2>&1; then
