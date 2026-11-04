@@ -49,7 +49,9 @@ tmp=$(mktemp -d 2> /dev/null || echo "${TMPDIR:-/tmp}/termux-sim.$$")
 mkdir -p "${tmp}"
 # shellcheck disable=SC2317,SC2329
 cleanup() { rm -rf "${tmp}"; }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 : > "${tmp}/pass.list"
 : > "${tmp}/extra.profile"
 

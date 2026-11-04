@@ -27,7 +27,7 @@ Output: LEVEL FILE:LINE [CODE] message, then one SUMMARY line.
 
 After editing on a device, apply with: termux-reload-settings
 (some properties need the app process restarted).
-Exit: 0 no ERROR, 1 findings, 2 usage error.
+Exit: 0 no ERROR (WARN and INFO never change it), 1 at least one ERROR, 2 usage error.
 '@
 }
 

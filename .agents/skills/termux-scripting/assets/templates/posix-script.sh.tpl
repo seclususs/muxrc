@@ -47,7 +47,10 @@ main() {
   [ $# -ge 1 ] || die "missing argument (see --help)"
   require_cmd TOOL
   tmp=$(mktemp -d "${TMPDIR:-${PREFIX}/tmp}/NAME.XXXXXX")
-  trap cleanup EXIT INT TERM
+  # INT and TERM must exit: after a trap that only cleans up, the script resumes.
+  trap cleanup EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
   printf '%s\n' "$1"
 }
 

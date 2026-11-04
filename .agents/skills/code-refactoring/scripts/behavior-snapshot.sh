@@ -139,7 +139,10 @@ sandbox="${here}/../../termux-scripting/scripts/sandbox-run.sh"
 }
 
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/behavior-snapshot.XXXXXX") || die_usage "cannot create a temporary directory"
-trap 'rm -rf "${tmp}"' EXIT INT TERM HUP
+trap 'rm -rf "${tmp}"' EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 if [ "${mode}" = record ]; then
   mkdir -p "${dir}" || die_usage "cannot create ${dir}"
   work=${dir}

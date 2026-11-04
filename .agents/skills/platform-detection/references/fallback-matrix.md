@@ -12,7 +12,7 @@ Resolve each need from the `cap.*` keys of the detection output. "Partial" means
 | Syntax, zsh | `zsh -n` | heuristic Z-rules | partial. Windows: WSL, or MSYS2 `pacman -S zsh` |
 | Complete diff | `git` through `diff-collect` | `diff -u` (POSIX) or `Compare-Object` (PowerShell) on two copies | partial: no statistics check |
 | Search | `rg`, `grep`, PowerShell `Select-String` | | |
-| JSON | `jq`, `python3`, `node`, PowerShell `ConvertFrom-Json` | | |
+| JSON | `jq`, `python3`, PowerShell `ConvertFrom-Json` | | |
 | Archive | `zip`, `tar`, PowerShell `Compress-Archive` | | keep the directory structure |
 | Termux-like run | `cap.sandbox` (sandbox-run stubs), `termux-sim` (documented Termux and root behavior), `cap.termux_container` (docker) | give the user device commands | stub-based or simulated only |
 | Behavior snapshot | `behavior-snapshot` (POSIX shell plus the shell under test) | run the cases by hand in `sandbox-run` or on a device and compare | partial |

@@ -94,7 +94,9 @@ fi
 
 tmp=$(mktemp -d 2> /dev/null || echo "${TMPDIR:-/tmp}/format-shell.$$")
 mkdir -p "${tmp}"
-trap 'rm -rf "${tmp}"' EXIT INT TERM
+trap 'rm -rf "${tmp}"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # File discovery and dialect detection are shared with the linter
 printf '%s\n' "${args}" | while IFS= read -r a; do

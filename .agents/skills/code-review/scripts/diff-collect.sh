@@ -115,6 +115,7 @@ git rev-parse --is-inside-work-tree > /dev/null 2>&1 || die_usage "not inside a 
 top=$(git rev-parse --show-toplevel) || exit 3
 cd "${top}" || exit 3
 [ -n "${out}" ] || out="${top}/.artifacts/diff"
+case ${out} in /* | [A-Za-z]:*) ;; *) out="${top}/${out}" ;; esac
 mkdir -p "${out}" || die_usage "cannot create output directory: ${out}"
 # Output convention: .artifacts/ at the project root ignores itself in git
 case ${out} in
@@ -143,7 +144,10 @@ case ${scope} in
 esac
 
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/diff-collect.XXXXXX") || die_usage "cannot create a temporary directory"
-trap 'rm -rf "${tmp}"' EXIT INT TERM HUP
+trap 'rm -rf "${tmp}"' EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # shellcheck disable=SC2086
 g diff ${dopts} -U"${ctx}" --output="${out}/tracked.diff" ${sargs} -- ${pspec} || {

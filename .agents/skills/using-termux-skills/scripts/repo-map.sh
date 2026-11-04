@@ -80,7 +80,9 @@ root=$(pwd)
 
 tmp=$(mktemp -d 2> /dev/null || echo "${TMPDIR:-/tmp}/repo-map.$$")
 mkdir -p "${tmp}"
-trap 'rm -rf "${tmp}"' EXIT INT TERM
+trap 'rm -rf "${tmp}"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # File inventory: tracked + untracked-not-ignored via git, else find.
 if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
@@ -275,6 +277,6 @@ echo
 
 if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
   echo "commits:"
-  git log -n 8 --format='  %s' 2> /dev/null
+  git --no-pager log -n 8 --format='  %s' 2> /dev/null
 fi
 exit 0

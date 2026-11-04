@@ -97,7 +97,10 @@ if [ -n "${compare}" ] && [ ! -f "${compare}" ]; then
 fi
 
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/def-index.XXXXXX") || die_usage "cannot create a temporary directory"
-trap 'rm -rf "${tmp}"' EXIT INT TERM HUP
+trap 'rm -rf "${tmp}"' EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 is_shell_name() {
   case ${1##*/} in
@@ -293,7 +296,7 @@ if [ -z "${compare}" ]; then
       */.artifacts/*) [ -e "${outfile%%/.artifacts/*}/.artifacts/.gitignore" ] || printf '*\n' > "${outfile%%/.artifacts/*}/.artifacts/.gitignore" ;;
     esac
     build_index "${outfile}"
-    [ -s "${outfile}" ] || die_usage "could not write ${outfile}"
+    [ -f "${outfile}" ] || die_usage "could not write ${outfile}"
     echo "def-index: wrote $(awk 'END { print NR }' "${outfile}") entries to ${outfile}"
     exit 0
   fi

@@ -64,8 +64,29 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-have() { command -v "$1" > /dev/null 2>&1; }
-path_of() { command -v "$1" 2> /dev/null || echo "-"; }
+have() {
+  command -v "$1" > /dev/null 2>&1 && return 0
+  [ "$1" = "python3" ] && [ "$(path_of python3)" != "-" ]
+}
+path_of() {
+  p=$(command -v "$1" 2> /dev/null) && {
+    echo "${p}"
+    return 0
+  }
+  if [ "$1" = "python3" ]; then
+    for cand in python py; do
+      if p=$(command -v "${cand}" 2> /dev/null); then
+        case $("${p}" -V 2>&1) in
+          "Python 3."*)
+            echo "${p}"
+            return 0
+            ;;
+        esac
+      fi
+    done
+  fi
+  echo "-"
+}
 
 # Host OS and shell environment
 uname_s=$(uname -s 2> /dev/null || echo unknown)
@@ -132,7 +153,7 @@ if [ "${env}" = "termux" ]; then
 fi
 
 # Tool availability
-default_tools="git sh dash bash zsh busybox shellcheck shfmt checkbashisms rg jq python3 node pwsh powershell.exe docker adb zip unzip tar curl"
+default_tools="git sh dash bash zsh busybox shellcheck shfmt checkbashisms rg jq python3 pwsh powershell.exe docker adb zip unzip tar curl"
 extra_tools=$(printf '%s' "${extra}" | tr ',' ' ')
 missing=""
 seen=" "
@@ -195,8 +216,6 @@ if have jq; then
   echo "cap.json=jq"
 elif have python3; then
   echo "cap.json=python3"
-elif have node; then
-  echo "cap.json=node"
 elif have pwsh; then
   echo "cap.json=pwsh"
 else

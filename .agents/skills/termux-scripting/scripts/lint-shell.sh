@@ -15,7 +15,8 @@ Usage: lint-shell.sh [options] [PATH ...]
 
 Quality gate for shell code targeting Termux:
   sh/bash  ShellCheck + shfmt (project .editorconfig) + syntax check
-  zsh      zsh -n only (ShellCheck unsupported; shfmt can corrupt zsh syntax)
+  zsh      zsh -n, plus an advisory shfmt diff when shfmt supports zsh (ShellCheck unsupported;
+           shfmt can corrupt zsh syntax, so zsh files are never rewritten)
   all      built-in heuristics: line endings, banner borders, bashisms,
            zsh pitfalls, Termux path/command compatibility, log-prefix scope
 No PATH: lints the shell-like files of the repository (agent dirs excluded).
@@ -44,7 +45,9 @@ EOF
 
 tmp=$(mktemp -d 2> /dev/null || echo "${TMPDIR:-/tmp}/lint-shell.$$")
 mkdir -p "${tmp}"
-trap 'rm -rf "${tmp}"' EXIT INT TERM
+trap 'rm -rf "${tmp}"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 : > "${tmp}/args.list"
 
 dialect_force=""
@@ -407,7 +410,7 @@ lint_file() {
   case ${d} in
     posix | bash)
       if have shellcheck; then
-        if [ "${hasbang}" -eq 1 ]; then
+        if [ "${hasbang}" -eq 1 ] && [ -z "${dialect_force}" ]; then
           sc=$(shellcheck -f gcc "${f}" 2>&1)
         elif [ "${d}" = bash ]; then
           sc=$(shellcheck -f gcc -s bash "${f}" 2>&1)

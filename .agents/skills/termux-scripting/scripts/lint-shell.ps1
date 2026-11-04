@@ -15,7 +15,8 @@ Usage: powershell -NoProfile -ExecutionPolicy Bypass -File lint-shell.ps1 [optio
 
 Quality gate for shell code targeting Termux:
   sh/bash  ShellCheck + shfmt (project .editorconfig) + syntax check
-  zsh      zsh -n only (ShellCheck unsupported; shfmt can corrupt zsh syntax)
+  zsh      zsh -n, plus an advisory shfmt diff when shfmt supports zsh (ShellCheck unsupported;
+           shfmt can corrupt zsh syntax, so zsh files are never rewritten)
   all      built-in heuristics: line endings, banner borders, bashisms,
            zsh pitfalls, Termux path/command compatibility, log-prefix scope
 No PATH: lints the shell-like files of the repository (agent dirs excluded).
@@ -337,7 +338,7 @@ function Lint-File([string]$f, [string]$d) {
   if ($d -eq 'posix' -or $d -eq 'bash') {
     if ($shellcheck) {
       $scArgs = @('-f', 'gcc')
-      if (-not $hasBang) { if ($d -eq 'bash') { $scArgs += @('-s', 'bash') } else { $scArgs += @('-s', 'sh') } }
+      if (-not $hasBang -or $dialectForce) { if ($d -eq 'bash') { $scArgs += @('-s', 'bash') } else { $scArgs += @('-s', 'sh') } }
       $scArgs += $fp
       foreach ($line in (Invoke-Native $shellcheck $scArgs)) {
         $m = [regex]::Match($line, '^(.*?):([0-9]+):[0-9]+: (error|warning|note): (.*)$')
@@ -419,7 +420,11 @@ function Walk-Files([string]$dir) {
 }
 if ($argPaths.Count -gt 0) {
   foreach ($a in $argPaths) {
-    if (Test-Path -LiteralPath $a -PathType Container) { foreach ($x in (Walk-Files $a)) { $fileList.Add($x) } }
+    if (Test-Path -LiteralPath $a -PathType Container) {
+      $base = (Resolve-Path -LiteralPath $a).Path
+      $shown = $a.Replace('\', '/').TrimEnd('/')
+      foreach ($x in (Walk-Files $base)) { $fileList.Add($shown + '/' + $x.Substring($base.Length).TrimStart('\', '/').Replace('\', '/')) }
+    }
     elseif (Test-Path -LiteralPath $a -PathType Leaf) { $fileList.Add($a) }
     else { [Console]::Error.WriteLine("lint-shell: not found: $a"); exit 2 }
   }

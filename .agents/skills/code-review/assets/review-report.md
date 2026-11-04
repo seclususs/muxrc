@@ -3,7 +3,7 @@
 Delete a section that does not apply.
 
 ## Summary
-- Verdict: approve | changes needed (N blocker, N major)
+- Verdict: approve | changes needed (N blocker, N major) | no findings
 - Scope: files or diff summary; scope flags used
 - Coverage: diff parts and line counts read in full; files read in full; skipped files; verify=ok|mismatch
 - Lint: SUMMARY line and coverage

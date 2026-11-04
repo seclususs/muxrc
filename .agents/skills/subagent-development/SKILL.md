@@ -28,12 +28,12 @@ research (read-only), implementer, reviewer (read-only), tester. Fill every plac
 Separation: the implementer does not review its own work; research and review do not edit; the tester reports and does not fix.
 
 ## Antigravity subagents
-- `invoke_subagent` takes `Subagents`, an array; each item holds `Prompt` (the brief), `Role`, `TypeName`, and optional `Workspace` One call can start several independent subagents.
+- `invoke_subagent` takes `Subagents`, an array; each item holds `Prompt` (the brief), `Role`, `TypeName`, and optional `Workspace`. One call can start several independent subagents.
 - Built-in types: `research` (codebase research; the docs do not state its write access, so the brief also says "do not edit") fits the research and reviewer roles; `self` (a clone of the caller, same instructions and tools) fits the implementer and tester roles.
 - `Workspace`: `inherit` for sequential edits; `branch` (isolated git worktree) for parallel edits that may overlap, merged afterwards; `share` only when agents must see each other's files live.
-- `define_subagent` registers a reusable role: `name`, `description`, `system_prompt`, `enable_write_tools`, `enable_mcp_tools`, `enable_subagent_tools`. Least privilege: no write tools for research and reviewer roles; subagent tools only for a role that must delegate.
+- `define_subagent` creates a role for the current session only (reusable roles are Markdown files in `.agents/agents/`): `name`, `description`, `system_prompt`, `enable_write_tools`, `enable_mcp_tools`, `enable_subagent_tools`. Least privilege: no write tools for research and reviewer roles; subagent tools only for a role that must delegate.
 - `send_message` (`Recipient`, `Message`) reaches a running subagent; `manage_subagents` (`Action`: `list`, `kill`, `kill_all`) inspects or stops them.
-- Subagents run asynchronously. Do not poll in a loop; the parent is woken when one reports.
+- Subagents run asynchronously and send a result message to the parent when done. Do not poll in a loop.
 
 ## Sequential passes (no subagent tool)
 Run the roles as separate passes in this session, in the order of the phases. Before the review and test passes, re-run `diff-collect` and re-read the changed files from disk; ignore your memory of why they changed. State in the report that the review was not independent.

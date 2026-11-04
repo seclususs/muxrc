@@ -90,6 +90,7 @@ if ($script:gitExit -ne 0) { Fail 'cannot resolve the repository root' 3 }
 Set-Location -LiteralPath $top
 [Environment]::CurrentDirectory = $top
 if ($out -eq '') { $out = "$top/.artifacts/diff" }
+elseif (-not [System.IO.Path]::IsPathRooted($out)) { $out = "$top/$out" }
 try { $null = New-Item -ItemType Directory -Force -Path $out } catch { Fail "cannot create output directory: $out" 2 }
 # Output convention: .artifacts/ at the project root ignores itself in git
 if ($out.Replace('\', '/').StartsWith("$top/.artifacts")) {

@@ -18,7 +18,7 @@ Script invocation: core policy. Runtime facts: skill `termux-environment`. Host 
 - Start from `assets/templates/` (posix-script, zsh-module, command-wrapper, test-harness): replace the `NAME` and `TOOL` placeholders, keep banners exact-length, and add a comment only under the comment rule.
 - `main "$@"` entry; single-purpose functions; libraries and modules do no work at source time.
 - Fail fast: `set -eu` (sh/bash), `${1:-}` for optional arguments; validate arguments and required commands up front with a clear stderr message and a non-zero exit.
-- Idempotent: a re-run changes nothing. Check state first; `mkdir -p`, `ln -sfn`, `grep -qxF line file || printf '%s\n' line >> file`; write via temp file in the same directory then `mv`; back up user files before overwriting; remove temp files with `trap ... EXIT INT TERM`.
+- Idempotent: a re-run changes nothing. Check state first; `mkdir -p`, `ln -sfn`, `grep -qxF line file || printf '%s\n' line >> file`; write via temp file in the same directory then `mv`; back up user files before overwriting; remove temp files in an `EXIT` trap and map signals with `trap 'exit 130' INT` and `trap 'exit 143' TERM` (a cleanup-only trap on `INT TERM` lets the script resume after the signal and loses its status).
 - Quote every expansion; `--` before user-supplied operands; no `eval` of untrusted data; no `rm -rf` on a variable without a non-empty and prefix guard.
 - Paths: `$HOME`, `$PREFIX`, `$TMPDIR`; never `/tmp`, `/usr`, `/etc`, `/bin`, `/home`. Scripts, state, and executables stay in `$HOME` or `$PREFIX`; shared storage is for data exchange only.
 - `termux-*` API tools: guard with `command -v` and provide a fallback (they need the Termux:API app and the `termux-api` package).

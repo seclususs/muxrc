@@ -90,6 +90,17 @@ function Find-Tool([string]$name) {
       if (Test-Path -LiteralPath $p -PathType Leaf) { return $p }
     }
   }
+  if ($name -eq 'python3') {
+    foreach ($cand in @('python', 'py')) {
+      $py = Find-Tool $cand
+      if ($py -ne '-') {
+        try {
+          $v = [string](& $py -V 2>&1)
+          if ($v -match '^Python 3\.') { return $py }
+        } catch {}
+      }
+    }
+  }
   return '-'
 }
 function Have([string]$name) { return ((Find-Tool $name) -ne '-') }
@@ -128,7 +139,7 @@ Write-Output 'run.scripts=ps1'
 if ($envk -eq 'termux') { Write-Output 'note=running inside Termux (target); host-only assumptions do not apply' }
 
 # Tool availability
-$defaultTools = 'git sh dash bash zsh busybox shellcheck shfmt checkbashisms rg jq python3 node pwsh powershell.exe docker adb zip unzip tar curl'.Split(' ')
+$defaultTools = 'git sh dash bash zsh busybox shellcheck shfmt checkbashisms rg jq python3 pwsh powershell.exe docker adb zip unzip tar curl'.Split(' ')
 $extraTools = @()
 if ($extra) { $extraTools = $extra.Split(',') | Where-Object { $_ } }
 $missing = @()
@@ -181,7 +192,9 @@ else { Write-Output 'cap.syntax_posix=none' }
 if (Has 'bash') { Write-Output 'cap.syntax_bash=bash' } else { Write-Output 'cap.syntax_bash=none' }
 if (Has 'zsh') { Write-Output 'cap.syntax_zsh=zsh' } else { Write-Output 'cap.syntax_zsh=none' }
 if (Has 'rg') { Write-Output 'cap.search=rg' } else { Write-Output 'cap.search=select-string' }
-if (Has 'jq') { Write-Output 'cap.json=jq' } else { Write-Output 'cap.json=powershell-builtin' }
+if (Has 'jq') { Write-Output 'cap.json=jq' }
+elseif (Has 'python3') { Write-Output 'cap.json=python3' }
+else { Write-Output 'cap.json=powershell-builtin' }
 if (Has 'zip') { Write-Output 'cap.archive=zip' } elseif (Has 'tar') { Write-Output 'cap.archive=tar' } else { Write-Output 'cap.archive=compress-archive' }
 if ((Has 'sh') -or (Has 'bash')) { Write-Output 'cap.sandbox=sandbox-run' } else { Write-Output 'cap.sandbox=none' }
 if (Has 'docker') { Write-Output 'cap.termux_container=docker' } else { Write-Output 'cap.termux_container=none' }

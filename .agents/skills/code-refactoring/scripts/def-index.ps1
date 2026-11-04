@@ -93,7 +93,8 @@ function Get-Candidates {
     foreach ($p in $paths) {
       if (Test-Path -LiteralPath $p -PathType Container) {
         $base = (Resolve-Path -LiteralPath $p).Path
-        foreach ($f in (Get-AllFiles $base)) { [void]$list.Add($f) }
+        $shown = $p.Replace('\', '/').TrimEnd('/')
+        foreach ($f in (Get-AllFiles $base)) { [void]$list.Add($shown + '/' + $f.Substring($base.Length).TrimStart('\', '/').Replace('\', '/')) }
       }
       elseif (Test-Path -LiteralPath $p -PathType Leaf) { [void]$list.Add($p) }
       else { [Console]::Error.WriteLine("def-index: not found: $p") }
