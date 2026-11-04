@@ -35,6 +35,8 @@ alias ssh-status='net remote status'
 ##################################
 # Android file handlers & suffixes
 ##################################
+alias scandl='termux-media-scan -r /storage/emulated/0/Download'
+
 if (( $+commands[termux-open] )); then
   alias open='termux-open'
   alias share='termux-open --send'
