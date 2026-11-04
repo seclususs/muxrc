@@ -194,6 +194,8 @@ cleanup_legacy_dirs() {
   [[ -d "${HOME}/.zsh" ]] && rmdir "${HOME}/.zsh" 2> /dev/null || true
   [[ -d "${HOME}/.trash" ]] && rmdir "${HOME}/.trash" 2> /dev/null || true
   [[ -d "${HOME}/.vault" ]] && rmdir "${HOME}/.vault" 2> /dev/null || true
+  [[ -L "${HOME}/.tmux.conf" || -f "${HOME}/.tmux.conf" ]] && rm -f "${HOME}/.tmux.conf" 2> /dev/null || true
+  [[ -d "${HOME}/.sessions" ]] && rmdir "${HOME}/.sessions" 2> /dev/null || true
 }
 
 main() {
