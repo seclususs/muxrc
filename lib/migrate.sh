@@ -7,20 +7,36 @@ set -euo pipefail
 
 source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
-migrate_sudo_hash() {
-  local config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/muxrc"
-  local target_file="${config_dir}/sudo_hash"
-  local legacy_file="${HOME}/.sudo_hash"
+migrate_shadow() {
+  local prefix_dir="${PREFIX:-/data/data/com.termux/files/usr}"
+  local target_file="${prefix_dir}/etc/shadow"
+  local legacy_config="${XDG_CONFIG_HOME:-${HOME}/.config}/muxrc/sudo_hash"
+  local legacy_home="${HOME}/.sudo_hash"
 
-  if [[ -f "${legacy_file}" ]]; then
-    mkdir -p "${config_dir}"
+  local legacy_file=""
+  if [[ -f "${legacy_config}" ]]; then
+    legacy_file="${legacy_config}"
+  elif [[ -f "${legacy_home}" ]]; then
+    legacy_file="${legacy_home}"
+  fi
+
+  if [[ -n "${legacy_file}" ]]; then
+    mkdir -p "${prefix_dir}/etc"
     if [[ ! -f "${target_file}" ]]; then
-      mv "${legacy_file}" "${target_file}"
-    else
-      rm -f "${legacy_file}" 2> /dev/null || true
+      local raw_hash
+      raw_hash=$(head -n 1 "${legacy_file}" 2> /dev/null | tr -d '[:space:]')
+      if [[ -n "${raw_hash}" ]]; then
+        local current_user="${USER:-$(whoami 2> /dev/null || id -un 2> /dev/null || echo "termux")}"
+        local days_since_epoch=$(($(date +%s 2> /dev/null || echo 0) / 86400))
+        local tmp_file
+        tmp_file=$(mktemp "${prefix_dir}/etc/shadow.XXXXXX" 2> /dev/null || mktemp "${TMPDIR:-/tmp}/shadow.XXXXXX")
+        printf '%s:%s:%s:0:99999:7:::\n' "${current_user}" "${raw_hash}" "${days_since_epoch}" > "${tmp_file}"
+        chmod 600 "${tmp_file}"
+        mv -f "${tmp_file}" "${target_file}"
+        log_success "migrated sudo_hash to ${target_file}"
+      fi
     fi
-    chmod 600 "${target_file}" 2> /dev/null || true
-    log_success "migrated sudo_hash to ~/.config/muxrc/sudo_hash"
+    rm -f "${legacy_config}" "${legacy_home}" 2> /dev/null || true
   fi
 }
 
@@ -187,7 +203,7 @@ main() {
     exit 0
   fi
 
-  migrate_sudo_hash
+  migrate_shadow
   migrate_ai_env
   migrate_zsh_plugins
   migrate_zsh_history

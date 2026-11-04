@@ -38,8 +38,6 @@ get_targets() {
   candidates+=("${HOME}/.aws/credentials")
   candidates+=("${config_dir}/muxrc/ai.env")
   candidates+=("${HOME}/.gemini_ai_env")
-  candidates+=("${config_dir}/muxrc/sudo_hash")
-  candidates+=("${HOME}/.sudo_hash")
 
   # Shell histories and project trash
   candidates+=("${state_dir}/zsh/history")

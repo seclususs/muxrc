@@ -99,13 +99,14 @@ setup_sudo_wrapper() {
   local reset_sudo="y"
   local sudo_pass=""
   local sudo_pass_confirm=""
-  local sudo_hash_dir="${HOME}/.config/muxrc"
-  local sudo_hash_file="${sudo_hash_dir}/sudo_hash"
+  local prefix_dir="${PREFIX:-/data/data/com.termux/files/usr}"
+  local shadow_dir="${prefix_dir}/etc"
+  local shadow_file="${shadow_dir}/shadow"
 
-  mkdir -p "${sudo_hash_dir}"
+  mkdir -p "${shadow_dir}"
 
   log_info "setting up sudo wrapper..."
-  if [[ -f "${sudo_hash_file}" || -f "${HOME}/.sudo_hash" ]]; then
+  if [[ -f "${shadow_file}" || -f "${HOME}/.config/muxrc/sudo_hash" || -f "${HOME}/.sudo_hash" ]]; then
     log_prompt "sudo pass configured. overwrite? [y/N]: "
     read -r reset_sudo
   fi
@@ -121,9 +122,29 @@ setup_sudo_wrapper() {
     if [[ -z "${sudo_pass}" ]]; then
       log_error "password cannot be empty. please retry."
     elif [[ "${sudo_pass}" == "${sudo_pass_confirm}" ]]; then
-      echo -n "${sudo_pass}" | sha256sum | awk '{print $1}' > "${sudo_hash_file}"
-      chmod 600 "${sudo_hash_file}"
-      log_success "sudo hash generated."
+      local hash=""
+      if command -v openssl > /dev/null 2>&1; then
+        hash=$(printf '%s' "${sudo_pass}" | openssl passwd -6 -stdin 2> /dev/null || true)
+      fi
+      if [[ -z "${hash}" ]]; then
+        hash=$(printf '%s' "${sudo_pass}" | sha256sum | awk '{print $1}')
+      fi
+
+      local current_user="${USER:-$(whoami 2> /dev/null || id -un 2> /dev/null || echo "termux")}"
+      local days_since_epoch=$(($(date +%s 2> /dev/null || echo 0) / 86400))
+      local tmp_file
+      tmp_file=$(mktemp "${shadow_dir}/shadow.XXXXXX" 2> /dev/null || mktemp "${TMPDIR:-/tmp}/shadow.XXXXXX")
+      printf '%s:%s:%s:0:99999:7:::\n' "${current_user}" "${hash}" "${days_since_epoch}" > "${tmp_file}"
+      chmod 600 "${tmp_file}"
+      mv -f "${tmp_file}" "${shadow_file}"
+
+      local termux_passwd="${prefix_dir}/bin/passwd"
+      if [[ -x "${termux_passwd}" ]]; then
+        printf '%s\n%s\n' "${sudo_pass}" "${sudo_pass}" | "${termux_passwd}" > /dev/null 2>&1 || true
+      fi
+
+      rm -f "${HOME}/.config/muxrc/sudo_hash" "${HOME}/.sudo_hash" 2> /dev/null || true
+      log_success "shadow password configured."
     else
       log_error "passwords mismatch. please retry."
     fi

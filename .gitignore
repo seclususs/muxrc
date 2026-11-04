@@ -7,11 +7,9 @@
 Thumbs.db
 
 .zsh_history
-.sudo_hash
 .gemini_ai_env
 
 .config/muxrc/ai.env
-.config/muxrc/sudo_hash
 .config/muxrc/presets/local-*.json
 
 .artifacts/
