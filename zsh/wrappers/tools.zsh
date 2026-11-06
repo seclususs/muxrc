@@ -4,7 +4,7 @@
 
 typeset -g MUXRC_DIR="${MUXRC_DIR:-${ZSH_CONFIG_DIR:+${ZSH_CONFIG_DIR:h}}}"
 typeset -g MUXRC_DIR="${MUXRC_DIR:-$HOME/muxrc}"
-source "${MUXRC_DIR}/lib/init.sh"
+source "${MUXRC_DIR}/common/init.sh"
 
 _muxrc_run_as_root() {
   if [[ "$EUID" -eq 0 ]]; then
@@ -50,51 +50,51 @@ net() {
       shift
       local cidr="${1:-}"
       if [[ "$cidr" == "-h" || "$cidr" == "--help" ]]; then
-        bash "${MUXRC_DIR}/tools/sh/net/sweep.sh" -h
+        bash "${MUXRC_DIR}/bash/net/sweep.sh" -h
         return 0
       fi
       if [[ "$EUID" -eq 0 ]]; then
-        bash "${MUXRC_DIR}/tools/sh/net/sweep.sh" "$@"
+        bash "${MUXRC_DIR}/bash/net/sweep.sh" "$@"
       elif [[ -x /system/bin/su || -x /system/xbin/su || -n "$(whence -p sudo 2>/dev/null)" ]]; then
-        sudo bash "${MUXRC_DIR}/tools/sh/net/sweep.sh" "$@"
+        sudo bash "${MUXRC_DIR}/bash/net/sweep.sh" "$@"
       else
-        bash "${MUXRC_DIR}/tools/sh/net/sweep.sh" "$@"
+        bash "${MUXRC_DIR}/bash/net/sweep.sh" "$@"
       fi
       ;;
     mac)
       shift
       local action="${1:-show}"
       if [[ "$action" == "-h" || "$action" == "--help" || "$action" == "show" ]]; then
-        bash "${MUXRC_DIR}/tools/sh/net/mac.sh" "$@"
+        bash "${MUXRC_DIR}/bash/net/mac.sh" "$@"
       else
-        _muxrc_run_as_root "${MUXRC_DIR}/tools/sh/net/mac.sh" "$@"
+        _muxrc_run_as_root "${MUXRC_DIR}/bash/net/mac.sh" "$@"
       fi
       ;;
     identity)
       shift
       local action="${1:-show}"
       if [[ "$action" == "-h" || "$action" == "--help" || "$action" == "show" || "$action" == "status" ]]; then
-        bash "${MUXRC_DIR}/tools/sh/net/identity.sh" "$@"
+        bash "${MUXRC_DIR}/bash/net/identity.sh" "$@"
       else
-        _muxrc_run_as_root "${MUXRC_DIR}/tools/sh/net/identity.sh" "$@"
+        _muxrc_run_as_root "${MUXRC_DIR}/bash/net/identity.sh" "$@"
       fi
       ;;
     killswitch)
       shift
       local action="${1:-status}"
       if [[ "$action" == "-h" || "$action" == "--help" || "$action" == "status" ]]; then
-        bash "${MUXRC_DIR}/tools/sh/net/killswitch.sh" "$@"
+        bash "${MUXRC_DIR}/bash/net/killswitch.sh" "$@"
       else
-        _muxrc_run_as_root "${MUXRC_DIR}/tools/sh/net/killswitch.sh" "$@"
+        _muxrc_run_as_root "${MUXRC_DIR}/bash/net/killswitch.sh" "$@"
       fi
       ;;
     tor)
       shift
-      bash "${MUXRC_DIR}/tools/sh/net/tor.sh" "$@"
+      bash "${MUXRC_DIR}/bash/net/tor.sh" "$@"
       ;;
     remote)
       shift
-      bash "${MUXRC_DIR}/tools/sh/net/remote.sh" "$@"
+      bash "${MUXRC_DIR}/bash/net/remote.sh" "$@"
       ;;
     "")
       _net_help
@@ -138,16 +138,16 @@ media() {
       ;;
     dupes)
       shift
-      bash "${MUXRC_DIR}/tools/sh/media/dupes.sh" "$@"
+      bash "${MUXRC_DIR}/bash/media/dupes.sh" "$@"
       ;;
     strip)
       shift
-      bash "${MUXRC_DIR}/tools/sh/media/strip.sh" "$@"
+      bash "${MUXRC_DIR}/bash/media/strip.sh" "$@"
       ;;
     spoof)
       shift
       if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-        bash "${MUXRC_DIR}/tools/sh/media/spoof.sh" -h
+        bash "${MUXRC_DIR}/bash/media/spoof.sh" -h
         return 0
       fi
       if [[ $# -eq 0 ]]; then
@@ -155,19 +155,19 @@ media() {
         return 1
       fi
 
-      bash "${MUXRC_DIR}/tools/sh/media/spoof.sh" "$@"
+      bash "${MUXRC_DIR}/bash/media/spoof.sh" "$@"
       ;;
     sync)
       shift
-      bash "${MUXRC_DIR}/tools/sh/media/date-sync.sh" "$@"
+      bash "${MUXRC_DIR}/bash/media/date-sync.sh" "$@"
       ;;
     rename)
       shift
-      bash "${MUXRC_DIR}/tools/sh/media/rename.sh" "$@"
+      bash "${MUXRC_DIR}/bash/media/rename.sh" "$@"
       ;;
     compress)
       shift
-      bash "${MUXRC_DIR}/tools/sh/media/compress.sh" "$@"
+      bash "${MUXRC_DIR}/bash/media/compress.sh" "$@"
       ;;
     dispatch | volume | play | monitor)
       # Pass-through to Android media framework command
@@ -223,7 +223,7 @@ sec() {
     encrypt)
       shift
       if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-        bash "${MUXRC_DIR}/tools/sh/sec/crypt.sh" -h
+        bash "${MUXRC_DIR}/bash/sec/crypt.sh" -h
         return 0
       fi
       if [[ $# -eq 0 ]]; then
@@ -262,12 +262,12 @@ sec() {
         return 1
       fi
 
-      MUXRC_CRYPT_PASS="$pass1" bash "${MUXRC_DIR}/tools/sh/sec/crypt.sh" --encrypt "$target_file"
+      MUXRC_CRYPT_PASS="$pass1" bash "${MUXRC_DIR}/bash/sec/crypt.sh" --encrypt "$target_file"
       ;;
     decrypt)
       shift
       if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-        bash "${MUXRC_DIR}/tools/sh/sec/crypt.sh" -h
+        bash "${MUXRC_DIR}/bash/sec/crypt.sh" -h
         return 0
       fi
       if [[ $# -eq 0 ]]; then
@@ -296,19 +296,19 @@ sec() {
         return 1
       fi
 
-      MUXRC_CRYPT_PASS="$pass" bash "${MUXRC_DIR}/tools/sh/sec/crypt.sh" --decrypt "$target_file" "$output_file"
+      MUXRC_CRYPT_PASS="$pass" bash "${MUXRC_DIR}/bash/sec/crypt.sh" --decrypt "$target_file" "$output_file"
       ;;
     stego)
       shift
-      bash "${MUXRC_DIR}/tools/sh/sec/stego.sh" "$@"
+      bash "${MUXRC_DIR}/bash/sec/stego.sh" "$@"
       ;;
     shred)
       shift
-      bash "${MUXRC_DIR}/lib/shredder.sh" "$@"
+      bash "${MUXRC_DIR}/bash/sec/shred.sh" "$@"
       ;;
     panic)
       shift
-      bash "${MUXRC_DIR}/tools/sh/sec/panic.sh" "$@"
+      bash "${MUXRC_DIR}/bash/sec/panic.sh" "$@"
       local exit_code=$?
       if [[ $exit_code -eq 0 ]]; then
         local arg

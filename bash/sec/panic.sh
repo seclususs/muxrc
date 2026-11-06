@@ -6,9 +6,9 @@
 set -euo pipefail
 
 _panic_dir="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
-source "${_panic_dir}/../../../lib/init.sh"
-if [[ -f "${_panic_dir}/../../../lib/shredder.sh" ]]; then
-  source "${_panic_dir}/../../../lib/shredder.sh"
+source "${_panic_dir}/../../common/init.sh"
+if [[ -f "${_panic_dir}/../../common/shredder.sh" ]]; then
+  source "${_panic_dir}/../../common/shredder.sh"
 fi
 
 usage() {

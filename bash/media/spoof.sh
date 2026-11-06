@@ -5,7 +5,7 @@
 ##############
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../../lib/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
 
 check_dependencies() {
   require_cmd exiftool jq find
@@ -22,7 +22,7 @@ resolve_preset() {
   local preset_input="${1:-}"
   local script_dir
   script_dir="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
-  local repo_presets="${script_dir}/../../../tools/presets"
+  local repo_presets="${script_dir}/../../assets/presets"
   local user_presets="${XDG_CONFIG_HOME:-${HOME}/.config}/muxrc/presets"
   local clean_name="${preset_input%.json}"
 
@@ -44,7 +44,7 @@ resolve_preset() {
 select_random_preset() {
   local script_dir
   script_dir="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
-  local repo_presets="${script_dir}/../../../tools/presets"
+  local repo_presets="${script_dir}/../../assets/presets"
   local user_presets="${XDG_CONFIG_HOME:-${HOME}/.config}/muxrc/presets"
   local -A seen=()
   local -a candidates=()

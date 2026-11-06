@@ -6,7 +6,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
-source "${SCRIPT_DIR}/lib/init.sh"
+source "${SCRIPT_DIR}/common/init.sh"
 
 setup_storage() {
   if [[ ! -d "${HOME}/storage" ]]; then
@@ -80,8 +80,8 @@ setup_directories() {
 
   local preset
   local bname
-  if [[ -d "${dotfiles_dir}/tools/presets" ]]; then
-    for preset in "${dotfiles_dir}/tools/presets"/*.json; do
+  if [[ -d "${dotfiles_dir}/assets/presets" ]]; then
+    for preset in "${dotfiles_dir}/assets/presets"/*.json; do
       if [[ -f "${preset}" ]]; then
         bname="$(basename "${preset}")"
         if [[ ! -f "${HOME}/.config/muxrc/presets/${bname}" ]]; then
@@ -179,7 +179,7 @@ setup_zsh_plugins() {
   fi
 
   log_info "fetching zsh plugins..."
-  bash "${SCRIPT_DIR}/lib/sync.sh" "${zsh_plugins_dir}"
+  bash "${SCRIPT_DIR}/bash/sync.sh" "${zsh_plugins_dir}"
 }
 
 setup_storage_symlinks() {
@@ -278,8 +278,8 @@ main() {
   enable_repos
   install_packages
 
-  if [[ -f "${SCRIPT_DIR}/lib/migrate.sh" ]]; then
-    bash "${SCRIPT_DIR}/lib/migrate.sh"
+  if [[ -f "${SCRIPT_DIR}/bash/migrate.sh" ]]; then
+    bash "${SCRIPT_DIR}/bash/migrate.sh"
   fi
 
   setup_directories "${dotfiles_dir}" "${zsh_plugins_dir}"

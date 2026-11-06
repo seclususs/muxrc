@@ -5,7 +5,7 @@
 ######################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../common/init.sh"
 
 migrate_shadow() {
   local prefix_dir="${PREFIX:-/data/data/com.termux/files/usr}"

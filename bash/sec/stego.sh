@@ -6,9 +6,9 @@
 set -euo pipefail
 
 _stego_dir="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
-source "${_stego_dir}/../../../lib/init.sh"
-if [[ -f "${_stego_dir}/../../../lib/shredder.sh" ]]; then
-  source "${_stego_dir}/../../../lib/shredder.sh"
+source "${_stego_dir}/../../common/init.sh"
+if [[ -f "${_stego_dir}/../../common/shredder.sh" ]]; then
+  source "${_stego_dir}/../../common/shredder.sh"
 fi
 
 check_dependencies() {
