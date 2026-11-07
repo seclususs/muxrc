@@ -182,6 +182,8 @@ cleanup_legacy_dirs() {
   [[ -d "${HOME}/.vault" ]] && rmdir "${HOME}/.vault" 2> /dev/null || true
   [[ -L "${HOME}/.tmux.conf" || -f "${HOME}/.tmux.conf" ]] && rm -f "${HOME}/.tmux.conf" 2> /dev/null || true
   [[ -d "${HOME}/.sessions" ]] && rmdir "${HOME}/.sessions" 2> /dev/null || true
+  [[ -L "${HOME}/.shortcuts/backup.sh" || -f "${HOME}/.shortcuts/backup.sh" ]] && rm -f "${HOME}/.shortcuts/backup.sh" 2> /dev/null || true
+  [[ -d "${HOME}/.shortcuts" ]] && rmdir "${HOME}/.shortcuts" 2> /dev/null || true
 }
 
 migrate_magisk_boot() {
