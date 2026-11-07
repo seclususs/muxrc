@@ -18,7 +18,8 @@ Quality gate for shell code targeting Termux:
   zsh      zsh -n, plus an advisory shfmt diff when shfmt supports zsh (ShellCheck unsupported;
            shfmt can corrupt zsh syntax, so zsh files are never rewritten)
   all      built-in heuristics: line endings, banner borders, bashisms,
-           zsh pitfalls, Termux path/command compatibility, log-prefix scope
+           zsh pitfalls, Termux path/command compatibility, log-prefix scope,
+           numbered comments, log message length
 No PATH: lints the shell-like files of the repository (agent dirs excluded).
 
 Options:
@@ -39,6 +40,7 @@ Output: LEVEL FILE:LINE [CODE] message, then one SUMMARY line.
 Exit: 0 no ERROR (with --strict: no ERROR and no WARN); 1 otherwise; 2 usage error. INFO and NOTE never change the exit status.
 Suppress a heuristic on one line with a trailing comment: lint-ignore: CODE
 L002 flags log prefixes inside wrapper-like functions; names: scripts/wrapper-names.txt
+C002 flags numbered or step comments; L003 flags log_* messages over 36 characters
 ShellCheck notes count as WARN (judge new findings in changed files).
 EOF
 }
@@ -250,6 +252,24 @@ function iswrapper(name,   k) { # lint-ignore: B002
 function l002(ln, fn) { # lint-ignore: B002
   emitcap("WARN", ln, "L002", "UI log prefix inside wrapper-like function " fn ": wrappers and CLI integrations keep native output (no prefixes)")
 }
+function l003(ln, s,   rest, d, q, qc, st, body, en) { # lint-ignore: B002
+  if (!match(s, LCPAT) || s ~ LCDEF) return
+  rest = substr(s, RSTART + RLENGTH - 1)
+  d = index(rest, "\"")
+  q = index(rest, Q)
+  if (d == 0 && q == 0) return
+  if (d == 0 || (q > 0 && q < d)) {
+    qc = Q
+    st = q
+  } else {
+    qc = "\""
+    st = d
+  }
+  body = substr(rest, st + 1)
+  en = index(body, qc)
+  if (en == 0) return
+  if (en - 1 > LOGMAX) emitcap("WARN", ln, "L003", "log message is " (en - 1) " characters; keep it at " LOGMAX " or fewer and split longer text into several log calls")
+}
 BEGIN {
   WS = "[ " "\t" "]"
   nr = 0
@@ -269,6 +289,9 @@ BEGIN {
   FNRE2 = "^" WS "*function" WS "+" NM
   LUPAT = "(^|[^A-Za-z0-9_])\\[[*+!?-]\\]([^}]|$)"
   LCPAT = "(^|[^A-Za-z0-9_])log_(info|success|warn|error|prompt)([^A-Za-z0-9_]|$)"
+  LCDEF = "log_(info|success|warn|error|prompt)" WS "*\\("
+  NUMCMT = "^" WS "*#" WS "*([0-9]+[.):]|[Ss]tep" WS "*[0-9]+[.):-]?)(" WS "|$)"
+  LOGMAX = 36
   npre = 0
   while ((getline wl < WRAPPERS) > 0) {
     sub(/#.*/, "", wl)
@@ -314,7 +337,10 @@ BEGIN {
     next
   }
   if (NR == 1 && line ~ /^#!/) next
-  if (line ~ /^[ ]*#/) next
+  if (line ~ /^[ ]*#/) {
+    if (line ~ NUMCMT && !(index(line, "lint-ignore") > 0 && index(line, "C002") > 0)) emitcap("WARN", NR, "C002", "numbered or step comment reads like a tutorial: name the purpose or drop it")
+    next
+  }
   for (i = 1; i <= nr; i++) {
     if (index(rd[i], "," D ",") == 0 && index(rd[i], ",*,") == 0) continue
     if (line !~ rx[i]) continue
@@ -326,6 +352,7 @@ BEGIN {
     }
     emitcap(rs[i], NR, rc[i], rm[i])
   }
+  if (line ~ LCPAT && !(index(line, "lint-ignore") > 0 && index(line, "L003") > 0)) l003(NR, line)
   lg = (index(line, "lint-ignore") > 0 && index(line, "L002") > 0)
   if (infn == "") {
     fname = ""
@@ -373,6 +400,8 @@ END {
   }
   if (cnt["W001"] > MAXP) printf "NOTE %s [W001] %d more finding(s) suppressed (raise --max-per-rule)\n", F, cnt["W001"] - MAXP
   if (cnt["L002"] > MAXP) printf "NOTE %s [L002] %d more finding(s) suppressed (raise --max-per-rule)\n", F, cnt["L002"] - MAXP
+  if (cnt["C002"] > MAXP) printf "NOTE %s [C002] %d more finding(s) suppressed (raise --max-per-rule)\n", F, cnt["C002"] - MAXP
+  if (cnt["L003"] > MAXP) printf "NOTE %s [L003] %d more finding(s) suppressed (raise --max-per-rule)\n", F, cnt["L003"] - MAXP
   if (crn > 0) emit("ERROR", crfirst, "E001", "CR byte in " crn " line(s); LF line endings required")
   if (inhd) emit("WARN", hdline, "H001", "here-document delimiter " hdterm " never closed; later lines were not checked")
   for (i = 1; i <= nr; i++) {

@@ -1,38 +1,32 @@
 ---
 name: using-termux-skills
-description: Entry skill for every user message in this workspace, including questions, one-line requests, clarifications, and read-only analysis. Classifies the request and routes it to the domain skills - code-review (review and change analysis), systematic-debugging, code-refactoring, termux-scripting, termux-customization, termux-environment (including offline simulation), feature-ideation, platform-detection, subagent-development (delegation, parallel work, independent review). Read it at the start of a conversation, before any response or tool call.
+description: Entry skill, read on every user message. Separates discussion from tasks, loads project context, asks when a request is ambiguous, and routes tasks to the domain skills. Read it before any other action.
 ---
 
 # Using Termux skills
 
-Script invocation and the `.artifacts/` location: core policy.
+Read this file at the start of every user message, also when an earlier turn already read it. Rules, script invocation, and the `.artifacts/` layout: core policy.
 
-## Procedure
-1. Route: classify the message with the routing table and open the `SKILL.md` of every skill it names before the first edit or script run. Open it again when its text is no longer in context; a summary of a skill is not the skill.
-2. Host: before the first host command, and again after a "not found" failure, open `.agents/skills/platform-detection/SKILL.md` and follow it. It holds the detector command, how to read its output, and the fallbacks; `run.scripts` in the output picks `.sh` or `.ps1` for every other script.
-3. When the task needs repository facts that are not in context (conventions, definitions, config, logger use, commit style): `sh .agents/skills/using-termux-skills/scripts/repo-map.sh` (or `.ps1`). Skip it for a read-only question about files already read and for a trivial edit. Read the config files it lists (`.editorconfig`, `.shellcheckrc`, `.gitattributes`) when style or line endings matter.
-4. If a fact is missing or may be stale (package, flag, API, version, platform behavior): search the web, primary sources first, cite URLs, then continue.
-5. Plan when the task is not trivial (`assets/task-plan.md`) and apply the delegation gate. High risk: stop here and wait for the user's go. Then do the work, run the lint gate and `code-review`, report.
+## Mode
+Decide the mode from the message. Do not announce it and do not ask the user to pick.
+
+| Mode | Messages | Do |
+|---|---|---|
+| Discussion | Question, explanation, opinion, comparison, brainstorm, status, "why" | Answer directly. Ground each project fact in a file opened now (file:line) and each platform fact in a primary source. No implementation or code changes. Open a skill's reference only when the answer needs its facts. |
+| Task | Edits files, runs commands, reviews or analyzes diffs/changes, debugs, researches for a deliverable, produces code or config | Procedure below. |
+
+A discussion that ends in a decision to change something, or any request inspecting diffs or what changed, is a task. When the mode itself is unclear, ask (core policy, Ambiguity gate).
+
+## Task procedure
+1. Project: follow core policy, Project understanding. `sh .agents/skills/using-termux-skills/scripts/repo-map.sh [--root DIR] [--max N]` (or the `.ps1` flavor) prints read-only repository facts: `git`, `conf` (config files and README), `dirs`, `dialect.*`, `shebang`, `def` (definitions as FILE:LINE), `termux_cmds`, `logui.*` (logger convention), and `commits` (subject style). It lists no documentation beyond the README: search for the rest. Read the config files it lists (`.editorconfig`, `.shellcheckrc`, `.gitattributes`) when style or line endings matter.
+2. Ambiguity: resolve it by asking before any work.
+3. Route: open the `SKILL.md` of each skill the routing table names, before the first edit or script run; do not ask the user whether to use a skill. Reopen it when its text is no longer in context; a summary of a skill is not the skill.
+4. Host: before the first host command, and again after a "not found" failure, open `.agents/skills/platform-detection/SKILL.md` and follow it. `run.scripts` in its output picks `.sh` or `.ps1` for every other script.
+5. Facts: a package, flag, API, version, or platform behavior that is missing or may be stale: search the web (primary sources first) and cite the URL.
+6. Plan when the task is not trivial (`assets/task-plan.md`, saved as `.artifacts/scratch/plan.md`) and apply the delegation gate. High risk: stop and wait for the user's go.
+7. Work, then the lint gate and `code-review`, then the report.
 
 A subagent that received a brief skips this procedure and follows the brief (`subagent-development`).
-
-## No exemptions
-Questions, one-line requests, and read-only analysis open this skill and its routing table like any other message. Do not ask the user whether to use a skill. The only fast path is the one in the core policy Entry gate.
-
-| Thought | Action |
-|---|---|
-| It is only a question | Questions about code, diffs, shells, or Termux map to a skill below. |
-| It is read-only | `code-review` covers read-only analysis of changes and files. |
-| I already know the answer | Verify against the repository or a primary source, and load the skill. |
-| I need more context first | Load the skill first; it defines how to gather context. |
-| The change is trivial | Trivial changes still pass the lint gate and the review stage. |
-| The detector already ran | Its output is a snapshot. A path, flag, or version not visible in context is unknown: run it again. |
-| I know where bash or zsh is | Call the tool by its `tool.NAME` path from the detector output. |
-| I will run the script to see what happens | Only through `sandbox-run` or `termux-sim`, never directly on the host. |
-| I checked it by hand | Verification is the lint gate and `code-review`; ad-hoc commands do not replace them. |
-| I was asked to find bugs, so I must report some | A finding needs evidence and an intent check (`code-review`, finding gate). No findings is a valid result. |
-| It looks wrong or inconsistent | Run the intent check (core policy): history and comments may record why. |
-| The linter reports INFO | INFO is a lead, not a defect: do not edit only to silence it. |
 
 ## Routing
 | Request | Open, in order |
@@ -44,11 +38,24 @@ Questions, one-line requests, and read-only analysis open this skill and its rou
 | Write or change a script, function, wrapper, installer, alias | `termux-scripting` (+ `termux-environment`) |
 | Theme, properties, prompt, init, startup speed | `termux-customization` (+ `termux-scripting`) |
 | Ideas, roadmap, "what should I add" | `feature-ideation` (stop at the user's choice), then implement |
-| How Termux or Android behaves (paths, storage, packages, permissions, root), or a check that needs a device | `termux-environment` (simulate on the host with `termux-sim`) |
+| How Termux or Android behaves (paths, storage, packages, permissions, root), or a check that needs the device | `termux-environment` (device checks over SSH) |
 | A host tool is missing or failing | `platform-detection` |
-| Delegation gate met (below), or the user asks for subagents, parallel work, delegation, or a second opinion | `subagent-development` |
+| Delegation gate met, or the user asks for subagents, parallel work, delegation, or a second opinion | `subagent-development` |
 
 A request that matches several rows opens all of them. Process skills (`systematic-debugging`, `code-refactoring`, `feature-ideation`) come before implementation skills (`termux-scripting`, `termux-customization`). Every code change ends with `code-review` and the lint gate. A review that also asks for fixes reports first (`code-review`); edit only the findings that pass its finding gate.
+
+## Task shortcuts that fail
+| Thought | Action |
+|---|---|
+| I already know the answer | Verify it in the repository or a primary source first. |
+| The diff looks fine | A diff shows what changed, not what it calls. Check that every command, flag, function, and path it uses exists (`code-review`). |
+| The detector already ran | Its output is a snapshot. A path, flag, or version not visible in context is unknown: run it again. |
+| I know where bash or zsh is | Call the tool by its `tool.NAME` path from the detector output. |
+| I will run it to see what happens | Only through `sandbox-run` or `trace-run`, never directly on the host. |
+| I checked it by hand | Verification is the lint gate and `code-review`; ad-hoc commands do not replace them. |
+| I was asked to find bugs, so I must report some | A finding needs evidence and an intent check (`code-review`, finding gate). No findings is a valid result. |
+| It looks wrong or inconsistent | Run the intent check (core policy): history and comments may record why. |
+| The linter reports INFO | INFO is a lead, not a defect: do not edit only to silence it. |
 
 ## Delegation gate
 Defined in core policy. Evaluate it after the plan exists, before the first edit, and record `Delegation gate: met | not met` in the plan. Met: open `subagent-development`. Not met: work directly.
@@ -59,14 +66,16 @@ Risk follows the impact of the change, not the file or its role.
 - Standard: research, plan, implement, review, test.
 - High (destructive or irreversible actions, network or system-modifying installs, a behavior change to a wrapper or installer, many files, a repository-wide review with fixes): Standard, plus two review stages and the user checkpoint of the core policy.
 
+## Long conversations
+Older turns are compacted into summaries, so earlier values can be stale or lost. Keep the goal and open items in the plan file, not in memory. Before a major step and before the report, reopen the plan and the files in scope, and rerun any command whose output you are about to quote. A new unrelated task starts again at Mode with fresh project facts.
+
 ## Reporting
 - Tasks that change files: `assets/final-report.md`.
 - Review and change analysis: the report templates of `code-review`.
-- Questions: answer directly with evidence (file:line or source URL).
+- Discussion: answer directly with evidence (file:line or source URL).
 
 ## Gotchas
 - A missing tool is not a blocker: use the fallback and state the reduced coverage.
-- Repository facts go stale: re-run `repo-map` when the tree changed during the task.
-- Subagent output is a claim, not evidence: re-run checks yourself before reporting.
-- Do not copy repository paths into notes meant to outlive the task.
-- What each agent surface loads from this setup (rules, skills, subagents): `references/agent-surfaces.md`.
+- Repository facts go stale: rerun `repo-map` when the tree changed during the task.
+- Subagent output is a claim, not evidence: rerun checks yourself before reporting.
+- What each agent surface loads from this setup (rules, skills, tools): `references/agent-surfaces.md`.

@@ -14,13 +14,12 @@ Resolve each need from the `cap.*` keys of the detection output. "Partial" means
 | Search | `rg`, `grep`, PowerShell `Select-String` | | |
 | JSON | `jq`, `python3`, PowerShell `ConvertFrom-Json` | | |
 | Archive | `zip`, `tar`, PowerShell `Compress-Archive` | | keep the directory structure |
-| Termux-like run | `cap.sandbox` (sandbox-run stubs), `termux-sim` (documented Termux and root behavior), `cap.termux_container` (docker) | give the user device commands | stub-based or simulated only |
+| Termux-like run | `cap.sandbox` (sandbox-run stubs), `cap.termux_container` (docker) | give the user device commands | stub-based only |
 | Behavior snapshot | `behavior-snapshot` (POSIX shell plus the shell under test) | run the cases by hand in `sandbox-run` or on a device and compare | partial |
-| Real device check | `adb push` to shared storage, then copy into Termux `$HOME` | user runs the commands | |
-| POSIX shell on Windows | Git Bash, WSL, MSYS2 | skip sandbox-run, termux-sim, trace-run, behavior-snapshot; use a container or device | partial |
+| Real device check | SSH command from the user (`termux-environment`, Device checks over SSH) | user runs the commands | leaves no files on the device |
+| POSIX shell on Windows | Git Bash, WSL, MSYS2 | skip sandbox-run, trace-run, behavior-snapshot; use a container or the device | partial |
 | LF endings | `.gitattributes` plus editor setting; verify with lint `E001` | | |
 
 ## Notes
 - Termux container: the official `termux/termux-docker` project (https://github.com/termux/termux-docker); verify image name and tags in its README. It has no Android runtime, so `termux-*` API commands are absent; `aarch64` or `arm` images on x86 hosts need QEMU and may need privileged mode.
-- Device transfer example: `adb push file /sdcard/Download/`, then in Termux (after `termux-setup-storage`) `cp ~/storage/downloads/file ~/`.
 - Install policy: do not install host packages without asking; prefer a fallback first.

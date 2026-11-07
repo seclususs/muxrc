@@ -1,6 +1,6 @@
 ---
 name: termux-customization
-description: Customizes and personalizes Termux - termux.properties, extra keys, colors, fonts, prompt, aliases, shell init modules, completion, startup speed, boot workflow. Use when asked to theme, tweak, personalize, or speed up the Termux environment or shell, or when editing *.properties, dircolors, nanorc, prompt, or plugin configuration. Not for brainstorming new features (feature-ideation).
+description: Customizes Termux: termux.properties, extra keys, colors, fonts, prompt, aliases, shell init, startup speed, boot scripts. Use to theme, tune, or speed up the Termux shell environment.
 ---
 
 # Termux customization
@@ -29,7 +29,7 @@ Code goes through `termux-scripting`; runtime facts through `termux-environment`
 
 ## Rules
 - Output contract by code role (core policy): utilities that print status use the project's logger convention; wrappers and external-CLI integrations have no prefixes and keep native output.
-- Startup speed: measure first (`termux-scripting` `references/zsh.md`), remove forks from startup, defer heavy plugins, cache completion; report before and after timings.
+- Startup speed: measure first (`.agents/skills/termux-scripting/references/zsh.md`), remove forks from startup, defer heavy plugins, cache completion; report before and after timings.
 - Keep the prompt cheap: no blocking git or network calls on every prompt.
 - `allow-external-apps` lets other apps run commands in Termux: security-sensitive; change it only on explicit request.
 - Prefer a few durable options over large themes; every added option must earn its place.

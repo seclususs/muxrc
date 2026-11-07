@@ -12,7 +12,7 @@ Match the symptom, confirm with the check, then fix the cause.
 | `[Process completed (signal 9)]` | Android 12+ phantom process killer or memory kill | search the Termux issue tracker; reduce background child processes; system setting changes need the user's consent |
 | `set: Illegal option -o pipefail` | dash 0.5.12 or older (0.5.13.5 accepts it) | probe: `(set -o pipefail) 2>/dev/null && set -o pipefail` |
 | works in bash, fails in `sh` | bashism under dash | lint B-rules; `dash -n` |
-| works in bash, odd in zsh | splitting, 1-indexing, globbing, `read -p` | `termux-scripting` `references/zsh.md` |
+| works in bash, odd in zsh | splitting, 1-indexing, globbing, `read -p` | `.agents/skills/termux-scripting/references/zsh.md` |
 | `no matches found: ...` (zsh) | unmatched glob | `(N)` qualifier or quoting |
 | `read-only variable: status`, commands vanish inside a zsh function | special parameter used as a name (`status`, `path`) | rename the variable |
 | ShellCheck reports an unknown shell | no shebang or `shell=` directive | add one |

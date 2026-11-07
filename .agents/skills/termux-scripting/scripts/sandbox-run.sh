@@ -21,18 +21,17 @@ Options:
                      (repeatable), e.g. --stub termux-battery-status=0:{}
   --stub-termux      stub common termux-* API commands (exit 0, no output)
   --seed SRC[:DEST]  copy a file or directory into HOME (DEST relative to HOME)
-  --overlay DIR      copy the contents of DIR into the sandbox root before the run
-                     (DIR/home/..., DIR/prefix/..., DIR/sim/...); used by termux-sim
   --env NAME=VALUE   extra environment variable (repeatable); when a NAME
                      repeats, the last one wins; @SANDBOX@ in VALUE becomes the
                      sandbox directory; SANDBOX_DIR is always set
   --twice            run twice and report whether the second run changed files
-  --timeout S        kill after S seconds (default 60; needs timeout command)
+  --timeout S        kill after S seconds (default 60; needs timeout or gtimeout)
   --keep             keep the sandbox under <project>/.artifacts/sandbox/ (path printed)
   -h, --help         show this help
 
 Report (stderr, prefix "sandbox:"): exit status, recorded stub calls, files
 created under HOME/PREFIX. Literal /data/data/com.termux paths are not remapped.
+The working directory is not changed: relative paths resolve against the caller.
 sudo and doas are stubbed (exit 127) unless --stub names them, so a script cannot run them on the host.
 Not a security boundary: absolute host paths, the network, and other host commands
 (rm, git, apt-get, ...) still work. Read a script for destructive commands first.
@@ -43,7 +42,6 @@ EOF
 dialect=""
 twice=0
 keep=0
-overlay=""
 timeout_s=60
 tmp=$(mktemp -d 2> /dev/null || echo "${TMPDIR:-/tmp}/sandbox-run.$$")
 mkdir -p "${tmp}"
@@ -58,7 +56,7 @@ while [ $# -gt 0 ]; do
       rm -rf "${tmp}"
       exit 0
       ;;
-    --dialect | --stub | --seed | --timeout | --overlay | --env)
+    --dialect | --stub | --seed | --timeout | --env)
       if [ $# -lt 2 ]; then
         echo "sandbox-run: $1 needs a value" >&2
         rm -rf "${tmp}"
@@ -69,7 +67,6 @@ while [ $# -gt 0 ]; do
         --stub) printf '%s\n' "$2" >> "${tmp}/stubs.list" ;;
         --seed) printf '%s\n' "$2" >> "${tmp}/seeds.list" ;;
         --timeout) timeout_s=$2 ;;
-        --overlay) overlay=$2 ;;
         --env)
           case $2 in
             [A-Za-z_]*=* | _*=*) printf '%s\n' "$2" >> "${tmp}/envs.list" ;;
@@ -130,13 +127,8 @@ if [ $# -lt 1 ] || [ ! -f "$1" ]; then
 fi
 script=$1
 shift
-if [ -n "${overlay}" ] && [ ! -d "${overlay}" ]; then
-  echo "sandbox-run: --overlay is not a directory: ${overlay}" >&2
-  rm -rf "${tmp}"
-  exit 2
-fi
 
-# Output directory convention: <project root>/.artifacts/<tool>/ (self-ignoring in git)
+# Output directory convention: <project root>/.artifacts/<subfolder>/ (self-ignoring in git)
 # shellcheck disable=SC2317,SC2329
 artifacts_dir() {
   root=$(git rev-parse --show-toplevel 2> /dev/null) || root=$(pwd)
@@ -211,12 +203,6 @@ prefix="${tmp}/prefix"
 mkdir -p "${home}" "${prefix}/bin" "${prefix}/etc" "${prefix}/tmp" "${prefix}/var"
 calls="${tmp}/calls.log"
 : > "${calls}"
-if [ -n "${overlay}" ]; then
-  cp -R "${overlay}/." "${tmp}/" || {
-    echo "sandbox-run: cannot copy --overlay ${overlay}" >&2
-    exit 2
-  }
-fi
 
 make_stub() {
   spec=$1
@@ -281,6 +267,7 @@ done < "${tmp}/seeds.list"
 
 timeout_bin=""
 have timeout && timeout_bin=timeout
+[ -z "${timeout_bin}" ] && have gtimeout && timeout_bin=gtimeout
 sed -n '1!G;h;$p' "${tmp}/envs.list" > "${tmp}/envs.rev"
 run_script() {
   set -- "$@"
@@ -289,7 +276,7 @@ run_script() {
     *) set -- "${shell_name}" "$@" ;;
   esac
   if [ -n "${timeout_bin}" ]; then
-    set -- timeout "${timeout_s}" "$@"
+    set -- "${timeout_bin}" "${timeout_s}" "$@"
   fi
   # extra --env values go between the defaults and the command; envs.rev holds
   # them in reverse order so that prepending keeps the listed order
@@ -316,7 +303,7 @@ if [ "$(uname -s 2> /dev/null)" = "Darwin" ]; then
   echo "sandbox: note: macOS has BSD utilities; Termux uses GNU coreutils, results are indicative" >&2
 fi
 if [ -z "${timeout_bin}" ]; then
-  echo "sandbox: note: timeout command not found; no time limit applied" >&2
+  echo "sandbox: note: timeout or gtimeout not found; no time limit applied" >&2
 fi
 
 run_script "${script}" "$@"
@@ -329,7 +316,10 @@ if [ "${twice}" -eq 1 ]; then
     echo "sandbox: idempotent: second run left home/prefix unchanged" >&2
   else
     echo "sandbox: NOT idempotent: second run changed files:" >&2
-    diff "${tmp}/snap1" "${tmp}/snap2" | sed 's/^/sandbox:   /' | head -n 20 >&2
+    diff "${tmp}/snap1" "${tmp}/snap2" > "${tmp}/snap.diff"
+    head -n 20 "${tmp}/snap.diff" | sed 's/^/sandbox:   /' >&2
+    n_diff=$(wc -l < "${tmp}/snap.diff" | tr -d ' ')
+    [ "${n_diff}" -gt 20 ] && echo "sandbox:   ... $((n_diff - 20)) more not shown" >&2
   fi
 fi
 
@@ -338,6 +328,10 @@ echo "sandbox: shell=${shell_name} dialect=${dialect} exit=${rc}" >&2
 n_calls=$(wc -l < "${calls}" | tr -d ' ')
 echo "sandbox: stub calls: ${n_calls}" >&2
 head -n 40 "${calls}" | sed 's/^/sandbox:   /' >&2
-echo "sandbox: files under home/prefix (excluding stubs):" >&2
-(cd "${tmp}" && find home prefix -type f ! -path 'prefix/bin/*' | LC_ALL=C sort | head -n 40 | sed 's/^/sandbox:   /') >&2
+[ "${n_calls}" -gt 40 ] && echo "sandbox:   ... $((n_calls - 40)) more not shown" >&2
+(cd "${tmp}" && find home prefix -type f ! -path 'prefix/bin/*' | LC_ALL=C sort) > "${tmp}/files.list"
+n_files=$(wc -l < "${tmp}/files.list" | tr -d ' ')
+echo "sandbox: files under home/prefix (excluding stubs): ${n_files}" >&2
+head -n 40 "${tmp}/files.list" | sed 's/^/sandbox:   /' >&2
+[ "${n_files}" -gt 40 ] && echo "sandbox:   ... $((n_files - 40)) more not shown" >&2
 exit "${rc}"

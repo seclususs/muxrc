@@ -1,6 +1,6 @@
 ---
 name: code-refactoring
-description: Restructures shell and Termux code without changing behavior - rename, extract, inline, move, split or merge files, remove duplication, simplify. Captures a baseline (lint, definition index, behavior snapshot), applies one small step at a time, and compares after each step; wrapper and CLI-integration output stays native. Use for refactor, restructure, clean up, split a large file, rename, deduplicate, reorganize modules. Behavior changes and new features use termux-scripting.
+description: Restructures shell code without changing behavior (rename, extract, move, split, merge, deduplicate) against a baseline of lint, definition index, and behavior snapshot. Not for features or bug fixes.
 ---
 
 # Code refactoring
@@ -16,7 +16,7 @@ Open `termux-scripting` for dialect and style rules and `code-review` for the fi
 
 ## Workflow
 1. Scope: goal, the code to change, what stays identical (public names, CLI, output, load order), stop conditions. Fill `assets/refactor-plan.md`.
-2. Baseline, before any edit. Keep baseline files under `.artifacts/refactor/<topic>/` at the project root (inside the workspace, outside tracked files; the directory ignores itself in git).
+2. Baseline, before any edit. Keep baseline files under `.artifacts/refactor/` at the project root (inside the workspace, outside tracked files; `.artifacts/` ignores itself in git).
    - `git --no-pager status --short`: unrelated edits are listed, not mixed in.
    - `lint-shell` (`termux-scripting`) on the files in scope: keep the SUMMARY line and findings.
    - `sh .agents/skills/code-refactoring/scripts/def-index.sh --out .artifacts/refactor/before.tsv` (`.ps1` flavor available).

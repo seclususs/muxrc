@@ -1,6 +1,6 @@
 # termux.properties reference
 
-Source: official `termux.properties` template of the termux-tools repository (master, commit 05c857e, 2026-10-15; re-check the Termux wiki for newer keys). Apply with `termux-reload-settings`; some keys need the app process restarted.
+Source: official `termux.properties` template of the termux-tools repository (master, commit 9b53fb1, 2026-10-26; `termux.properties` last changed in 5c89c50, 2024-08-11; re-check the Termux wiki for newer keys). Apply with `termux-reload-settings`; some keys need the app process restarted.
 
 | Key | Values | Note |
 |---|---|---|

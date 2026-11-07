@@ -1,6 +1,6 @@
 ---
 name: feature-ideation
-description: Proposes new, evidence-based features for a Termux shell environment by mapping existing capabilities, finding gaps, and checking Termux feasibility. Use for ideas, a roadmap, "what should I add", improvements, new commands or tools, or planning before implementation. Outputs ranked proposals and stops for the user's choice; it does not implement.
+description: Proposes evidence-based features for a Termux shell project: maps capabilities, finds gaps, checks Termux feasibility, then stops for the user's choice. Use for ideas, a roadmap, or 'what should I add'.
 ---
 
 # Feature ideation

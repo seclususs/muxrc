@@ -1,6 +1,6 @@
 #!/bin/sh
 # Run inside the sandbox:
-#   sh scripts/sandbox-run.sh --stub-termux --twice -- tests/NAME.test.sh path/to/script
+#   sh .agents/skills/termux-scripting/scripts/sandbox-run.sh --stub-termux --twice -- tests/NAME.test.sh path/to/script
 # HOME, PREFIX, TMPDIR point into the sandbox; termux-* commands are stubs.
 
 set -u

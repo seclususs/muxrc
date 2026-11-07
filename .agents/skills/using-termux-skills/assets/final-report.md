@@ -11,13 +11,15 @@ Delete any section that does not apply. One fact per line.
 - Review: the coverage line of `code-review`
 - Evidence: per fix, the failing reproducer (shell and version) or the rule and source it violates; the intent check result when existing behavior changed
 - Other command run: result (test output, harness report)
+- Device (SSH): command run and result, and that the device was left clean
 - Not verified on host: item that needs a Termux device, with the exact command to run there
 
 ## Draft commit
 ```text
 Imperative subject, at most 52 chars, no trailing period
 
-- What changed and why; flat single-level bullets, wrapped at 72
+Paragraph on what changed and why, wrapped at 72 characters. One
+idea per paragraph; no bullets.
 ```
 
 ## Approval

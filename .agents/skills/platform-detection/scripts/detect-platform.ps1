@@ -127,7 +127,7 @@ else {
 if (-not $arch) { $arch = 'unknown' }
 
 # Package manager (first match; order depends on host)
-$mgrs = if ($os -eq 'macos') { @('brew', 'port') } elseif ($os -eq 'windows') { if ($envk -eq 'msys') { @('pacman', 'winget', 'scoop', 'choco') } else { @('winget', 'scoop', 'choco', 'pacman') } } else { @('apt-get', 'dnf', 'pacman', 'zypper', 'apk', 'brew') }
+$mgrs = if ($os -eq 'macos') { @('brew', 'port') } elseif ($os -eq 'windows') { if ($envk -eq 'msys') { @('pacman', 'winget', 'scoop', 'choco') } else { @('winget', 'scoop', 'choco', 'pacman') } } elseif ($os -eq 'android') { @('pkg') } else { @('apt-get', 'dnf', 'pacman', 'zypper', 'apk', 'brew') }
 $pkgmgr = 'none'
 foreach ($m in $mgrs) { if (Have $m) { $pkgmgr = $m; break } }
 
@@ -225,6 +225,7 @@ function Get-Hint([string]$tool) {
   $key = $tool + ':' + $pkgmgr
   if ($map.ContainsKey($key)) { return $map[$key] }
   if ($pkgmgr -eq 'winget') { return "winget search $tool  # install the matching package id" }
+  if ($pkgmgr -eq 'pkg') { return "pkg install $tool" }
   return ''
 }
 foreach ($t in $missing) {

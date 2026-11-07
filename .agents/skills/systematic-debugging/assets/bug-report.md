@@ -9,7 +9,7 @@ Exact error text and exit status.
 Host or Termux (rooted or not); shell, dialect, and shell version.
 
 ## Reproducer
-The command or minimal script, and where it was run (host, termux-sim profile, device).
+The command or minimal script, and where it was run (host harness, device over SSH).
 
 ## Evidence
 Trace excerpt with file:line, and relevant outputs. Intent check of the lines to change (history, comments). Full logs: `.artifacts/trace/<time>/`.

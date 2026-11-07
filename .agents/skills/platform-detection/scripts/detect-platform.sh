@@ -133,6 +133,7 @@ case ${os} in
       mgrs="winget scoop choco pacman"
     fi
     ;;
+  android) mgrs="pkg" ;;
   *) mgrs="apt-get dnf pacman zypper apk brew" ;;
 esac
 pkgmgr=none
@@ -275,6 +276,7 @@ hint_pkg() {
     jq:scoop) echo "scoop install jq" ;;
     jq:choco) echo "choco install jq" ;;
     *:winget) echo "winget search $1  # install the matching package id" ;;
+    *:pkg) echo "pkg install $1" ;;
     *) return 1 ;;
   esac
 }

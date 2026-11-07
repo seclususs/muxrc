@@ -23,7 +23,7 @@ Effort, risk, and maintenance: lower is better.
 
 ## Risks and test plan
 - What can go wrong on a device
-- Tests: host checks, sandbox stubs or termux-sim, device commands
+- Tests: host checks, sandbox stubs, device checks over SSH, or commands for the user
 
 ## Size
 Files touched and approximate lines.

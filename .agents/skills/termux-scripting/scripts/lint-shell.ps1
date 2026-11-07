@@ -18,7 +18,8 @@ Quality gate for shell code targeting Termux:
   zsh      zsh -n, plus an advisory shfmt diff when shfmt supports zsh (ShellCheck unsupported;
            shfmt can corrupt zsh syntax, so zsh files are never rewritten)
   all      built-in heuristics: line endings, banner borders, bashisms,
-           zsh pitfalls, Termux path/command compatibility, log-prefix scope
+           zsh pitfalls, Termux path/command compatibility, log-prefix scope,
+           numbered comments, log message length
 No PATH: lints the shell-like files of the repository (agent dirs excluded).
 
 Options:
@@ -39,6 +40,7 @@ Output: LEVEL FILE:LINE [CODE] message, then one SUMMARY line.
 Exit: 0 no ERROR (with --strict: no ERROR and no WARN); 1 otherwise; 2 usage error. INFO and NOTE never change the exit status.
 Suppress a heuristic on one line with a trailing comment: lint-ignore: CODE
 L002 flags log prefixes inside wrapper-like functions; names: scripts/wrapper-names.txt
+C002 flags numbered or step comments; L003 flags log_* messages over 36 characters
 ShellCheck notes count as WARN (judge new findings in changed files).
 '@
 }
@@ -102,6 +104,9 @@ $reLuPrefix = New-Object System.Text.RegularExpressions.Regex('(^|[^A-Za-z0-9_])
 $reLuCall = New-Object System.Text.RegularExpressions.Regex('(^|[^A-Za-z0-9_])log_(info|success|warn|error|prompt)([^A-Za-z0-9_]|$)')
 $reTrailWs = New-Object System.Text.RegularExpressions.Regex('[ \t]+$')
 $reCommentLine = New-Object System.Text.RegularExpressions.Regex('^[ ]*#')
+$reNumComment = New-Object System.Text.RegularExpressions.Regex('^' + $ws + '*#' + $ws + '*([0-9]+[.):]|[Ss]tep' + $ws + '*[0-9]+[.):-]?)(' + $ws + '|$)')
+$reLogDef = New-Object System.Text.RegularExpressions.Regex('log_(info|success|warn|error|prompt)' + $ws + '*\(')
+$logMax = 36
 $reHdStart = New-Object System.Text.RegularExpressions.Regex('(^|[^<])<<-?[ ]*["''\\]?[A-Za-z_][A-Za-z0-9_]*')
 $reHdStrip = New-Object System.Text.RegularExpressions.Regex('[ "''\\]')
 
@@ -219,6 +224,23 @@ function Invoke-Heuristics([string]$file, [string]$dialect) {
   $crn = 0; $crfirst = 0; $p1 = ''; $p2 = ''; $nr = 0
   $inhd = $false; $hdterm = ''; $hdtab = $false; $hdline = 0
   $infn = ''; $fnwrap = $false; $fnend = $null
+  function Add-Capped([string]$code, [int]$n, [string]$msg) {
+    if ($cnt.ContainsKey($code)) { $cnt[$code]++ } else { $cnt[$code] = 1 }
+    if ($cnt[$code] -le $maxPer) { $res.Add(('WARN {0}:{1} [{2}] {3}' -f $file, $n, $code, $msg)) }
+  }
+  function Test-L003([int]$n, [string]$s) {
+    $m = $reLuCall.Match($s)
+    if (-not $m.Success -or $reLogDef.IsMatch($s)) { return }
+    $rest = $s.Substring($m.Index + $m.Length - 1)
+    $d = $rest.IndexOf([char]34)
+    $q = $rest.IndexOf([char]39)
+    if ($d -lt 0 -and $q -lt 0) { return }
+    if ($d -lt 0 -or ($q -ge 0 -and $q -lt $d)) { $qc = [char]39; $st = $q } else { $qc = [char]34; $st = $d }
+    $body = $rest.Substring($st + 1)
+    $en = $body.IndexOf($qc)
+    if ($en -lt 0) { return }
+    if ($en -gt $logMax) { Add-Capped 'L003' $n "log message is $en characters; keep it at $logMax or fewer and split longer text into several log calls" }
+  }
   function Add-L002([int]$n, [string]$fn) {
     if ($cnt.ContainsKey('L002')) { $cnt['L002']++ } else { $cnt['L002'] = 1 }
     if ($cnt['L002'] -le $maxPer) { $res.Add(('WARN {0}:{1} [L002] UI log prefix inside wrapper-like function {2}: wrappers and CLI integrations keep native output (no prefixes)' -f $file, $n, $fn)) }
@@ -245,7 +267,10 @@ function Invoke-Heuristics([string]$file, [string]$dialect) {
       continue
     }
     if ($nr -eq 1 -and $line.StartsWith('#!')) { continue }
-    if ($reCommentLine.IsMatch($line)) { continue }
+    if ($reCommentLine.IsMatch($line)) {
+        if ($reNumComment.IsMatch($line) -and -not ($line.Contains('lint-ignore') -and $line.Contains('C002'))) { Add-Capped 'C002' $nr 'numbered or step comment reads like a tutorial: name the purpose or drop it' }
+        continue
+      }
     for ($ri = 0; $ri -lt $rules.Count; $ri++) {
       $r = $rules[$ri]
       if (-not ($r.Dialects.Contains(',' + $dialect + ',') -or $r.Dialects.Contains(',*,'))) { continue }
@@ -258,6 +283,7 @@ function Invoke-Heuristics([string]$file, [string]$dialect) {
       if ($cnt.ContainsKey($r.Code)) { $cnt[$r.Code]++ } else { $cnt[$r.Code] = 1 }
       if ($cnt[$r.Code] -le $maxPer) { $res.Add(('{0} {1}:{2} [{3}] {4}' -f $r.Severity, $file, $nr, $r.Code, $r.Message)) }
     }
+    if ($reLuCall.IsMatch($line) -and -not ($line.Contains('lint-ignore') -and $line.Contains('L003'))) { Test-L003 $nr $line }
     $lg = ($line.Contains('lint-ignore') -and $line.Contains('L002'))
     if ($infn -eq '') {
       $fname = ''
@@ -305,7 +331,12 @@ function Invoke-Heuristics([string]$file, [string]$dialect) {
   if ($cnt.ContainsKey('L002') -and $cnt['L002'] -gt $maxPer) {
     $res.Add(('NOTE {0} [L002] {1} more finding(s) suppressed (raise --max-per-rule)' -f $file, ($cnt['L002'] - $maxPer)))
   }
-  if ($crn -gt 0) { $res.Add(('ERROR {0}:{1} [E001] CR byte in {2} line(s); LF line endings required' -f $file, $crfirst, $crn)) }
+  foreach ($code in 'C002', 'L003') {
+      if ($cnt.ContainsKey($code) -and $cnt[$code] -gt $maxPer) {
+        $res.Add(('NOTE {0} [{1}] {2} more finding(s) suppressed (raise --max-per-rule)' -f $file, $code, ($cnt[$code] - $maxPer)))
+      }
+    }
+    if ($crn -gt 0) { $res.Add(('ERROR {0}:{1} [E001] CR byte in {2} line(s); LF line endings required' -f $file, $crfirst, $crn)) }
   if ($inhd) { $res.Add(('WARN {0}:{1} [H001] here-document delimiter {2} never closed; later lines were not checked' -f $file, $hdline, $hdterm)) }
   for ($ri = 0; $ri -lt $rules.Count; $ri++) {
     if ($lcnt.ContainsKey($ri)) { $res.Add(('INFO {0}:{1} [{2}] {3} line(s): {4}' -f $file, $lfirst[$ri], $rules[$ri].Code, $lcnt[$ri], $rules[$ri].Message)) }

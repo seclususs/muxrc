@@ -1,6 +1,7 @@
 # Agent Instructions
 
-Rules and skills live in `.agents/` and are self-contained. This file only points to them.
+All rules and skills live in `.agents/`; this file only points to them.
 
-- Rules (always on): `.agents/rules/core-policy.md`. If the environment does not load `.agents/rules/` by itself, read it first.
-- Entry skill: `.agents/skills/using-termux-skills/SKILL.md`. It applies to every message, including questions; the entry gate is in the core policy.
+- Rules: `.agents/rules/core-policy.md`. Read it first if the environment did not load it.
+- On every user message, open `.agents/skills/using-termux-skills/SKILL.md` before anything else.
+- Generated, test, and scratch files go under `.artifacts/<subfolder>/` (`scratch` for manual files); see the core policy.

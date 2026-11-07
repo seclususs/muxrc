@@ -1,6 +1,6 @@
 # Runtime facts and sources
 
-Load when a Termux claim must be justified or extended. Re-verify with a web search if a fact may have changed.
+Load when a Termux claim must be justified or extended. Verified on 2026-11-04 against termux-packages b1bc9d9, termux-app 8629e63 (latest stable tag v0.118.3), and termux-tools 9b53fb1. Re-verify with a web search if a fact may have changed.
 
 | Fact | Source |
 |---|---|
@@ -32,7 +32,10 @@ Load when a Termux claim must be justified or extended. Re-verify with a web sea
 | `sudo` package: rooted device, required `su` options, optional wrapper | https://github.com/agnostic-apollo/sudo (`site/pages/en/projects/docs/install/index.md`, `usage/index.md`), https://github.com/termux/termux-packages (`packages/sudo/build.sh`) |
 | Su wrappers may set `HOME` to `~/.suroot`; `apt` and `pacman` refuse root; root-created files can break the environment | https://github.com/termux/termux-packages/wiki/Termux-file-system-layout |
 | `~/storage/*` link names | https://github.com/termux/termux-app (`TermuxInstaller.java`) |
+| Stable release v0.118.3; v0.119.0 only as beta tags | https://github.com/termux/termux-app/releases |
+| Default font 12dp (`TermuxAppSharedPreferences.java`), columns = view width / glyph width of "X" (`TerminalView.java`, `TerminalRenderer.java`); the 0.6 glyph ratio is an estimate for monospace fonts | https://github.com/termux/termux-app (`termux-shared`, `terminal-view`) |
+| sshd: port 8022, default `PATH` `$PREFIX/bin`, session keeps `PATH`, `PREFIX`, `TMPDIR`, `LANG`, `TERMUX_*`, `ANDROID_*` | https://github.com/termux/termux-packages (`packages/openssh/build.sh`, `sshd_config.patch`, `session.c.patch`) |
 
 ## Verification commands (on a device)
-One shot: copy `.agents/skills/termux-environment/scripts/device-facts.sh` to the device and run `sh device-facts.sh`. Individually:
-`echo "$PREFIX $HOME $TMPDIR"` / `readlink "$PREFIX/bin/sh"` / `dpkg -s dash | grep Version` / `dpkg --print-architecture` / `command -v termux-toast` / `termux-info` / `command -v getprop` / `id -u` / `su -c id` (rooted devices)
+Run them through `$DEV` (SKILL.md, Device checks over SSH) or ask the user to run them:
+`echo "$PREFIX $HOME $TMPDIR"` / `readlink "$PREFIX/bin/sh"` / `dpkg -s dash | grep Version` / `dash -c 'set -o pipefail && echo pipefail-ok; echo "LINENO=${LINENO-}"'` / `getprop ro.build.version.sdk` / `echo "$LD_PRELOAD"` (termux-exec) / `dpkg --print-architecture` / `command -v termux-toast` / `termux-info` / `id -u` / `su -c id` (rooted devices)

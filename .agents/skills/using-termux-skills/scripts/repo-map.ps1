@@ -234,6 +234,6 @@ Write-Output ('logui.prefix=' + (Format-Locs $lu))
 Write-Output ('logui.calls=' + (Format-Locs $cu))
 if ($inGit) {
   Write-Output 'commits:'
-  foreach ($s in (& git log -n 8 --format='  %s' 2>$null)) { Write-Output $s }
+  foreach ($s in (& git --no-pager log -n 8 --format='  %s' 2>$null)) { Write-Output $s }
 }
 exit 0

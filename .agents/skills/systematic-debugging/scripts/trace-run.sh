@@ -148,16 +148,16 @@ if [ -z "${shell_name}" ]; then
   exit 3
 fi
 
-if [ -n "${outdir}" ]; then
-  mkdir -p "${outdir}" || exit 2
-else
-  # Output convention: .artifacts/ at the project root ignores itself in git
+if [ -z "${outdir}" ]; then
   root=$(git rev-parse --show-toplevel 2> /dev/null) || root=$(pwd)
   outdir="${root}/.artifacts/trace/$(date -u +%Y%m%dT%H%M%SZ)-$$"
-  mkdir -p "${outdir}" || exit 2
-  [ -e "${root}/.artifacts/.gitignore" ] || printf '*\n' > "${root}/.artifacts/.gitignore"
 fi
+mkdir -p "${outdir}" || exit 2
 outdir=$(cd "${outdir}" && pwd) || exit 2
+# Output convention: .artifacts/ ignores itself in git, whatever the subfolder
+case ${outdir} in
+  */.artifacts/*) [ -e "${outdir%%/.artifacts/*}/.artifacts/.gitignore" ] || printf '*\n' > "${outdir%%/.artifacts/*}/.artifacts/.gitignore" ;;
+esac
 stdout_log="${outdir}/stdout.log"
 trace_log="${outdir}/trace.log"
 
@@ -171,9 +171,10 @@ export HOME PREFIX TMPDIR
 
 timeout_bin=""
 have timeout && timeout_bin=timeout
+[ -z "${timeout_bin}" ] && have gtimeout && timeout_bin=gtimeout
 run() {
   if [ -n "${timeout_bin}" ]; then
-    timeout "${timeout_s}" "$@"
+    "${timeout_bin}" "${timeout_s}" "$@"
   else
     "$@"
   fi
@@ -200,8 +201,14 @@ EOF
     rc=$?
     ;;
   *)
-    lineno=no
-    run "${shell_name}" -x "$@" > "${stdout_log}" 2> "${trace_log}"
+    # dash 0.5.12 leaves LINENO empty; without it PS4 stays at the default
+    # shellcheck disable=SC2016
+    if [ -n "$("${shell_name}" -c 'echo "${LINENO-}"' 2> /dev/null)" ]; then
+      run env 'PS4=+L${LINENO}: ' "${shell_name}" -x "$@" > "${stdout_log}" 2> "${trace_log}"
+    else
+      lineno=no
+      run "${shell_name}" -x "$@" > "${stdout_log}" 2> "${trace_log}"
+    fi
     rc=$?
     ;;
 esac
@@ -216,7 +223,7 @@ n_trc=$(wc -l < "${trace_log}" | tr -d ' ')
 echo "trace-run: shell=${shell_name} exit=${rc} lineno=${lineno} dir=${outdir}"
 [ "${rc}" -eq 124 ] && echo "trace-run: timed out after ${timeout_s}s"
 if [ -z "${timeout_bin}" ]; then
-  echo "trace-run: note: timeout command not found; no time limit applied"
+  echo "trace-run: note: timeout or gtimeout not found; no time limit applied"
 fi
 echo "--- stdout (last ${tail_n} of ${n_out}) ---"
 tail -n "${tail_n}" "${stdout_log}"

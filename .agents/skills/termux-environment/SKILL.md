@@ -1,15 +1,15 @@
 ---
 name: termux-environment
-description: Verified facts about the Termux runtime on Android, rooted and non-rooted - $PREFIX and $HOME layout, absent FHS paths, shebangs and termux-exec, dash as sh, packages and architectures, shared-storage limits, su behavior and root caveats, Termux:API, Boot, process killing - plus termux-sim, an offline simulation of that environment on the host (uname, getprop, id, su, pkg, storage) for scripts and checks that would otherwise need a physical device. Use when code, config, or a question depends on paths, permissions, packages, storage, exec, root, or background processes that differ from desktop Linux. To write code use termux-scripting.
+description: Verified Termux and Android runtime facts, rooted or not: paths, exec limits, dash as sh, packages, storage, su, Termux:API, process kills, SSH device checks. Use when code depends on device behavior.
 ---
 
 # Termux environment
 
-Facts were verified against official Termux, Android, and root-tool sources (list: `references/runtime-facts.md`). For anything not listed here, search the web before relying on it. Device-only behavior cannot be proven from a host.
+Facts were verified against official Termux, Android, and root-tool sources (list: `references/runtime-facts.md`). For anything not listed here, search the web before relying on it. Device-only behavior cannot be proven from a host (see Device checks over SSH).
 
 ## Core facts
 - `$PREFIX` = `/data/data/com.termux/files/usr`; `$HOME` = `/data/data/com.termux/files/home` (outside the prefix). `$PREFIX/bin` combines `/bin`, `/sbin`, `/usr/bin`, `/usr/sbin`; `$PREFIX/tmp` combines `/tmp` and `/var/tmp` (erased on each app restart); `$PREFIX/var/run` replaces `/run`; `$PREFIX/etc`, `$PREFIX/var`, `$PREFIX/lib`, `$PREFIX/share` hold the Termux equivalents (Android's `/etc` is a symlink to `/system/etc`, not Termux configuration).
-- The app exports `HOME`, `PREFIX`, `TMPDIR`, `TERMUX_VERSION`. From app v0.119.0 the documented names are `TERMUX__PREFIX`, `TERMUX__HOME`, `TERMUX__ROOTFS`, and `PREFIX` is marked deprecated; the latest release is v0.118.3, so `$PREFIX` stays the portable choice.
+- The app exports `HOME`, `PREFIX`, `TMPDIR`, `TERMUX_VERSION`. The wiki adds `TERMUX__PREFIX`, `TERMUX__HOME`, `TERMUX__ROOTFS` and deprecates `PREFIX` from app v0.119.0, which exists only as beta (latest stable: v0.118.3), so `$PREFIX` stays the portable choice.
 - `PATH` holds only `$PREFIX/bin` on Android 7 and later; `/system/bin` is not in it. Android binaries need the absolute path, and `LD_LIBRARY_PATH` and `LD_PRELOAD` unset when run from Termux.
 - FHS paths are absent or restricted: do not hard-code `/tmp`, `/usr`, `/etc`, `/bin`, `/home`; use `$TMPDIR`, `$PREFIX`, `$HOME`.
 - Exec: `termux-exec` is loaded through `LD_PRELOAD` and overrides the `exec()` family (not direct `execve` syscalls), so `#!/bin/sh` and `#!/usr/bin/env x` resolve to `$PREFIX/bin`. Without it, `/bin/*` and `/usr/bin/*` shebangs fail with `No such file or directory` or run Android's `/system/bin/*` binary of the same name. A `$PREFIX` shebang needs no help. Do not depend on Android's `/system/bin/sh`.
@@ -18,7 +18,7 @@ Facts were verified against official Termux, Android, and root-tool sources (lis
 - `bash` (package `bash`, essential) is 5.3.20 and `zsh` (optional, `pkg install zsh`) is 5.9.2 in termux-packages master; the device may differ (`bash --version`, `zsh --version`).
 - Architectures: aarch64 (default), arm, i686, x86_64. libc is bionic, not glibc.
 - Packages: `pkg` wraps `apt` (both exist; Termux also has a pacman-based variant, see `TERMUX_APP_PACKAGE_MANAGER`). `pkg install|update|upgrade|search|show`; `termux-change-repo` switches mirrors. Packages are built for the `com.termux` prefix.
-- Default install: `termux-tools` depends on coreutils, findutils, grep, sed, gawk, diffutils, tar, gzip, bzip2, xz-utils, less, procps, psmisc, util-linux, curl, dialog, dash. Not on that list (install with `pkg`): git, python, jq, zsh, termux-api, sudo.
+- Default install: `termux-tools` depends on coreutils, findutils, grep, sed, gawk, diffutils, tar, gzip, bzip2, xz-utils, less, procps, psmisc, util-linux, curl, dialog, dash, termux-core, termux-exec, termux-am. Not on that list (install with `pkg`): git, python, jq, zsh, termux-api, sudo.
 - Installation sources: F-Droid or GitHub releases. The Google Play build is separate; do not mix sources (signing differs).
 - Storage: `termux-setup-storage` creates `~/storage/*` symlinks (`shared`, `documents`, `downloads`, `dcim`, `pictures`, `music`, `movies`, `podcasts`, `external-N`) into shared storage. Shared storage is mounted noexec, cannot hold symlinks, has case-insensitive names, and `chmod` fails there ("Operation not permitted"). Keep scripts, state, and symlink targets in `$HOME` or `$PREFIX`; a symlink in `$HOME` may point into shared storage. Pass a file in shared storage to an interpreter (`sh file`) instead of executing it.
 - Termux:API: `termux-*` API commands need the Termux:API Android app, the `termux-api` package, and Android permissions. Guard each use with `command -v` and provide a fallback. Other `termux-*` commands (`termux-open`, `termux-wake-lock`, `termux-reload-settings`, `termux-setup-storage`, `termux-fix-shebang`) come from `termux-tools`.
@@ -26,6 +26,7 @@ Facts were verified against official Termux, Android, and root-tool sources (lis
 - Boot and services: Termux:Boot runs scripts in `~/.termux/boot/` at device boot (start the app once from its launcher icon; call `termux-wake-lock` first in a script that must keep the device awake); `termux-services` (depends on `runit`) provides service management.
 - Android 12+ kills phantom processes above a combined limit of 32 across apps, and processes with excessive CPU use; symptom `[Process completed (signal 9) - press Enter]`.
 - Detect Termux: `[ -n "${TERMUX_VERSION:-}" ]` and `$PREFIX`; `termux-info` prints versions and architecture.
+- Terminal width: the default font is 12dp and a glyph is about 0.6 of the font size wide, so a 360dp phone shows about 50 columns, a 411dp phone about 57, and a 360dp phone zoomed to 16dp about 37. The log limit in the core policy rests on this estimate; measure the real width with `tput cols` in the app.
 
 ## Root and non-root
 - Termux itself does not need root. The app runs under its own Android user id (`u0_aNNN`); it can access only files with the same owner and a compatible SELinux context. Root bypasses that sandbox.
@@ -36,16 +37,15 @@ Facts were verified against official Termux, Android, and root-tool sources (lis
 - `sudo` (agnostic-apollo/sudo, package `sudo`) is an optional wrapper around `su` for rooted devices. It needs a `su` binary that supports `-c`, `--shell`, `--preserve-environment`, and `--mount-master` (Magisk and SuperSU do), ideally with root permission granted to Termux. A su wrapper may set `HOME` to `~/.suroot` to keep root-owned files apart. Code calls plain `su -c` and handles failure; it does not require the wrapper.
 - Default: write code that works without root, detect root explicitly, and degrade when it is missing. A feature that needs root states so.
 
-## Simulate on the host
-No device at hand: `sh .agents/skills/termux-environment/scripts/termux-sim.sh` (or `.ps1`) runs a script, a snippet, or the fact collector in a simulated Termux. Details and limits: `references/simulation.md`.
-- Script: `sh .agents/skills/termux-environment/scripts/termux-sim.sh [--root] -- path/to/script.sh args`
-- Snippet: `sh .agents/skills/termux-environment/scripts/termux-sim.sh [--root] -c 'uname -o; su -c id'`
-- Facts: `sh .agents/skills/termux-environment/scripts/termux-sim.sh [--root] --facts` (output carries `sim=yes`)
-- Match a real device: pass the output of `device-facts.sh` as `--profile FILE`.
-It reproduces documented behavior (paths, variables, `uname -o`, `getprop`, `id`, `su`, `pkg`, `dpkg`, `termux-info`, storage refusals). It does not reproduce the Android kernel, SELinux, bionic, termux-exec, or Termux:API; anything that depends on those is listed as "needs device".
-
-## Device facts
-Have the user copy `.agents/skills/termux-environment/scripts/device-facts.sh` to the device (or paste its content), run it with `sh`, and paste the output. It is read-only, makes no Termux:API call, and settles device-only questions: dash version (`pipefail`), `LINENO`, architecture, Android SDK, termux-exec, Termux:API presence, storage setup.
+## Device checks over SSH
+A host run shows syntax and logic, not Termux. When a check needs the device (termux-exec, storage, root, Termux:API, the device's dash), ask once per conversation, in the user's language: "Can I reach your Termux device over SSH?" If the user answers with a command, for example `ssh termux` (an alias from the user's own SSH config), call it `$DEV` and use it exactly as given. Never edit SSH config or keys and never guess a host. If the answer is no, list the check with its exact command for the user to run.
+- Probe first, read-only: `$DEV 'uname -o; echo "$PREFIX"; echo "$TMPDIR"'` must print `Android` and two paths; otherwise stop and report. When `$DEV` starts with `ssh`, add `-o BatchMode=yes -o ConnectTimeout=10` right after `ssh`, so a missing key fails instead of waiting for a password.
+- Run code only inside a temporary directory that the same command removes, with `HOME` redirected into it. Send the files as a tar stream so nothing else is written:
+  `tar -c -C DIR FILE... | $DEV 'd=$(mktemp -d "${TMPDIR:?}/agent.XXXXXX") || exit 1; trap "rm -rf \"$d\"" EXIT HUP INT TERM; tar -x -C "$d" && cd "$d" && mkdir home && HOME="$d/home" timeout 60 sh ./SCRIPT ARGS'`
+  The command's exit status is the script's. The trap removes the directory after success, failure, timeout, or a dropped connection (tested against OpenSSH with bash, dash, and zsh as login shell; not on a device).
+- Afterwards `$DEV 'ls -d "${TMPDIR:?}"/agent.* 2>/dev/null'` must print nothing; report that.
+- Without the user's approval, run nothing that changes the device outside that directory: `pkg` or `apt` installs, writes under `$PREFIX`, `~/.termux`, or storage, services, `su`, kill, reboot. Read each script before sending it; one that does any of those runs only in `sandbox-run`.
+- Run the pipe from a POSIX shell (Git Bash or WSL on Windows): PowerShell 5.1 corrupts binary pipelines. Termux's sshd listens on port 8022 and keeps `PATH`, `PREFIX`, `TMPDIR`, `LANG`, and `TERMUX_*` in the session.
 
 ## Decision table
 | Situation | Do |
@@ -56,6 +56,7 @@ Have the user copy `.agents/skills/termux-environment/scripts/device-facts.sh` t
 | Android feature (toast, notification, clipboard, battery) | Termux:API behind a guard, with a fallback |
 | Root needed | `su -c` behind a status check, with a non-root path |
 | Long-running background task | document wake-lock and the killer; do not promise reliability |
+| Behavior only the device shows | ask for SSH access (Device checks over SSH) |
 | Unsure about a fact | search official sources; cite the URL in notes |
 
 ## Gotchas

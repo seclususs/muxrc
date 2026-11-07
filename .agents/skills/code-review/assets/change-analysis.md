@@ -4,7 +4,7 @@ Delete a section that does not apply.
 
 ## Overview
 - Scope: what was compared; scope flags used
-- Coverage: diff parts and line counts read in full; files read in full; skipped files; verify=ok|mismatch
+- Coverage: diff parts and line counts read in full; files read in full; skipped files; verify=ok|mismatch; references checked and unverified
 - Summary: two or three sentences on what changed overall
 
 ## Files
