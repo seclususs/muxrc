@@ -38,3 +38,48 @@ systemctl() {
       ;;
   esac
 }
+
+service() {
+  if [[ $# -eq 0 ]]; then
+    echo "Usage: service <service-name> {start|stop|restart|status|enable|disable}"
+    echo "       service --status-all"
+    return 1
+  fi
+
+  case "$1" in
+    -h | --help)
+      echo "Usage: service <service-name> {start|stop|restart|status|enable|disable}"
+      echo "       service --status-all"
+      return 0
+      ;;
+    list | check | call)
+      if [[ -x /system/bin/service ]]; then
+        /system/bin/service "$@"
+      else
+        print -u2 "service: /system/bin/service not found"
+        return 1
+      fi
+      ;;
+    --status-all)
+      if [[ -d "$PREFIX/var/service" ]]; then
+        local d
+        for d in "$PREFIX/var/service"/*(N); do
+          if [[ -d "$d" ]]; then
+            command sv status "${d:t}"
+          fi
+        done
+      fi
+      ;;
+    *)
+      if [[ $# -ge 2 ]]; then
+        local s_name="$1"
+        local s_act="$2"
+        systemctl "$s_act" "$s_name"
+      else
+        echo "Usage: service <service-name> {start|stop|restart|status|enable|disable}"
+        return 1
+      fi
+      ;;
+  esac
+}
+
