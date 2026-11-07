@@ -1,2 +1,6 @@
-disable=SC1090,SC1091,SC3043,SC2155,SC2034
+# SC1090, SC1091: dynamic sourcing in loader
+# SC3043: 'local' supported by Termux dash
+# SC2034: library exports and namerefs
+disable=SC1090,SC1091,SC3043,SC2034
+
 enable=require-variable-braces,quote-safe-variables,check-unassigned-uppercase
