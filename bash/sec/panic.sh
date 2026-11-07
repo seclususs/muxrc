@@ -5,11 +5,7 @@
 ################
 set -euo pipefail
 
-_panic_dir="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
-source "${_panic_dir}/../../common/init.sh"
-if [[ -f "${_panic_dir}/../../common/shredder.sh" ]]; then
-  source "${_panic_dir}/../../common/shredder.sh"
-fi
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 usage() {
   echo "usage: sec panic [-f|--force] [-n|--dry-run]"
@@ -78,7 +74,7 @@ shred_target() {
 
   if [[ -d "${target}" ]]; then
     if ((dry_run == 1)); then
-      log_info "[dry-run] would shred directory: ${target}"
+      log_info "[dry-run] shred dir: ${target}"
       return 0
     fi
 
@@ -96,20 +92,20 @@ wipe_clipboard() {
 
   if command -v termux-clipboard-set > /dev/null 2>&1; then
     if ((dry_run == 1)); then
-      log_info "[dry-run] would wipe android clipboard"
+      log_info "[dry-run] wipe clipboard"
       return 0
     fi
     printf "" | termux-clipboard-set 2> /dev/null || true
     log_success "clipboard wiped"
   else
-    log_warn "termux-clipboard-set not found (clipboard not wiped)"
+    log_warn "clipboard tool not found"
   fi
 }
 
 confirm_panic() {
   local confirm=""
 
-  log_warn "emergency panic: permanently destroying credentials, history, and vault"
+  log_warn "destroying credentials & vault"
   log_prompt "type 'PANIC' to confirm: "
   read -r confirm
 
@@ -151,7 +147,7 @@ main() {
   done < <(get_targets)
 
   if [[ ${#targets[@]} -eq 0 ]]; then
-    log_info "no sensitive targets found to destroy"
+    log_info "no sensitive targets found"
     wipe_clipboard "${dry_run}"
     return 0
   fi
@@ -167,7 +163,7 @@ main() {
   fi
 
   if ((force == 0)); then
-    log_warn "the following targets will be permanently destroyed:"
+    log_warn "targets to be destroyed:"
     for target in "${targets[@]}"; do
       log_warn "  - ${target}"
     done
@@ -185,7 +181,7 @@ main() {
   done
 
   wipe_clipboard 0
-  log_success "panic protocol complete: credentials and vault destroyed"
+  log_success "panic complete: vault destroyed"
 }
 
 main "$@"

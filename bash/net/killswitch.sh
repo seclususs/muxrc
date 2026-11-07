@@ -5,7 +5,7 @@
 #########################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 readonly CHAIN_NAME="MUXRC_KILLSWITCH"
 
@@ -29,7 +29,7 @@ check_dependencies() {
   local ipt
   ipt=$(get_iptables_bin)
   if [[ -z "${ipt}" ]]; then
-    log_error "missing iptables (install root-repo & iptables)"
+    log_error "missing iptables"
     return 1
   fi
   return 0
@@ -56,7 +56,7 @@ add_state_rule() {
     return 0
   fi
 
-  log_warn "conntrack unavailable, skipping state rule"
+  log_warn "conntrack unavailable, skipped"
   return 0
 }
 
@@ -122,7 +122,7 @@ enable_killswitch() {
 
   disable_killswitch_rules > /dev/null 2>&1 || true
 
-  log_info "enabling killswitch (mode: ${mode})..."
+  log_info "enabling killswitch (${mode})"
 
   "${ipt}" -N "${CHAIN_NAME}" 2> /dev/null || true
   "${ipt}" -F "${CHAIN_NAME}" 2> /dev/null || true
@@ -141,7 +141,7 @@ enable_killswitch() {
       local tor_uid
       tor_uid=$(get_tor_uid) || true
       if [[ -z "${tor_uid}" ]]; then
-        log_error "tor daemon not running. run 'net tor start' first"
+        log_error "tor daemon not running"
         disable_killswitch_rules > /dev/null 2>&1 || true
         return 1
       fi
@@ -201,7 +201,7 @@ show_status() {
   fi
 
   if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-    log_warn "reading status without root may be inaccurate"
+    log_warn "non-root status may be inaccurate"
   fi
 
   if is_killswitch_active; then
@@ -228,7 +228,7 @@ toggle_killswitch() {
     disable_killswitch_rules
     log_success "killswitch disabled"
   else
-    log_info "killswitch inactive, enabling (mode: block)..."
+    log_info "enabling killswitch (block)"
     enable_killswitch "block" "true" "8022"
   fi
 }

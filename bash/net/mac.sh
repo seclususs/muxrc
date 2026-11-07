@@ -5,7 +5,7 @@
 ######################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 check_dependencies() {
   require_cmd ip awk
@@ -82,7 +82,7 @@ save_original_mac() {
     mkdir -p "${state_dir}"
     printf "%s\n" "${cur_mac}" > "${orig_file}"
     chmod 600 "${orig_file}"
-    log_info "saved factory mac for ${iface}: ${cur_mac}"
+    log_info "saved orig MAC: ${cur_mac}"
   fi
 }
 
@@ -93,7 +93,7 @@ apply_mac() {
 
   cur_mac=$(get_current_mac "${iface}")
   if [[ "${cur_mac}" == "${new_mac,,}" ]]; then
-    log_warn "interface ${iface} already has address ${cur_mac}"
+    log_warn "${iface} already has ${cur_mac}"
     return 0
   fi
 
@@ -171,7 +171,7 @@ reset_mac() {
   local orig_file="${state_dir}/mac_orig_${iface}"
 
   if [[ ! -f "${orig_file}" ]]; then
-    log_error "no factory mac backup found for ${iface}"
+    log_error "no factory MAC found: ${iface}"
     return 1
   fi
 
@@ -179,7 +179,7 @@ reset_mac() {
   orig_mac=$(tr -d ' \n' < "${orig_file}")
   validate_mac "${orig_mac}" || return 1
 
-  log_info "restoring factory mac ${orig_mac} on ${iface}..."
+  log_info "restoring MAC on ${iface}"
   apply_mac "${iface}" "${orig_mac}"
 }
 
@@ -223,7 +223,7 @@ main() {
       require_root || exit 1
       local target_mac="${1:-}"
       if [[ -z "${target_mac}" || "${target_mac}" == "-h" || "${target_mac}" == "--help" ]]; then
-        log_error "usage: net mac set <mac_address> [interface]"
+        log_error "usage: net mac set <mac> [iface]"
         exit 1
       fi
       shift

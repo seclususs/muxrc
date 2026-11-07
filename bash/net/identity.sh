@@ -5,7 +5,7 @@
 #######################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 check_dependencies() {
   require_cmd ip awk
@@ -169,7 +169,7 @@ rotate_identity() {
     if [[ -f "${script_dir}/mac.sh" ]]; then
       bash "${script_dir}/mac.sh" random "${iface}"
     else
-      log_warn "mac.sh not found, skipping mac rotation"
+      log_warn "mac.sh not found, skipping"
     fi
   else
     confirm_ssh_hazard "this will drop your ssh connection" || return 1
@@ -182,7 +182,7 @@ rotate_identity() {
   flush_network_caches "${iface}"
   signal_tor
 
-  log_success "identity rotation complete on ${iface}"
+  log_success "identity rotated on ${iface}"
   show_status "${iface}"
 }
 
@@ -191,7 +191,7 @@ reset_identity() {
   local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
   local orig_file="${state_dir}/hostname_orig"
 
-  log_info "restoring factory identity on ${iface}..."
+  log_info "restoring identity on ${iface}"
 
   local script_dir
   script_dir="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
@@ -221,7 +221,7 @@ reset_identity() {
   flush_network_caches "${iface}"
   signal_tor
 
-  log_success "identity restored to factory defaults"
+  log_success "identity restored to factory"
   show_status "${iface}"
 }
 
@@ -344,14 +344,14 @@ main() {
           set_ipv6_state "1" "${iface}"
           ;;
         status)
-          log_info "ipv6 status on ${iface}: $(get_ipv6_status "${iface}")"
+          log_info "ipv6: $(get_ipv6_status "${iface}")"
           ;;
         -h | --help)
           echo "usage: net identity ipv6 {enable|disable|status} [iface]"
           exit 0
           ;;
         *)
-          log_error "usage: net identity ipv6 {enable|disable|status} [iface]"
+          log_error "usage: net identity ipv6 <act>"
           exit 1
           ;;
       esac

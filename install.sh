@@ -6,7 +6,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
-source "${SCRIPT_DIR}/common/init.sh"
+source "${SCRIPT_DIR}/sh/init.sh"
 
 setup_storage() {
   if [[ ! -d "${HOME}/storage" ]]; then
@@ -19,7 +19,7 @@ setup_storage() {
 enable_repos() {
   local sources_dir="${PREFIX:-/data/data/com.termux/files/usr}/etc/apt/sources.list.d"
   if [[ -f "${sources_dir}/root.list" && -f "${sources_dir}/x11.list" ]]; then
-    log_info "extra repos already enabled, skipping."
+    log_info "extra repos already enabled"
     return 0
   fi
 
@@ -48,7 +48,7 @@ install_packages() {
   done
 
   if [[ ${#missing_pkgs[@]} -eq 0 ]]; then
-    log_info "all packages already installed, skipping."
+    log_info "packages already installed"
     return 0
   fi
 
@@ -106,7 +106,7 @@ setup_sudo_wrapper() {
 
   log_info "setting up sudo wrapper..."
   if [[ -f "${shadow_file}" || -f "${HOME}/.config/muxrc/sudo_hash" || -f "${HOME}/.sudo_hash" ]]; then
-    log_info "sudo password already configured, skipping."
+    log_info "sudo already configured"
     return 0
   fi
 
@@ -118,7 +118,7 @@ setup_sudo_wrapper() {
   echo ""
 
   if [[ -z "${sudo_pass}" ]]; then
-    log_error "password cannot be empty. please retry."
+    log_error "password cannot be empty"
     return 1
   elif [[ "${sudo_pass}" == "${sudo_pass_confirm}" ]]; then
     local hash=""
@@ -179,7 +179,7 @@ setup_zsh_plugins() {
   fi
 
   log_info "fetching zsh plugins..."
-  bash "${SCRIPT_DIR}/bash/sync.sh" "${zsh_plugins_dir}"
+  bash "${SCRIPT_DIR}/bash/common/sync.sh" "${zsh_plugins_dir}"
 }
 
 setup_storage_symlinks() {
@@ -197,10 +197,10 @@ setup_storage_symlinks() {
       if mkdir -p "${target_path}" 2> /dev/null; then
         log_success "created ${target_path}"
       else
-        log_warn "could not create ${target_path} (check storage permissions)."
+        log_warn "cannot create ${target_path}"
       fi
     else
-      log_warn "${target_path} already exists, skipping."
+      log_warn "exists: ${target_path}"
     fi
     ln -sfn "${target_path}" "${HOME}/${dir_name}"
   done
@@ -232,15 +232,15 @@ setup_boot_services() {
 
   log_info "configuring boot services..."
   mkdir -p "${HOME}/.termux/boot"
-  ln -sf "${dotfiles_dir}/boot/start-sshd" "${HOME}/.termux/boot/start-sshd"
-  chmod +x "${dotfiles_dir}/boot/start-sshd" 2> /dev/null || true
+  ln -sf "${dotfiles_dir}/sh/boot/start-sshd" "${HOME}/.termux/boot/start-sshd"
+  chmod +x "${dotfiles_dir}/sh/boot/start-sshd" 2> /dev/null || true
 
   local magisk_service_dir="/data/adb/service.d"
   local magisk_runner="${magisk_service_dir}/muxrc-boot.sh"
 
   if command -v su > /dev/null 2>&1 && su -c true 2> /dev/null; then
     if su -c "[ -d '${magisk_service_dir}' ]" 2> /dev/null; then
-      su -c "cp '${dotfiles_dir}/boot/magisk-boot.sh' '${magisk_runner}'" 2> /dev/null \
+      su -c "cp '${dotfiles_dir}/sh/boot/magisk-boot.sh' '${magisk_runner}'" 2> /dev/null \
         && su -c "chmod 755 '${magisk_runner}'" 2> /dev/null || true
     fi
   fi
@@ -278,8 +278,8 @@ main() {
   enable_repos
   install_packages
 
-  if [[ -f "${SCRIPT_DIR}/bash/migrate.sh" ]]; then
-    bash "${SCRIPT_DIR}/bash/migrate.sh"
+  if [[ -f "${SCRIPT_DIR}/bash/common/migrate.sh" ]]; then
+    bash "${SCRIPT_DIR}/bash/common/migrate.sh"
   fi
 
   setup_directories "${dotfiles_dir}" "${zsh_plugins_dir}"
@@ -292,7 +292,7 @@ main() {
   setup_nerd_font
   setup_default_shell
 
-  log_success "installation complete! please restart termux."
+  log_success "install done. restart termux"
   trap - EXIT
 }
 

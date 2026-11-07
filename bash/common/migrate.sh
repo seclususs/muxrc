@@ -5,7 +5,7 @@
 ######################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../sh/init.sh"
 
 migrate_shadow() {
   local prefix_dir="${PREFIX:-/data/data/com.termux/files/usr}"
@@ -62,7 +62,7 @@ migrate_zsh_plugins() {
       done
       rm -rf "${legacy_dir}" 2> /dev/null || true
     fi
-    log_success "migrated zsh plugins to ~/.local/share/zsh/plugins"
+    log_success "migrated zsh plugins"
     rmdir "${HOME}/.zsh" 2> /dev/null || true
   fi
 }
@@ -77,7 +77,7 @@ migrate_zsh_history() {
     else
       rm -f "${HOME}/.zsh_history" 2> /dev/null || true
     fi
-    log_success "migrated zsh history to ~/.local/state/zsh/history"
+    log_success "migrated zsh history"
   fi
 
   if [[ -f "${HOME}/.zsh_history_root" ]]; then
@@ -87,7 +87,7 @@ migrate_zsh_history() {
     else
       rm -f "${HOME}/.zsh_history_root" 2> /dev/null || true
     fi
-    log_success "migrated zsh root history to ~/.local/state/zsh/history_root"
+    log_success "migrated zsh root history"
   fi
 }
 
@@ -109,7 +109,7 @@ migrate_trash() {
       shopt -u dotglob nullglob
       rmdir "${legacy_dir}" 2> /dev/null || true
     fi
-    log_success "migrated trash to ~/.local/share/Trash"
+    log_success "migrated trash to xdg"
   fi
 }
 
@@ -137,7 +137,7 @@ migrate_vault() {
       shopt -u dotglob nullglob
       rmdir "${legacy_dir}" 2> /dev/null || true
     fi
-    log_success "migrated vault to ~/.local/share/muxrc/vault"
+    log_success "migrated vault to xdg"
   fi
 }
 
@@ -188,8 +188,8 @@ migrate_magisk_boot() {
   local magisk_service_dir="/data/adb/service.d"
   local magisk_runner="${magisk_service_dir}/muxrc-boot.sh"
   local repo_dir
-  repo_dir="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")")"
-  local source_runner="${repo_dir}/boot/magisk-boot.sh"
+  repo_dir="$(dirname "$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")")")"
+  local source_runner="${repo_dir}/sh/boot/magisk-boot.sh"
 
   if [[ -f "${source_runner}" ]] && command -v su > /dev/null 2>&1 && su -c true 2> /dev/null; then
     if su -c "[ -d '${magisk_service_dir}' ]" 2> /dev/null; then

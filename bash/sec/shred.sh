@@ -5,7 +5,7 @@
 ##########################
 [[ $- != *i* ]] && set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 confirm_destruction() {
   local target_file="${1:-}"
@@ -53,7 +53,7 @@ shred_main() {
   done
 
   if [[ -z "${target_file}" ]]; then
-    log_error "usage: sec shred <file_path> (see -h)"
+    log_error "usage: sec shred <file>"
     return 1
   fi
 

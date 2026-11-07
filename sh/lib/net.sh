@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.termux/files/usr/bin/sh
 
 ###################
 # Network utilities
@@ -10,8 +10,8 @@
 detect_interface() {
   local iface="${1:-}"
 
-  if [[ -n "${iface}" ]]; then
-    if [[ ! -d "/sys/class/net/${iface}" ]] && ! ip link show "${iface}" > /dev/null 2>&1; then
+  if [ -n "${iface}" ]; then
+    if [ ! -d "/sys/class/net/${iface}" ] && ! ip link show "${iface}" > /dev/null 2>&1; then
       log_error "interface '${iface}' not found"
       return 1
     fi
@@ -22,22 +22,22 @@ detect_interface() {
   local detected=""
   local dev_path
   for dev_path in /sys/class/net/wlan*; do
-    if [[ -d "${dev_path}" ]]; then
+    if [ -d "${dev_path}" ]; then
       detected="${dev_path##*/}"
       break
     fi
   done
 
-  if [[ -z "${detected}" ]]; then
+  if [ -z "${detected}" ]; then
     detected=$(ip -o link show 2> /dev/null | awk -F': ' '{print $2}' | grep -E '^wlan' | head -n 1 || true)
   fi
 
-  if [[ -z "${detected}" ]]; then
+  if [ -z "${detected}" ]; then
     detected="wlan0"
   fi
 
-  if [[ ! -d "/sys/class/net/${detected}" ]] && ! ip link show "${detected}" > /dev/null 2>&1; then
-    log_error "no active wireless interface detected"
+  if [ ! -d "/sys/class/net/${detected}" ] && ! ip link show "${detected}" > /dev/null 2>&1; then
+    log_error "no wireless interface detected"
     return 1
   fi
 
@@ -52,15 +52,15 @@ get_current_mac() {
   local iface="${1}"
   local cur_mac=""
 
-  if [[ -f "/sys/class/net/${iface}/address" ]]; then
+  if [ -f "/sys/class/net/${iface}/address" ]; then
     cur_mac=$(tr -d ' \n' < "/sys/class/net/${iface}/address" 2> /dev/null || true)
   fi
 
-  if [[ -z "${cur_mac}" ]]; then
+  if [ -z "${cur_mac}" ]; then
     cur_mac=$(ip -o link show "${iface}" 2> /dev/null | awk '{for(i=1;i<=NF;i++) if($i=="link/ether") print $(i+1)}' || true)
   fi
 
-  printf "%s\n" "${cur_mac,,}"
+  printf "%s\n" "${cur_mac}" | tr '[:upper:]' '[:lower:]'
 }
 
 ################################

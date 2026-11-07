@@ -4,7 +4,7 @@
 
 typeset -g MUXRC_DIR="${MUXRC_DIR:-${ZSH_CONFIG_DIR:+${ZSH_CONFIG_DIR:h}}}"
 typeset -g MUXRC_DIR="${MUXRC_DIR:-$HOME/muxrc}"
-source "${MUXRC_DIR}/common/init.sh"
+source "${MUXRC_DIR}/sh/init.sh"
 
 ############
 # Muxrc Sync
@@ -42,14 +42,14 @@ _muxrc_sync() {
     return 1
   fi
 
-  if [[ -f "$muxrc_dir/bash/migrate.sh" ]]; then
+  if [[ -f "$muxrc_dir/bash/common/migrate.sh" ]]; then
     log_info "checking migrations..."
-    bash "$muxrc_dir/bash/migrate.sh"
+    bash "$muxrc_dir/bash/common/migrate.sh"
   fi
 
-  if [[ -f "$muxrc_dir/bash/sync.sh" ]]; then
+  if [[ -f "$muxrc_dir/bash/common/sync.sh" ]]; then
     log_info "syncing zsh plugins..."
-    bash "$muxrc_dir/bash/sync.sh" "$plugins_dir"
+    bash "$muxrc_dir/bash/common/sync.sh" "$plugins_dir"
     rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump"* 2> /dev/null || true
   fi
 
@@ -130,7 +130,7 @@ muxrc() {
       _muxrc_help
       ;;
     *)
-      log_error "unknown command: $subcmd (see: muxrc -h)"
+      log_error "unknown command: $subcmd"
       return 1
       ;;
   esac

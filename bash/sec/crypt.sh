@@ -5,7 +5,7 @@
 ########################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 check_dependencies() {
   require_cmd openssl
@@ -15,7 +15,7 @@ validate_target_file() {
   local target_file="${1:-}"
 
   if [[ -z "${target_file}" ]]; then
-    log_error "usage: sec encrypt <file> | sec decrypt <file> [out] (see -h)"
+    log_error "usage: sec crypt <enc|dec> <file>"
     return 1
   fi
 
@@ -23,9 +23,19 @@ validate_target_file() {
 }
 
 validate_password() {
-  if [[ -z "${MUXRC_CRYPT_PASS:-}" ]]; then
-    log_error "missing password in MUXRC_CRYPT_PASS"
-    return 1
+  local mode="${1:-}"
+  if [[ -n "${MUXRC_CRYPT_PASS:-}" ]]; then
+    return 0
+  fi
+
+  if [[ "${mode}" == "--encrypt" ]]; then
+    prompt_secret_confirmed "encryption password" MUXRC_CRYPT_PASS || return 1
+  else
+    read_secret "enter decryption password: " MUXRC_CRYPT_PASS || return 1
+    if [[ -z "${MUXRC_CRYPT_PASS:-}" ]]; then
+      log_error "password cannot be empty"
+      return 1
+    fi
   fi
   return 0
 }
@@ -71,10 +81,7 @@ encrypt_target_file() {
   out_file="${vault_dir}/.${base_name}.enc"
 
   if [[ -e "${out_file}" ]]; then
-    local overwrite=""
-    log_prompt "'${out_file}' exists. overwrite? [y/N]: "
-    read -r overwrite
-    if [[ ! "${overwrite:-}" =~ ^[Yy]$ ]]; then
+    if ! prompt_confirm "file exists. overwrite?" "N"; then
       log_warn "aborted"
       return 1
     fi
@@ -114,10 +121,7 @@ decrypt_target_file() {
   fi
 
   if [[ -e "${out_file}" ]]; then
-    local overwrite=""
-    log_prompt "'${out_file}' exists. overwrite? [y/N]: "
-    read -r overwrite
-    if [[ ! "${overwrite:-}" =~ ^[Yy]$ ]]; then
+    if ! prompt_confirm "file exists. overwrite?" "N"; then
       log_warn "aborted"
       return 1
     fi
@@ -170,7 +174,7 @@ main() {
   fi
 
   validate_target_file "${target_file}" || exit 1
-  validate_password || exit 1
+  validate_password "${mode}" || exit 1
   check_dependencies || exit 1
 
   if [[ "${mode}" == "--encrypt" ]]; then

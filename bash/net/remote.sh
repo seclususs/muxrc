@@ -5,7 +5,7 @@
 ################################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 check_dependencies() {
   require_cmd sshd ssh-keygen awk grep
@@ -38,7 +38,7 @@ get_sshd_port() {
   printf "%s\n" "${port}"
 }
 
-_run_ip() {
+run_ip_cmd() {
   local ip_bin="ip"
   if ! command -v ip > /dev/null 2>&1; then
     if [[ -x "/system/bin/ip" ]]; then
@@ -72,7 +72,7 @@ get_device_ip() {
   local ip_addr=""
 
   local route_out
-  route_out=$(_run_ip -4 route get 1.1.1.1 2> /dev/null || true)
+  route_out=$(run_ip_cmd -4 route get 1.1.1.1 2> /dev/null || true)
   if [[ -n "${route_out}" ]]; then
     local r_dev
     r_dev=$(awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1); exit}' <<< "${route_out}")
@@ -85,12 +85,12 @@ get_device_ip() {
     local iface
     iface=$(detect_interface 2> /dev/null || true)
     if [[ -n "${iface}" ]]; then
-      ip_addr=$(_run_ip -4 -o addr show "${iface}" 2> /dev/null | awk '{print $4; exit}' | cut -d/ -f1 || true)
+      ip_addr=$(run_ip_cmd -4 -o addr show "${iface}" 2> /dev/null | awk '{print $4; exit}' | cut -d/ -f1 || true)
     fi
   fi
 
   if [[ -z "${ip_addr}" ]]; then
-    ip_addr=$(_run_ip -4 -o addr show scope global 2> /dev/null | awk '$2 !~ /^(dummy|lo|tun|tailscale|wg)/ {print $4; exit}' | cut -d/ -f1 || true)
+    ip_addr=$(run_ip_cmd -4 -o addr show scope global 2> /dev/null | awk '$2 !~ /^(dummy|lo|tun|tailscale|wg)/ {print $4; exit}' | cut -d/ -f1 || true)
   fi
 
   if [[ -z "${ip_addr}" ]]; then
@@ -217,7 +217,7 @@ status_remote() {
     sshd_active=1
     local sshd_pid
     sshd_pid=$(pgrep -x sshd | head -n 1)
-    log_success "sshd: active (pid ${sshd_pid}, port ${port})"
+    log_success "sshd: active (port ${port})"
   else
     log_warn "sshd: inactive"
   fi
@@ -249,7 +249,7 @@ status_remote() {
 
   local vpn_ips=()
   local vpn_lines=""
-  vpn_lines=$(_run_ip -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $2 " " $4}' | cut -d/ -f1 || true)
+  vpn_lines=$(run_ip_cmd -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $2 " " $4}' | cut -d/ -f1 || true)
   if [[ -n "${vpn_lines}" ]]; then
     while read -r vpn_iface vpn_addr; do
       if [[ -n "${vpn_iface}" && -n "${vpn_addr}" ]]; then
@@ -386,7 +386,7 @@ pair_client_key() {
   chmod 700 "${user_ssh}"
   printf "%s\n" "${target_key}" > "${auth_keys}"
   chmod 600 "${auth_keys}"
-  log_success "key registered to ~/.ssh/authorized_keys"
+  log_success "key registered to auth_keys"
 
   local port
   port=$(get_sshd_port)
@@ -395,13 +395,15 @@ pair_client_key() {
   lan_ip=$(get_device_ip)
 
   if [[ -n "${lan_ip}" ]]; then
-    log_info "connect: ssh -p ${port} ${current_user}@${lan_ip}"
+    local target="${current_user}@${lan_ip}"
+    log_info "ssh: ${target}:${port}"
   fi
 
   local vpn_ip
-  vpn_ip=$(_run_ip -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $4}' | cut -d/ -f1 | head -n 1 || true)
+  vpn_ip=$(run_ip_cmd -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $4}' | cut -d/ -f1 | head -n 1 || true)
   if [[ -n "${vpn_ip}" && "${vpn_ip}" != "${lan_ip}" ]]; then
-    log_info "connect: ssh -p ${port} ${current_user}@${vpn_ip}"
+    local vpn_target="${current_user}@${vpn_ip}"
+    log_info "ssh vpn: ${vpn_target}:${port}"
   fi
 }
 
@@ -516,7 +518,7 @@ main() {
       stop_remote
       ;;
     *)
-      log_error "unknown command: ${cmd} (see: net remote -h)"
+      log_error "unknown command: ${cmd}"
       exit 1
       ;;
   esac

@@ -5,7 +5,7 @@
 ##############
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 check_dependencies() {
   require_cmd exiftool jq find
@@ -112,7 +112,7 @@ execute_spoof() {
     fi
 
     local confirm=""
-    log_prompt "inject metadata into ${file_count} files? [y/N]: "
+    log_prompt "inject ${file_count} files? [y/N]: "
     read -r confirm
     if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
       log_warn "aborted"
@@ -126,7 +126,7 @@ execute_spoof() {
     msg_target="file $(basename "${target_path}")"
     [[ -f "${output_target}" ]] && rm -f "${output_target}"
   else
-    log_error "unsupported target type: ${target_path}"
+    log_error "unsupported target: ${target_path}"
     return 1
   fi
 
@@ -172,7 +172,7 @@ main() {
     preset_file=$(resolve_preset "$1") || exit 1
     target_path="$2"
   else
-    log_error "usage: media spoof [preset_json_file] <target> (see -h)"
+    log_error "usage: media spoof [pre] <target>"
     exit 1
   fi
 

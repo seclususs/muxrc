@@ -5,7 +5,7 @@
 ##########################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 CURRENT_TEMP=""
 
@@ -33,7 +33,7 @@ compress_video() {
   local target_file="${1:-}"
 
   if [[ -z "${target_file}" ]]; then
-    log_error "usage: media compress <video_file> (see -h)"
+    log_error "usage: media compress <file>"
     return 1
   fi
 
@@ -111,7 +111,7 @@ compress_video() {
   if ((orig_size > 0 && new_size >= orig_size)); then
     rm -f "${temp_file}" 2> /dev/null || true
     CURRENT_TEMP=""
-    log_warn "done: ${orig_fmt} -> ${new_fmt} (kept original)"
+    log_warn "done: ${orig_fmt}->${new_fmt} (kept)"
   else
     mv -f "${temp_file}" "${target_file}"
     CURRENT_TEMP=""
@@ -119,7 +119,7 @@ compress_video() {
     if ((orig_size > 0 && new_size < orig_size)); then
       local saved_pct
       saved_pct=$(awk -v o="${orig_size}" -v n="${new_size}" 'BEGIN { printf "%.1f", ((o - n) / o) * 100 }')
-      log_success "done: ${orig_fmt} -> ${new_fmt} (${saved_pct}% saved)"
+      log_success "done: ${new_fmt} (-${saved_pct}%)"
     else
       log_success "done: ${new_fmt}"
     fi
@@ -150,7 +150,7 @@ compress_batch() {
   local total_fmt
   total_fmt=$(format_bytes "${total_bytes}")
 
-  log_info "found ${total} video(s) in ${target_dir} (${total_fmt})"
+  log_info "found ${total} videos (${total_fmt})"
   local confirm=""
   log_prompt "start batch compression? [y/N]: "
   read -r confirm
@@ -163,16 +163,16 @@ compress_batch() {
   local failed=0
   for f in "${video_files[@]}"; do
     idx=$((idx + 1))
-    log_info "[${idx}/${total}] processing $(basename "${f}")..."
+    log_info "[${idx}/${total}] $(basename "${f}")"
     if ! compress_video "${f}"; then
       failed=$((failed + 1))
     fi
   done
 
   if [[ "${failed}" -eq 0 ]]; then
-    log_success "batch compression complete (${total} files)"
+    log_success "batch complete: ${total} files"
   else
-    log_warn "batch finished with ${failed} failure(s)"
+    log_warn "batch failed: ${failed} file(s)"
   fi
 }
 
@@ -184,7 +184,7 @@ main() {
 
   local target="${1:-}"
   if [[ -z "${target}" ]]; then
-    log_error "usage: media compress <file_or_directory> (see -h)"
+    log_error "usage: media compress <path>"
     exit 1
   fi
 

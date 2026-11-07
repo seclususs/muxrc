@@ -1,14 +1,19 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.termux/files/usr/bin/sh
 
 ##########################
 # Permanent Media Shredder
 ##########################
-[[ $- != *i* ]] && set -euo pipefail
+case "$-" in
+  *i*) ;;
+  *) set -eu ;;
+esac
 
-if ! declare -F start_spinner > /dev/null 2>&1; then
-  _shredder_dir="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
-  if [[ -f "${_shredder_dir}/init.sh" ]]; then
-    source "${_shredder_dir}/init.sh"
+if ! command -v start_spinner > /dev/null 2>&1; then
+  _shredder_dir="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+  if [ -f "${_shredder_dir}/../init.sh" ]; then
+    . "${_shredder_dir}/../init.sh"
+  elif [ -f "${_shredder_dir}/init.sh" ]; then
+    . "${_shredder_dir}/init.sh"
   fi
 fi
 
@@ -19,7 +24,7 @@ shred_file() {
   local target_file="${1:-}"
   local silent="${2:-0}"
 
-  if [[ -z "${target_file}" || ! -f "${target_file}" ]]; then
+  if [ -z "${target_file}" ] || [ ! -f "${target_file}" ]; then
     return 1
   fi
 
@@ -28,7 +33,7 @@ shred_file() {
     return 0
   fi
 
-  if ((silent == 1)); then
+  if [ "${silent}" -eq 1 ]; then
     shred -u -z -n 3 -- "${target_file}" 2> /dev/null || rm -f "${target_file}" 2> /dev/null || true
   else
     trap 'cleanup_spinner' EXIT

@@ -5,7 +5,7 @@
 ########################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 check_dependencies() {
   require_cmd find stat sha256sum awk sort xargs
@@ -15,7 +15,7 @@ validate_target_dir() {
   local target_dir="${1:-}"
 
   if [[ -z "${target_dir}" ]]; then
-    log_error "usage: media dupes <directory> (see -h)"
+    log_error "usage: media dupes <dir>"
     return 1
   fi
 
@@ -99,7 +99,7 @@ display_duplicates_and_collect_deletions() {
     if [[ "${hash}" != "${current_hash}" ]]; then
       current_hash="${hash}"
       total_dupe_sets=$((total_dupe_sets + 1))
-      log_info "[group ${total_dupe_sets}] ${hash:0:8}..."
+      log_info "[grp ${total_dupe_sets}] ${hash:0:8}"
       log_success "keep: ${file}"
     else
       log_warn "del : ${file}"
@@ -123,7 +123,8 @@ confirm_and_delete() {
     return 0
   fi
 
-  log_prompt "delete ${total_to_delete} files? [y/N]: "
+  local count="${total_to_delete}"
+  log_prompt "delete ${count} files? [y/N]: "
   read -r confirm
 
   if [[ "${confirm:-}" =~ ^[Yy]$ ]]; then

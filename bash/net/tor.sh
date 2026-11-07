@@ -5,11 +5,7 @@
 #################
 set -euo pipefail
 
-_script_dir="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
-source "${_script_dir}/../../common/init.sh"
-if [[ -f "${_script_dir}/../../common/shredder.sh" ]]; then
-  source "${_script_dir}/../../common/shredder.sh"
-fi
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 check_dependencies() {
   require_cmd tor
@@ -58,10 +54,10 @@ start_tor() {
   existing_pid=$(pgrep -x tor 2> /dev/null | head -n 1 || true)
   if [[ -n "${existing_pid}" ]]; then
     if [[ -f "${pid_file}" ]] && [[ "$(< "${pid_file}")" == "${existing_pid}" ]]; then
-      log_warn "tor already running (pid ${existing_pid})"
+      log_warn "tor running (pid ${existing_pid})"
       return 0
     else
-      log_error "external tor running (pid ${existing_pid}), stop it first"
+      log_error "external tor running (stop it)"
       return 1
     fi
   fi

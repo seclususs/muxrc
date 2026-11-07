@@ -5,7 +5,7 @@
 ###########################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 check_dependencies() {
   require_cmd nmap awk jq
@@ -115,7 +115,7 @@ main() {
   fi
 
   if [[ -z "${cidr}" ]]; then
-    log_error "subnet not detected. use: net sweep <cidr>"
+    log_error "subnet not detected (pass CIDR)"
     exit 1
   fi
 

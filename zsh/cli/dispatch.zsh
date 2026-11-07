@@ -1,18 +1,18 @@
-#######################
-# Custom tools wrappers
-#######################
+#####################
+# Custom tools router
+#####################
 
 typeset -g MUXRC_DIR="${MUXRC_DIR:-${ZSH_CONFIG_DIR:+${ZSH_CONFIG_DIR:h}}}"
 typeset -g MUXRC_DIR="${MUXRC_DIR:-$HOME/muxrc}"
-source "${MUXRC_DIR}/common/init.sh"
+source "${MUXRC_DIR}/sh/init.sh"
 
-_muxrc_run_as_root() {
+_run_as_root() {
   if [[ "$EUID" -eq 0 ]]; then
     bash "$@"
   elif (( $+functions[sudo] )) || whence sudo > /dev/null 2>&1; then
     sudo bash "$@"
   else
-    log_error "root access required (sudo not found)"
+    log_error "root required (sudo not found)"
     return 1
   fi
 }
@@ -67,7 +67,7 @@ net() {
       if [[ "$action" == "-h" || "$action" == "--help" || "$action" == "show" ]]; then
         bash "${MUXRC_DIR}/bash/net/mac.sh" "$@"
       else
-        _muxrc_run_as_root "${MUXRC_DIR}/bash/net/mac.sh" "$@"
+        _run_as_root "${MUXRC_DIR}/bash/net/mac.sh" "$@"
       fi
       ;;
     identity)
@@ -76,7 +76,7 @@ net() {
       if [[ "$action" == "-h" || "$action" == "--help" || "$action" == "show" || "$action" == "status" ]]; then
         bash "${MUXRC_DIR}/bash/net/identity.sh" "$@"
       else
-        _muxrc_run_as_root "${MUXRC_DIR}/bash/net/identity.sh" "$@"
+        _run_as_root "${MUXRC_DIR}/bash/net/identity.sh" "$@"
       fi
       ;;
     killswitch)
@@ -85,7 +85,7 @@ net() {
       if [[ "$action" == "-h" || "$action" == "--help" || "$action" == "status" ]]; then
         bash "${MUXRC_DIR}/bash/net/killswitch.sh" "$@"
       else
-        _muxrc_run_as_root "${MUXRC_DIR}/bash/net/killswitch.sh" "$@"
+        _run_as_root "${MUXRC_DIR}/bash/net/killswitch.sh" "$@"
       fi
       ;;
     tor)
@@ -101,7 +101,7 @@ net() {
       return 1
       ;;
     *)
-      log_error "unknown command: $subcmd (see: net -h)"
+      log_error "unknown command: $subcmd"
       return 1
       ;;
   esac
@@ -146,15 +146,6 @@ media() {
       ;;
     spoof)
       shift
-      if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-        bash "${MUXRC_DIR}/bash/media/spoof.sh" -h
-        return 0
-      fi
-      if [[ $# -eq 0 ]]; then
-        log_error "usage: media spoof [preset] <target> (see -h)"
-        return 1
-      fi
-
       bash "${MUXRC_DIR}/bash/media/spoof.sh" "$@"
       ;;
     sync)
@@ -170,7 +161,6 @@ media() {
       bash "${MUXRC_DIR}/bash/media/compress.sh" "$@"
       ;;
     dispatch | volume | play | monitor)
-      # Pass-through to Android media framework command
       if [[ -x /system/bin/media ]]; then
         /system/bin/media "$@"
       else
@@ -186,7 +176,7 @@ media() {
       if [[ -x /system/bin/media ]] && /system/bin/media "$@" 2> /dev/null; then
         return $?
       fi
-      log_error "unknown command: $subcmd (see: media -h)"
+      log_error "unknown command: $subcmd"
       return 1
       ;;
   esac
@@ -222,81 +212,11 @@ sec() {
       ;;
     encrypt)
       shift
-      if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-        bash "${MUXRC_DIR}/bash/sec/crypt.sh" -h
-        return 0
-      fi
-      if [[ $# -eq 0 ]]; then
-        log_error "usage: sec encrypt <file> (see -h)"
-        return 1
-      fi
-
-      local target_file="$1"
-      if [[ ! -f "$target_file" ]]; then
-        log_error "file '$target_file' not found"
-        return 1
-      fi
-
-      local pass1="" pass2=""
-      log_prompt "enter encryption password: "
-      if ! _muxrc_read_secret "" pass1; then
-        print -u2 ""
-        return 130
-      fi
-      print -u2 ""
-
-      log_prompt "confirm password: "
-      if ! _muxrc_read_secret "" pass2; then
-        print -u2 ""
-        return 130
-      fi
-      print -u2 ""
-
-      if [[ -z "$pass1" ]]; then
-        log_error "password cannot be empty"
-        return 1
-      fi
-
-      if [[ "$pass1" != "$pass2" ]]; then
-        log_error "passwords do not match"
-        return 1
-      fi
-
-      MUXRC_CRYPT_PASS="$pass1" bash "${MUXRC_DIR}/bash/sec/crypt.sh" --encrypt "$target_file"
+      bash "${MUXRC_DIR}/bash/sec/crypt.sh" --encrypt "$@"
       ;;
     decrypt)
       shift
-      if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-        bash "${MUXRC_DIR}/bash/sec/crypt.sh" -h
-        return 0
-      fi
-      if [[ $# -eq 0 ]]; then
-        log_error "usage: sec decrypt <encrypted_file> [out] (see -h)"
-        return 1
-      fi
-
-      local target_file="$1"
-      local output_file="${2:-}"
-
-      if [[ ! -f "$target_file" ]]; then
-        log_error "file '$target_file' not found"
-        return 1
-      fi
-
-      local pass=""
-      log_prompt "enter decryption password: "
-      if ! _muxrc_read_secret "" pass; then
-        print -u2 ""
-        return 130
-      fi
-      print -u2 ""
-
-      if [[ -z "$pass" ]]; then
-        log_error "password cannot be empty"
-        return 1
-      fi
-
-      MUXRC_CRYPT_PASS="$pass" bash "${MUXRC_DIR}/bash/sec/crypt.sh" --decrypt "$target_file" "$output_file"
+      bash "${MUXRC_DIR}/bash/sec/crypt.sh" --decrypt "$@"
       ;;
     stego)
       shift
@@ -334,7 +254,7 @@ sec() {
       return 1
       ;;
     *)
-      log_error "unknown command: $subcmd (see: sec -h)"
+      log_error "unknown command: $subcmd"
       return 1
       ;;
   esac

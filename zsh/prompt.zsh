@@ -32,10 +32,10 @@ precmd_functions+=(precmd_status_line)
 ######################
 # Lightweight Git Info
 ######################
-typeset -g _muxrc_git_info=""
+typeset -g _git_info=""
 
 _prompt_git_info() {
-  _muxrc_git_info=""
+  _git_info=""
   local raw
   raw=$(git status --porcelain -b 2> /dev/null) || return 0
   local header="${raw%%$'\n'*}"
@@ -53,10 +53,10 @@ _prompt_git_info() {
   [[ "$raw" != "$header" ]] && dirty="✚"
 
   if [[ -n "$dirty" ]]; then
-    _muxrc_git_info=" %F{yellow}(${branch}"
-    _muxrc_git_info+=" %F{#e06c75}${dirty}%F{yellow})%f"
+    _git_info=" %F{yellow}(${branch}"
+    _git_info+=" %F{#e06c75}${dirty}%F{yellow})%f"
   else
-    _muxrc_git_info=" %F{yellow}(${branch})%f"
+    _git_info=" %F{yellow}(${branch})%f"
   fi
 }
 precmd_functions+=(_prompt_git_info)
@@ -74,10 +74,10 @@ if [[ -n "${SSH_CONNECTION-}" ]]; then
 fi
 
 if [[ "$EUID" -eq 0 ]]; then
-  PROMPT='${COLOR_ROOT}root@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_muxrc_git_info}# '
+  PROMPT='${COLOR_ROOT}root@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_git_info}# '
   PS2="${COLOR_ROOT}>${RESET} "
 else
-  PROMPT='${COLOR_USR}${TERMUX_USER}@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_muxrc_git_info}$ '
+  PROMPT='${COLOR_USR}${TERMUX_USER}@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_git_info}$ '
   PS2="${COLOR_USR}>${RESET} "
 fi
 
@@ -97,9 +97,9 @@ preexec_functions+=(preexec_set_title)
 typeset -g _PROMPT_FULL="$PROMPT"
 _prompt_restore() {
   if [[ "$EUID" -eq 0 ]]; then
-    _PROMPT_FULL='${COLOR_ROOT}root@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_muxrc_git_info}# '
+    _PROMPT_FULL='${COLOR_ROOT}root@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_git_info}# '
   else
-    _PROMPT_FULL='${COLOR_USR}${TERMUX_USER}@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_muxrc_git_info}$ '
+    _PROMPT_FULL='${COLOR_USR}${TERMUX_USER}@${TERMUX_HOST}${RESET}:${COLOR_DIR}%~${RESET}${_git_info}$ '
   fi
   PROMPT="$_PROMPT_FULL"
 }

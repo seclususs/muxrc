@@ -5,7 +5,7 @@
 #######################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 check_dependencies() {
   require_cmd exiftool
@@ -15,7 +15,7 @@ validate_target() {
   local target="${1:-}"
 
   if [[ -z "${target}" ]]; then
-    log_error "usage: media strip <file_or_directory> (see -h)"
+    log_error "usage: media strip <target>"
     return 1
   fi
 
@@ -38,7 +38,7 @@ usage() {
   echo "output is saved to ~/muxrc-out/stripped/"
 }
 
-clean_metadata() {
+strip_metadata() {
   local target="${1:-}"
   local output_dir="${2:-}"
 
@@ -60,10 +60,7 @@ clean_metadata() {
       return 0
     fi
 
-    local confirm=""
-    log_prompt "strip metadata from ${file_count} files? [y/N]: "
-    read -r confirm
-    if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
+    if ! prompt_confirm "strip ${file_count} files?" "N"; then
       log_warn "aborted"
       return 1
     fi
@@ -102,7 +99,7 @@ main() {
   validate_target "${target}" || exit 1
   check_dependencies || exit 1
 
-  clean_metadata "${target}" "${output_dir}"
+  strip_metadata "${target}" "${output_dir}"
 }
 
 main "$@"

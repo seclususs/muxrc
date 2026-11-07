@@ -5,7 +5,7 @@
 ##############
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 check_dependencies() {
   require_cmd exiftool stat date find mv
@@ -16,7 +16,7 @@ validate_inputs() {
   local prefix="${2:-}"
 
   if [[ -z "${target_dir}" || -z "${prefix}" ]]; then
-    log_error "usage: media rename <dir> <prefix> (see -h)"
+    log_error "usage: media rename <dir> <pfx>"
     return 1
   fi
 

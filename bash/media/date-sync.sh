@@ -5,7 +5,7 @@
 ################
 set -euo pipefail
 
-source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/../../common/init.sh"
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 check_dependencies() {
   require_cmd exiftool find
@@ -15,7 +15,7 @@ validate_target() {
   local target="${1:-}"
 
   if [[ -z "${target}" ]]; then
-    log_error "usage: media sync <target> (see -h)"
+    log_error "usage: media sync <target>"
     return 1
   fi
 
@@ -61,7 +61,7 @@ sync_metadata_dates() {
     fi
 
     local confirm=""
-    log_prompt "sync dates for ${file_count} files? [y/N]: "
+    log_prompt "sync ${file_count} files? [y/N]: "
     read -r confirm
     if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
       log_warn "aborted"

@@ -5,11 +5,7 @@
 #####################
 set -euo pipefail
 
-_stego_dir="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"
-source "${_stego_dir}/../../common/init.sh"
-if [[ -f "${_stego_dir}/../../common/shredder.sh" ]]; then
-  source "${_stego_dir}/../../common/shredder.sh"
-fi
+source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
 check_dependencies() {
   require_cmd steghide
@@ -23,24 +19,7 @@ usage() {
 
 prompt_passphrase_confirmed() {
   local pass=""
-  local pass_conf=""
-
-  log_prompt "passphrase: "
-  read -r -s pass
-  echo >&2
-  if [[ -z "${pass}" ]]; then
-    log_error "passphrase cannot be empty"
-    return 1
-  fi
-
-  log_prompt "confirm passphrase: "
-  read -r -s pass_conf
-  echo >&2
-  if [[ "${pass}" != "${pass_conf}" ]]; then
-    log_error "passphrases do not match"
-    return 1
-  fi
-
+  prompt_secret_confirmed "passphrase" pass || return 1
   echo "${pass}"
   return 0
 }

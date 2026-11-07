@@ -1,9 +1,9 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.termux/files/usr/bin/sh
 
 ############
 # Start SSHD
 ############
-set -euo pipefail
+set -eu
 
 command -v termux-wake-lock > /dev/null 2>&1 && termux-wake-lock 2> /dev/null || true
 

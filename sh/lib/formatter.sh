@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.termux/files/usr/bin/sh
 
 ###########
 # Formatter
@@ -11,14 +11,19 @@ format_truncate() {
   local text="${1:-}"
   local max_len="${2:-60}"
 
-  if [[ ! "${max_len}" =~ ^[0-9]+$ ]] || [[ "${max_len}" -le 0 ]]; then
-    max_len=60
-  fi
+  case "${max_len}" in
+    '' | *[!0-9]*) max_len=60 ;;
+    *)
+      if [ "${max_len}" -le 0 ]; then
+        max_len=60
+      fi
+      ;;
+  esac
 
-  if [[ ${#text} -gt ${max_len} ]]; then
-    echo "${text:0:${max_len}}..."
+  if [ "${#text}" -gt "${max_len}" ]; then
+    printf '%s...\n' "$(printf '%s' "${text}" | cut -c 1-"${max_len}")"
   else
-    echo "${text}"
+    printf '%s\n' "${text}"
   fi
 }
 
@@ -28,13 +33,15 @@ format_truncate() {
 format_bytes() {
   local bytes="${1:-0}"
 
-  if [[ ! "${bytes}" =~ ^[0-9]+$ ]]; then
-    echo "0 B"
-    return 0
-  fi
+  case "${bytes}" in
+    '' | *[!0-9]*)
+      printf '0 B\n'
+      return 0
+      ;;
+  esac
 
   if command -v numfmt > /dev/null 2>&1; then
-    numfmt --to=iec-i --suffix=B "${bytes}" 2> /dev/null || echo "${bytes} B"
+    numfmt --to=iec-i --suffix=B "${bytes}" 2> /dev/null || printf '%s B\n' "${bytes}"
   elif command -v awk > /dev/null 2>&1; then
     awk -v b="${bytes}" 'BEGIN {
       if (b < 1024) printf "%d B\n", b;
@@ -43,6 +50,6 @@ format_bytes() {
       else printf "%.2f GiB\n", b / 1073741824;
     }'
   else
-    echo "${bytes} B"
+    printf '%s B\n' "${bytes}"
   fi
 }

@@ -29,9 +29,16 @@ setopt AUTO_PUSHD
 setopt PUSHD_IGNORE_DUPS
 setopt PUSHD_SILENT
 
-source "$ZSH_CONFIG_DIR/wrappers/linux.zsh"
-source "$ZSH_CONFIG_DIR/wrappers/muxrc.zsh"
-source "$ZSH_CONFIG_DIR/wrappers/tools.zsh"
+source "$ZSH_CONFIG_DIR/linux/auth.zsh"
+local _linux_mod=""
+for _linux_mod in "$ZSH_CONFIG_DIR/linux/"*.zsh; do
+  [[ "$_linux_mod" == *"auth.zsh" ]] && continue
+  [[ -f "$_linux_mod" ]] && source "$_linux_mod"
+done
+unset _linux_mod
+
+source "$ZSH_CONFIG_DIR/cli/dispatch.zsh"
+source "$ZSH_CONFIG_DIR/cli/muxrc.zsh"
 source "$ZSH_CONFIG_DIR/aliases.zsh"
 source "$ZSH_CONFIG_DIR/prompt.zsh"
 if [[ -f "$HOME/.dircolors" ]]; then
