@@ -36,7 +36,7 @@ sudo() {
     return 1
   fi
 
-  if [[ "$1" =~ ^(apt|apt-get|pkg)$ ]]; then
+  if [[ "$1" =~ ^(apt|apt-get|apt-cache|pkg)$ ]]; then
     command "$1" "${@:2}"
     return $?
   fi
