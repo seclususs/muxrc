@@ -202,11 +202,16 @@ symlink_configurations() {
     return 1
   fi
 
-  ln -sf "${dotfiles_dir}/zsh/.zshrc" "${HOME}/.zshrc"
-  ln -sf "${dotfiles_dir}/colors/.dircolors" "${HOME}/.dircolors"
-  ln -sf "${dotfiles_dir}/termux/colors.properties" "${HOME}/.termux/colors.properties"
-  ln -sf "${dotfiles_dir}/termux/termux.properties" "${HOME}/.termux/termux.properties"
-  ln -sf "${dotfiles_dir}/nano/.nanorc" "${HOME}/.nanorc"
+  local tmp_check="${TMPDIR:-${PREFIX:-/data/data/com.termux/files/usr}/tmp}"
+  if [[ "${dotfiles_dir}" == "${tmp_check}"* ]]; then
+    return 0
+  fi
+
+  ln -sfn "${dotfiles_dir}/zsh/.zshrc" "${HOME}/.zshrc"
+  ln -sfn "${dotfiles_dir}/colors/.dircolors" "${HOME}/.dircolors"
+  ln -sfn "${dotfiles_dir}/termux/colors.properties" "${HOME}/.termux/colors.properties"
+  ln -sfn "${dotfiles_dir}/termux/termux.properties" "${HOME}/.termux/termux.properties"
+  ln -sfn "${dotfiles_dir}/nano/.nanorc" "${HOME}/.nanorc"
 }
 
 setup_boot_services() {
@@ -217,8 +222,13 @@ setup_boot_services() {
     return 1
   fi
 
+  local tmp_check="${TMPDIR:-${PREFIX:-/data/data/com.termux/files/usr}/tmp}"
+  if [[ "${dotfiles_dir}" == "${tmp_check}"* ]]; then
+    return 0
+  fi
+
   mkdir -p "${HOME}/.termux/boot"
-  ln -sf "${dotfiles_dir}/sh/boot/start-sshd" "${HOME}/.termux/boot/start-sshd"
+  ln -sfn "${dotfiles_dir}/sh/boot/start-sshd" "${HOME}/.termux/boot/start-sshd"
   chmod +x "${dotfiles_dir}/sh/boot/start-sshd" 2> /dev/null || true
 
   local magisk_service_dir="/data/adb/service.d"
