@@ -44,7 +44,11 @@ if (-not $sh) {
   [Console]::Error.WriteLine('behavior-snapshot: without it, compare outputs by hand in the sandbox launcher or on a device (see platform-detection).')
   exit 3
 }
-if ($onWindows) { $env:PATH = (Split-Path -Parent $sh) + ';' + $env:PATH }
+# Expose discovered Git and MSYS2 binaries to the child POSIX shell.
+if ($onWindows) {
+  $pathAdditions = @((Split-Path -Parent $sh)) + $extraDirs
+  $env:PATH = (($pathAdditions | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -Unique) -join ';') + ';' + $env:PATH
+}
 
 $target = (Join-Path $PSScriptRoot 'behavior-snapshot.sh')
 if ($onWindows) { $target = $target.Replace('\', '/') }

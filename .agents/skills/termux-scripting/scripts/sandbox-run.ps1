@@ -43,8 +43,11 @@ if (-not $sh) {
   [Console]::Error.WriteLine('sandbox-run: for runtime verification of Termux behavior use the Termux container or a device (see platform-detection).')
   exit 3
 }
-# Make the shell's sibling tools (env, mktemp, sed, ...) resolvable first on Windows.
-if ($onWindows) { $env:PATH = (Split-Path -Parent $sh) + ';' + $env:PATH }
+# Expose discovered Git and MSYS2 binaries to the child POSIX shell.
+if ($onWindows) {
+  $pathAdditions = @((Split-Path -Parent $sh)) + $extraDirs
+  $env:PATH = (($pathAdditions | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -Unique) -join ';') + ';' + $env:PATH
+}
 
 # Only an option before the first -- is the launcher's own; later -h/--help belong to the target script.
 $own = @()
