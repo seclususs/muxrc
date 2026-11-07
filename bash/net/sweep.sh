@@ -42,9 +42,19 @@ execute_arp_sweep() {
   fi
 
   log_info "target: ${target_cidr}"
+
+  local scan_out
+  scan_out=$(mktemp "${TMPDIR:-/data/data/com.termux/files/usr/tmp}/sweep.XXXXXX" 2> /dev/null || mktemp)
+
+  trap 'cleanup_spinner; rm -f "${scan_out}" 2> /dev/null' EXIT
+  start_spinner "sweeping subnet"
+  nmap -sn "${target_cidr}" > "${scan_out}" 2>&1
+  cleanup_spinner
+  trap - EXIT
+
   printf "%-15s | %-17s | %s\n" "ip" "mac" "vendor (host)"
 
-  nmap -sn "${target_cidr}" | awk '
+  awk '
 function flush_host() {
     if (ip != "") {
         if (mac == "") {
@@ -85,7 +95,9 @@ function flush_host() {
 }
 END {
     flush_host()
-}'
+}' "${scan_out}"
+
+  rm -f "${scan_out}" 2> /dev/null
 
   log_success "sweep complete"
 }

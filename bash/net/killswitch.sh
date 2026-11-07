@@ -56,7 +56,6 @@ add_state_rule() {
     return 0
   fi
 
-  log_warn "conntrack unavailable, skipped"
   return 0
 }
 
@@ -122,8 +121,6 @@ enable_killswitch() {
 
   disable_killswitch_rules > /dev/null 2>&1 || true
 
-  log_info "enabling killswitch (${mode})"
-
   "${ipt}" -N "${CHAIN_NAME}" 2> /dev/null || true
   "${ipt}" -F "${CHAIN_NAME}" 2> /dev/null || true
 
@@ -155,7 +152,6 @@ enable_killswitch() {
       "${ipt}" -A "${CHAIN_NAME}" -j DROP
       ;;
     lan)
-      log_info "allowing rfc1918 subnets..."
       "${ipt}" -A "${CHAIN_NAME}" -d 10.0.0.0/8 -j ACCEPT
       "${ipt}" -A "${CHAIN_NAME}" -d 172.16.0.0/12 -j ACCEPT
       "${ipt}" -A "${CHAIN_NAME}" -d 192.168.0.0/16 -j ACCEPT
@@ -163,7 +159,6 @@ enable_killswitch() {
       "${ipt}" -A "${CHAIN_NAME}" -j DROP
       ;;
     block | *)
-      log_info "blocking all outbound wan..."
       "${ipt}" -A "${CHAIN_NAME}" -j DROP
       ;;
   esac
@@ -224,11 +219,9 @@ show_status() {
 
 toggle_killswitch() {
   if is_killswitch_active; then
-    log_info "killswitch active, disabling..."
     disable_killswitch_rules
     log_success "killswitch disabled"
   else
-    log_info "enabling killswitch (block)"
     enable_killswitch "block" "true" "8022"
   fi
 }
@@ -305,7 +298,6 @@ main() {
       ;;
     off | disable | reset)
       require_root || exit 1
-      log_info "disabling killswitch..."
       disable_killswitch_rules
       log_success "killswitch disabled"
       ;;

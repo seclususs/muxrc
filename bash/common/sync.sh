@@ -66,8 +66,16 @@ sync_plugins() {
       fi
     else
       start_spinner "updating ${plugin_name} (${idx}/${total})"
+      local p_old=""
+      local p_new=""
+      p_old=$(git -C "${target_dir}" rev-parse HEAD 2> /dev/null || true)
       if git -C "${target_dir}" pull -q --rebase; then
-        stop_spinner "success" "updated ${plugin_name}"
+        p_new=$(git -C "${target_dir}" rev-parse HEAD 2> /dev/null || true)
+        if [[ -n "${p_old}" && "${p_old}" != "${p_new}" ]]; then
+          stop_spinner "success" "updated ${plugin_name}"
+        else
+          stop_spinner "success" "${plugin_name} ok"
+        fi
       else
         stop_spinner "error" "failed to update ${plugin_name}"
       fi
@@ -79,8 +87,16 @@ sync_plugins() {
       idx=$((idx + 1))
       target_dir="${plugins_dir}/${plugin_name}"
       start_spinner "updating ${plugin_name} (${idx}/${total})"
+      local cp_old=""
+      local cp_new=""
+      cp_old=$(git -C "${target_dir}" rev-parse HEAD 2> /dev/null || true)
       if git -C "${target_dir}" pull -q --rebase; then
-        stop_spinner "success" "updated ${plugin_name}"
+        cp_new=$(git -C "${target_dir}" rev-parse HEAD 2> /dev/null || true)
+        if [[ -n "${cp_old}" && "${cp_old}" != "${cp_new}" ]]; then
+          stop_spinner "success" "updated ${plugin_name}"
+        else
+          stop_spinner "success" "${plugin_name} ok"
+        fi
       else
         stop_spinner "error" "failed to update ${plugin_name}"
       fi

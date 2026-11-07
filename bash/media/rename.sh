@@ -116,11 +116,13 @@ apply_renames() {
   read -r conf
 
   if [[ "${conf}" =~ ^[Yy]$ ]]; then
-    log_info "executing rename..."
+    trap 'cleanup_spinner' EXIT
+    start_spinner "renaming files"
     for i in "${!_old_targets[@]}"; do
       mv -n -- "${_old_targets[${i}]}" "${_new_targets[${i}]}"
     done
-    log_success "rename complete"
+    stop_spinner "success" "rename complete"
+    trap - EXIT
   else
     log_warn "aborted"
   fi
@@ -173,7 +175,6 @@ main() {
   done
 
   clear_progress
-  log_success "parsing complete"
 
   if [[ ${#old_names[@]} -eq 0 ]]; then
     log_info "no files to rename"

@@ -174,14 +174,15 @@ main() {
     fi
   fi
 
-  log_info "executing panic protocol..."
+  trap 'cleanup_spinner' EXIT
+  start_spinner "destroying targets"
   for target in "${targets[@]}"; do
-    log_info "destroying: ${target}"
     shred_target "${target}" 0
   done
 
   wipe_clipboard 0
-  log_success "panic complete: vault destroyed"
+  stop_spinner "success" "panic complete: vault destroyed"
+  trap - EXIT
 }
 
 main "$@"

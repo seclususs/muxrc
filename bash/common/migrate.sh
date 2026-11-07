@@ -194,12 +194,7 @@ migrate_magisk_boot() {
   local source_runner="${repo_dir}/sh/boot/magisk-boot.sh"
 
   if [[ -f "${source_runner}" ]] && command -v su > /dev/null 2>&1 && su -c true 2> /dev/null; then
-    if su -c "[ -d '${magisk_service_dir}' ]" 2> /dev/null; then
-      if su -c "[ -f '${magisk_runner}' ]" 2> /dev/null; then
-        su -c "cp '${source_runner}' '${magisk_runner}'" 2> /dev/null || true
-        su -c "chmod 755 '${magisk_runner}'" 2> /dev/null || true
-      fi
-    fi
+    su -c "if [ -d '${magisk_service_dir}' ] && [ -f '${magisk_runner}' ]; then cp '${source_runner}' '${magisk_runner}' && chmod 755 '${magisk_runner}'; fi" 2> /dev/null || true
   fi
 }
 
@@ -210,6 +205,14 @@ main() {
     exit 0
   fi
 
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+  local state_file="${state_dir}/.migrated"
+
+  if [[ -f "${state_file}" ]]; then
+    migrate_magisk_boot
+    exit 0
+  fi
+
   migrate_shadow
   migrate_zsh_plugins
   migrate_zsh_history
@@ -217,6 +220,9 @@ main() {
   migrate_vault
   migrate_magisk_boot
   cleanup_legacy_dirs
+
+  mkdir -p "${state_dir}"
+  touch "${state_file}" 2> /dev/null || true
 }
 
 main "$@"

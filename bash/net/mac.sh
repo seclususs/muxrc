@@ -82,7 +82,6 @@ save_original_mac() {
     mkdir -p "${state_dir}"
     printf "%s\n" "${cur_mac}" > "${orig_file}"
     chmod 600 "${orig_file}"
-    log_info "saved orig MAC: ${cur_mac}"
   fi
 }
 
@@ -126,11 +125,11 @@ apply_mac() {
   verified_mac=$(get_current_mac "${iface}")
 
   if [[ ${set_ok} -eq 1 && "${verified_mac}" == "${new_mac,,}" ]]; then
-    stop_spinner "success" "mac changed on ${iface}: ${verified_mac}"
+    stop_spinner "success" "mac changed: ${verified_mac}"
     trap - EXIT
     return 0
   else
-    stop_spinner "error" "mac refused by driver. active: ${verified_mac}"
+    stop_spinner "error" "mac rejected by driver"
     trap - EXIT
     return 1
   fi
@@ -179,7 +178,6 @@ reset_mac() {
   orig_mac=$(tr -d ' \n' < "${orig_file}")
   validate_mac "${orig_mac}" || return 1
 
-  log_info "restoring MAC on ${iface}"
   apply_mac "${iface}" "${orig_mac}"
 }
 

@@ -68,7 +68,6 @@ save_original_hostname() {
     mkdir -p "${state_dir}"
     printf "%s\n" "${cur_host}" > "${orig_file}"
     chmod 600 "${orig_file}"
-    log_info "saved factory hostname: ${cur_host}"
   fi
 }
 
@@ -151,8 +150,6 @@ rotate_identity() {
   local keep_mac="${3:-false}"
   local keep_ipv6="${4:-false}"
 
-  log_info "rotating identity on ${iface}..."
-
   local target_host="${custom_host}"
   if [[ -z "${target_host}" ]]; then
     target_host=$(generate_hostname)
@@ -173,7 +170,6 @@ rotate_identity() {
     fi
   else
     confirm_ssh_hazard "this will drop your ssh connection" || return 1
-    log_info "keeping mac, resetting link..."
     set_wifi_framework_state "disabled"
     sleep 0.5
     set_wifi_framework_state "enabled"
@@ -190,8 +186,6 @@ reset_identity() {
   local iface="${1}"
   local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
   local orig_file="${state_dir}/hostname_orig"
-
-  log_info "restoring identity on ${iface}"
 
   local script_dir
   script_dir="$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")"

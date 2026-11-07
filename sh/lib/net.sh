@@ -88,7 +88,6 @@ set_wifi_framework_state() {
 flush_network_caches() {
   local iface="${1}"
 
-  log_info "flushing network caches..."
   if command -v ip > /dev/null 2>&1; then
     ip neigh flush all > /dev/null 2>&1 || true
   fi

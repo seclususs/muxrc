@@ -66,7 +66,6 @@ hash_potential_duplicates() {
   done
 
   clear_progress
-  log_success "hashing complete"
 
   awk '{hash=$1; count[hash]++} END {for(h in count) if(count[h]>1) print h}' "${tmp_dir}/hashed.txt" > "${tmp_dir}/dup_hashes.txt"
 }
@@ -128,9 +127,9 @@ confirm_and_delete() {
   read -r confirm
 
   if [[ "${confirm:-}" =~ ^[Yy]$ ]]; then
-    log_info "deleting..."
+    start_spinner "deleting duplicates"
     xargs -r -d '\n' rm -f -- < "${delete_list}"
-    log_success "deleted ${total_to_delete} files"
+    stop_spinner "success" "deleted ${total_to_delete} files"
   else
     log_warn "aborted"
   fi

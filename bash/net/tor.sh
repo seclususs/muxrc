@@ -71,7 +71,6 @@ start_tor() {
 
   ensure_proxychains_config "${opsec_dir}"
 
-  log_info "generating torrc..."
   cat << EOF > "${torrc}"
 SocksPort 127.0.0.1:9050 IsolateDestAddr IsolateDestPort
 DNSPort 127.0.0.1:5353
@@ -90,7 +89,6 @@ EOF
     return 1
   fi
 
-  log_info "spawning tor..."
   tor -f "${torrc}" > "${opsec_dir}/tor.log" 2>&1 &
 
   trap 'cleanup_spinner' EXIT
@@ -100,7 +98,7 @@ EOF
     if [[ -f "${pid_file}" ]]; then
       tpid=$(cat "${pid_file}" 2> /dev/null || true)
       if [[ -n "${tpid}" ]] && kill -0 "${tpid}" 2> /dev/null; then
-        stop_spinner "success" "tor spawned (pid: ${tpid}) at 127.0.0.1:9050"
+        stop_spinner "success" "tor started (pid: ${tpid})"
         trap - EXIT
         return 0
       fi
@@ -215,7 +213,6 @@ run_tor_command() {
   fi
 
   if [[ ${is_running} -eq 0 ]]; then
-    log_info "spawning tor session..."
     start_tor "${opsec_dir}" "${torrc}" "${tor_data}" "${pid_file}" || return 1
   fi
 

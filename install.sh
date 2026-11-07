@@ -19,7 +19,6 @@ setup_storage() {
 enable_repos() {
   local sources_dir="${PREFIX:-/data/data/com.termux/files/usr}/etc/apt/sources.list.d"
   if [[ -f "${sources_dir}/root.list" && -f "${sources_dir}/x11.list" ]]; then
-    log_info "extra repos already enabled"
     return 0
   fi
 
@@ -48,7 +47,6 @@ install_packages() {
   done
 
   if [[ ${#missing_pkgs[@]} -eq 0 ]]; then
-    log_info "packages already installed"
     return 0
   fi
 
@@ -91,7 +89,6 @@ setup_directories() {
     done
   fi
 
-  log_info "muting termux motd..."
   touch "${HOME}/.hushlogin"
 }
 
@@ -104,9 +101,7 @@ setup_sudo_wrapper() {
 
   mkdir -p "${shadow_dir}"
 
-  log_info "setting up sudo wrapper..."
   if [[ -f "${shadow_file}" || -f "${HOME}/.config/muxrc/sudo_hash" || -f "${HOME}/.sudo_hash" ]]; then
-    log_info "sudo already configured"
     return 0
   fi
 
@@ -154,7 +149,6 @@ setup_sudo_config() {
   local config_dir="${HOME}/.config/sudo"
   local config_file="${config_dir}/sudo.config"
 
-  log_info "configuring sudo environment..."
   mkdir -p "${config_dir}"
   if [[ ! -f "${config_file}" ]]; then
     cat << 'EOF' > "${config_file}"
@@ -165,8 +159,6 @@ SUDO__SHELLS_HISTORY_ENABLED=0
 EOF
     chmod 600 "${config_file}"
     log_success "sudo environment configured."
-  else
-    log_warn "keeping existing sudo.config."
   fi
 }
 
@@ -178,7 +170,10 @@ setup_zsh_plugins() {
     return 1
   fi
 
-  log_info "fetching zsh plugins..."
+  if [[ "${MUXRC_SKIP_PLUGIN_SYNC:-0}" == "1" ]]; then
+    return 0
+  fi
+
   bash "${SCRIPT_DIR}/bash/common/sync.sh" "${zsh_plugins_dir}"
 }
 
@@ -186,7 +181,6 @@ setup_storage_symlinks() {
   local dir_name
   local target_path
 
-  log_info "creating storage symlinks..."
   local -A storage_dirs=(
     ["Workspace"]="/storage/emulated/0/Workspace"
   )
@@ -194,13 +188,7 @@ setup_storage_symlinks() {
   for dir_name in "${!storage_dirs[@]}"; do
     target_path="${storage_dirs[${dir_name}]}"
     if [[ ! -d "${target_path}" ]]; then
-      if mkdir -p "${target_path}" 2> /dev/null; then
-        log_success "created ${target_path}"
-      else
-        log_warn "cannot create ${target_path}"
-      fi
-    else
-      log_warn "exists: ${target_path}"
+      mkdir -p "${target_path}" 2> /dev/null || true
     fi
     ln -sfn "${target_path}" "${HOME}/${dir_name}"
   done
@@ -214,7 +202,6 @@ symlink_configurations() {
     return 1
   fi
 
-  log_info "symlinking configurations..."
   ln -sf "${dotfiles_dir}/zsh/.zshrc" "${HOME}/.zshrc"
   ln -sf "${dotfiles_dir}/colors/.dircolors" "${HOME}/.dircolors"
   ln -sf "${dotfiles_dir}/termux/colors.properties" "${HOME}/.termux/colors.properties"
@@ -230,7 +217,6 @@ setup_boot_services() {
     return 1
   fi
 
-  log_info "configuring boot services..."
   mkdir -p "${HOME}/.termux/boot"
   ln -sf "${dotfiles_dir}/sh/boot/start-sshd" "${HOME}/.termux/boot/start-sshd"
   chmod +x "${dotfiles_dir}/sh/boot/start-sshd" 2> /dev/null || true
@@ -254,16 +240,12 @@ setup_nerd_font() {
       log_warn "font download failed, skipping."
       rm -f "${HOME}/.termux/font.ttf" 2> /dev/null || true
     fi
-  else
-    log_warn "font already installed, skipping."
+    termux-reload-settings 2> /dev/null || true
   fi
-
-  termux-reload-settings 2> /dev/null || true
 }
 
 setup_default_shell() {
   if [[ "${SHELL:-}" != */zsh ]]; then
-    log_info "changing default shell..."
     chsh -s zsh
   fi
 }

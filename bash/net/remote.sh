@@ -436,8 +436,6 @@ edit_ssh_config() {
 }
 
 start_remote() {
-  log_info "starting remote services..."
-
   local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
   mkdir -p "${state_dir}"
 
@@ -450,7 +448,11 @@ start_remote() {
   if ! pgrep -x sshd > /dev/null 2>&1; then
     local ssh_dir="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh"
     if ! compgen -G "${ssh_dir}/ssh_host_*_key" > /dev/null 2>&1; then
+      trap 'cleanup_spinner' EXIT
+      start_spinner "generating ssh host keys"
       ssh-keygen -A > /dev/null 2>&1 || true
+      stop_spinner "success" "ssh host keys generated"
+      trap - EXIT
     fi
 
     if sshd; then
@@ -468,8 +470,6 @@ start_remote() {
 
 stop_remote() {
   confirm_ssh_hazard "this will terminate your ssh session" || return 1
-
-  log_info "stopping remote services..."
 
   local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
 
