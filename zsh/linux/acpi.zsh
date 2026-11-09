@@ -3,6 +3,7 @@
 #############################
 
 acpi() {
+  local -a orig_args=("$@")
   local mode="battery"
 
   while [[ $# -gt 0 ]]; do
@@ -42,7 +43,7 @@ acpi() {
 
   if ! command -v termux-battery-status > /dev/null 2>&1; then
     if [[ -x /system/bin/acpi ]]; then
-      /system/bin/acpi "$@"
+      /system/bin/acpi "${orig_args[@]}"
       return $?
     fi
     print -u2 "acpi: termux-api not installed (pkg install termux-api)"

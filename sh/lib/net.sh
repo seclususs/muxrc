@@ -4,6 +4,14 @@
 # Network utilities
 ###################
 
+_interface_exists() {
+  local target="${1}"
+  [ -d "/sys/class/net/${target}" ] && return 0
+  ip link show "${target}" > /dev/null 2>&1 && return 0
+  ifconfig 2> /dev/null | grep -E "^${target}[: ]" > /dev/null 2>&1 && return 0
+  return 1
+}
+
 ##################################
 # Detect active wireless interface
 ##################################
@@ -11,7 +19,7 @@ detect_interface() {
   local iface="${1:-}"
 
   if [ -n "${iface}" ]; then
-    if [ ! -d "/sys/class/net/${iface}" ] && ! ip link show "${iface}" > /dev/null 2>&1; then
+    if ! _interface_exists "${iface}"; then
       log_error "interface '${iface}' not found"
       return 1
     fi
@@ -33,10 +41,14 @@ detect_interface() {
   fi
 
   if [ -z "${detected}" ]; then
+    detected=$(ifconfig 2> /dev/null | awk -F'[: ]' '/^[a-zA-Z0-9]/ {print $1}' | grep -E '^wlan' | head -n 1 || true)
+  fi
+
+  if [ -z "${detected}" ]; then
     detected="wlan0"
   fi
 
-  if [ ! -d "/sys/class/net/${detected}" ] && ! ip link show "${detected}" > /dev/null 2>&1; then
+  if ! _interface_exists "${detected}"; then
     log_error "no wireless interface detected"
     return 1
   fi

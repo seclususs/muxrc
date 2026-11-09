@@ -3,11 +3,6 @@
 #####################
 # Core Initialization
 #####################
-case "$-" in
-  *i*) ;;
-  *) set -eu ;;
-esac
-
 _sh_dir=""
 if [ -n "${MUXRC_DIR:-}" ] && [ -d "${MUXRC_DIR}/sh" ]; then
   _sh_dir="${MUXRC_DIR}/sh"

@@ -384,7 +384,9 @@ pair_client_key() {
 
   mkdir -p "${user_ssh}"
   chmod 700 "${user_ssh}"
-  printf "%s\n" "${target_key}" > "${auth_keys}"
+  if ! grep -qxF "${target_key}" "${auth_keys}" 2> /dev/null; then
+    printf "%s\n" "${target_key}" >> "${auth_keys}"
+  fi
   chmod 600 "${auth_keys}"
   log_success "key registered to auth_keys"
 

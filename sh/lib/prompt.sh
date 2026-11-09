@@ -52,8 +52,8 @@ read_secret() {
 
   stty -echo 2> /dev/null || true
   local secret_val=""
-  read -r secret_val || true
-  local read_rc=$?
+  local read_rc=0
+  read -r secret_val || read_rc=$?
 
   if [ -n "${orig_tty}" ]; then
     stty "${orig_tty}" 2> /dev/null || stty sane 2> /dev/null

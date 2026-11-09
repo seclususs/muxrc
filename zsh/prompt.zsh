@@ -111,5 +111,7 @@ _prompt_condense() {
   RPROMPT=''
   zle && zle .reset-prompt
 }
-autoload -Uz add-zle-hook-widget
-add-zle-hook-widget zle-line-finish _prompt_condense
+if [[ -o interactive ]]; then
+  autoload -Uz add-zle-hook-widget
+  add-zle-hook-widget zle-line-finish _prompt_condense
+fi
