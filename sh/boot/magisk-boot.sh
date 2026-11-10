@@ -12,6 +12,13 @@ termux_home="${TERMUX_HOME:-/data/data/com.termux/files/home}"
 termux_prefix="${TERMUX_PREFIX:-/data/data/com.termux/files/usr}"
 boot_dir="${termux_home}/.termux/boot"
 
+timeout=120
+elapsed=0
+while [ ! -d "${boot_dir}" ] && [ "${elapsed}" -lt "${timeout}" ]; do
+  sleep 2
+  elapsed=$((elapsed + 2))
+done
+
 [ ! -d "${boot_dir}" ] && exit 0
 
 termux_user="$(stat -c %U "${termux_home}" 2> /dev/null)" || exit 0
