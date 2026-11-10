@@ -21,12 +21,12 @@ done
 
 [ ! -d "${boot_dir}" ] && exit 0
 
-termux_user="$(stat -c %U "${termux_home}" 2> /dev/null)" || exit 0
-[ -z "${termux_user}" ] && exit 0
+termux_uid="$(stat -c %u "${termux_home}" 2> /dev/null)" || exit 0
+[ -z "${termux_uid}" ] && exit 0
 
 for script in "${boot_dir}"/*; do
   [ -f "${script}" ] && [ -x "${script}" ] || continue
-  su "${termux_user}" -c "env -i \
+  su -g "${termux_uid}" -G 3003 -G 9997 "${termux_uid}" -c "env -i \
     PATH=${termux_prefix}/bin:${termux_prefix}/bin/applets:/system/bin \
     HOME=${termux_home} \
     PREFIX=${termux_prefix} \
