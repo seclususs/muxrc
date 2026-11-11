@@ -58,14 +58,10 @@ EOF
 
   if [[ "$EUID" -eq 0 ]]; then
     authenticated=1
-  elif [[ -f "$_sudo_ts_file" ]]; then
-    local last_auth
-    last_auth=$(< "$_sudo_ts_file" 2> /dev/null)
-    if [[ -n "$last_auth" && "$last_auth" =~ ^[0-9]+$ ]]; then
-      local now=${EPOCHSECONDS:-0}
-      if ((now >= last_auth && now - last_auth <= 900)); then
-        authenticated=1
-      fi
+  elif [[ -n "${_SUDO_TS:-}" && "${_SUDO_TS}" =~ ^[0-9]+$ ]]; then
+    local now=${EPOCHSECONDS:-0}
+    if ((now >= _SUDO_TS && now - _SUDO_TS <= 900)); then
+      authenticated=1
     fi
   fi
 
@@ -83,9 +79,7 @@ EOF
     fi
 
     if [[ "$EUID" -ne 0 ]]; then
-      mkdir -p "$_sudo_cache_dir" 2> /dev/null
-      print "$EPOCHSECONDS" > "$_sudo_ts_file" 2> /dev/null
-      chmod 600 "$_sudo_ts_file" 2> /dev/null
+      typeset -g _SUDO_TS=$EPOCHSECONDS
     fi
   fi
 

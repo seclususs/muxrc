@@ -58,7 +58,9 @@ run_ip_cmd() {
   if [[ "${EUID:-$(id -u)}" -ne 0 ]] && command -v su > /dev/null 2>&1; then
     local su_ip="/system/bin/ip"
     [[ -x "${su_ip}" ]] || su_ip="ip"
-    out=$(su -c "${su_ip} $*" 2> /dev/null || true)
+    local safe_args
+    safe_args=$(printf '%q ' "$@")
+    out=$(su -c "${su_ip} ${safe_args}" 2> /dev/null || true)
     if [[ -n "${out}" ]]; then
       printf "%s\n" "${out}"
       return 0

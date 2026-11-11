@@ -46,7 +46,7 @@ passwd() {
     return 0
   fi
 
-  if [[ "$target_user" != "$current_user" && "$target_user" != "root" && "$EUID" -ne 0 ]]; then
+  if [[ "$target_user" != "$current_user" && "$EUID" -ne 0 ]]; then
     print -u2 "passwd: You may not view or modify password information for $target_user."
     return 1
   fi
@@ -100,9 +100,6 @@ passwd() {
   if command -v openssl > /dev/null 2>&1; then
     new_hash=$(printf '%s' "$new_pass" | openssl passwd -6 -stdin 2> /dev/null)
   fi
-  if [[ -z "$new_hash" ]]; then
-    new_hash=$(printf '%s' "$new_pass" | sha256sum 2> /dev/null | awk '{print $1}')
-  fi
 
   if [[ -z "$new_hash" ]]; then
     print -u2 "passwd: Authentication token manipulation error"
@@ -150,6 +147,7 @@ passwd() {
 
   local _sudo_cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/muxrc"
   rm -f "$_sudo_cache_dir/sudo_ts" 2> /dev/null
+  typeset -g _SUDO_TS=0
 
   local _sudo_cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/muxrc"
   rm -f "$_sudo_cfg_dir/sudo_hash" "$HOME/.sudo_hash" 2> /dev/null || true

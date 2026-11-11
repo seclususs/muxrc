@@ -22,6 +22,7 @@ sudo() {
   local _sudo_ts_file="$_sudo_cache_dir/sudo_ts"
 
   if [[ "$1" == "-k" || "$1" == "-K" ]]; then
+    typeset -g _SUDO_TS=0
     rm -f "$_sudo_ts_file" 2> /dev/null
     if [[ $# -eq 1 ]]; then
       return 0
@@ -57,14 +58,10 @@ sudo() {
 
   if [[ "$EUID" -eq 0 ]]; then
     authenticated=1
-  elif [[ -f "$_sudo_ts_file" ]]; then
-    local last_auth
-    last_auth=$(< "$_sudo_ts_file" 2> /dev/null)
-    if [[ -n "$last_auth" && "$last_auth" =~ ^[0-9]+$ ]]; then
-      local now=${EPOCHSECONDS:-0}
-      if ((now >= last_auth && now - last_auth <= 900)); then
-        authenticated=1
-      fi
+  elif [[ -n "${_SUDO_TS:-}" && "${_SUDO_TS}" =~ ^[0-9]+$ ]]; then
+    local now=${EPOCHSECONDS:-0}
+    if ((now >= _SUDO_TS && now - _SUDO_TS <= 900)); then
+      authenticated=1
     fi
   fi
 
@@ -79,9 +76,7 @@ sudo() {
       if _auth_verify_password "$user_pass" "$SUDO_HASH"; then
         authenticated=1
         if [[ "$EUID" -ne 0 ]]; then
-          mkdir -p "$_sudo_cache_dir" 2> /dev/null
-          print "$EPOCHSECONDS" > "$_sudo_ts_file" 2> /dev/null
-          chmod 600 "$_sudo_ts_file" 2> /dev/null
+          typeset -g _SUDO_TS=$EPOCHSECONDS
         fi
         break
       else

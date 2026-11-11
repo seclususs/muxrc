@@ -121,7 +121,8 @@ setup_sudo_wrapper() {
       hash=$(printf '%s' "${sudo_pass}" | openssl passwd -6 -stdin 2> /dev/null || true)
     fi
     if [[ -z "${hash}" ]]; then
-      hash=$(printf '%s' "${sudo_pass}" | sha256sum | awk '{print $1}')
+      log_error "password hashing failed"
+      return 1
     fi
 
     local current_user="${USER:-$(whoami 2> /dev/null || id -un 2> /dev/null || echo "termux")}"

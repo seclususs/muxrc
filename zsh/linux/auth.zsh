@@ -14,9 +14,6 @@ _auth_get_hash() {
   local target_user="${1:-${USER:-$(whoami)}}"
   local hash=""
   hash=$(awk -F: -v u="$target_user" '$1 == u {print $2; exit}' "$shadow_file" 2> /dev/null)
-  if [[ -z "$hash" ]]; then
-    hash=$(awk -F: 'NF>=2 && $2 != "" {print $2; exit}' "$shadow_file" 2> /dev/null)
-  fi
   [[ -n "$hash" ]] || return 1
   print -r -- "$hash"
   return 0
@@ -40,12 +37,6 @@ _auth_verify_password() {
     if command -v openssl > /dev/null 2>&1; then
       test_hash=$(printf '%s' "$candidate" | openssl passwd "$flag" -salt "$salt" -stdin 2> /dev/null)
     fi
-    if [[ -n "$test_hash" && "$test_hash" == "$stored" ]]; then
-      return 0
-    fi
-  elif ((${#stored} == 64)) && [[ "$stored" =~ ^[0-9a-fA-F]+$ ]]; then
-    local test_hash=""
-    test_hash=$(printf '%s' "$candidate" | sha256sum 2> /dev/null | awk '{print $1}')
     if [[ -n "$test_hash" && "$test_hash" == "$stored" ]]; then
       return 0
     fi
