@@ -12,12 +12,12 @@ termux_home="${TERMUX_HOME:-/data/data/com.termux/files/home}"
 termux_prefix="${TERMUX_PREFIX:-/data/data/com.termux/files/usr}"
 boot_dir="${termux_home}/.termux/boot"
 
-timeout=120
-elapsed=0
-while [ ! -d "${boot_dir}" ] && [ "${elapsed}" -lt "${timeout}" ]; do
-  sleep 2
-  elapsed=$((elapsed + 2))
+while [ "$(getprop sys.user.0.ce_available)" != "true" ] && [ "$(getprop vold.fbe.decrypted)" != "1" ]; do
+  [ -d "${boot_dir}" ] && break
+  sleep 3
 done
+
+sleep 2
 
 [ ! -d "${boot_dir}" ] && exit 0
 

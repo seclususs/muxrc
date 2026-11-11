@@ -10,5 +10,8 @@ chmod() {
 }
 
 chown() {
-  return 0
+  if [[ "$PWD" == "/sdcard"* || "$PWD" == *"/storage/"* || "$PWD" == *"$HOME/storage"* || "$*" == *"/sdcard"* || "$*" == *"/storage/emulated/"* || "$*" == *"$HOME/storage"* || "$*" == *"/storage/"* ]]; then
+    return 0
+  fi
+  command chown "$@"
 }
