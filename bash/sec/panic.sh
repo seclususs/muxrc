@@ -67,7 +67,7 @@ shred_target() {
       log_info "[dry-run] would shred: ${target}"
       return 0
     fi
-    shred_file "${target}" 1
+    shred_file "${target}" 1 || true
     rm -f "${target}" 2> /dev/null || true
     return 0
   fi
@@ -80,7 +80,7 @@ shred_target() {
 
     local file
     while IFS= read -r -d '' file; do
-      shred_file "${file}" 1
+      shred_file "${file}" 1 || true
     done < <(find "${target}" ! -type d -print0 2> /dev/null)
 
     rm -rf "${target}" 2> /dev/null || true

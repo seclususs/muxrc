@@ -58,21 +58,17 @@ acpi() {
   fi
 
   print -r -- "$raw_json" | awk -v mode="$mode" '
-    /^[[:space:]]*"status":/ {
-      gsub(/[",]/, "", $2)
-      st = $2
+    BEGIN {
+      RS = "[\r\n,{}]+"
+      FS = "[:\"[:space:]]+"
     }
-    /^[[:space:]]*"percentage":/ {
-      gsub(/[",]/, "", $2)
-      pct = $2
-    }
-    /^[[:space:]]*"temperature":/ {
-      gsub(/[",]/, "", $2)
-      temp = $2
-    }
-    /^[[:space:]]*"plugged":/ {
-      gsub(/[",]/, "", $2)
-      plug = $2
+    {
+      for (i = 1; i <= NF; i++) {
+        if ($i == "status") st = $(i+1)
+        else if ($i == "percentage") pct = $(i+1)
+        else if ($i == "temperature") temp = $(i+1)
+        else if ($i == "plugged") plug = $(i+1)
+      }
     }
     END {
       st_low = tolower(st)

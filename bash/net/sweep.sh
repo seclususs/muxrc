@@ -114,7 +114,7 @@ main() {
 
   if [[ -z "${cidr}" ]]; then
     if command -v ip > /dev/null 2>&1; then
-      cidr=$(ip route show 2> /dev/null | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '{print $1}' | head -n 1 || true)
+      cidr=$(ip route show 2> /dev/null | grep -v 'default' | grep -vE 'dev (lo|tun|tap|wg)' | awk '$1 ~ /\// {print $1}' | head -n 1 || true)
     fi
   fi
 

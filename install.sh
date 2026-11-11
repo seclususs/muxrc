@@ -181,10 +181,13 @@ setup_zsh_plugins() {
 setup_storage_symlinks() {
   local dir_name
   local target_path
+  local home_ctx
 
   local -A storage_dirs=(
     ["Workspace"]="/storage/emulated/0/Workspace"
   )
+
+  home_ctx=$(stat -c %C "${HOME}" 2> /dev/null || true)
 
   for dir_name in "${!storage_dirs[@]}"; do
     target_path="${storage_dirs[${dir_name}]}"
@@ -192,6 +195,9 @@ setup_storage_symlinks() {
       mkdir -p "${target_path}" 2> /dev/null || true
     fi
     ln -sfn "${target_path}" "${HOME}/${dir_name}"
+    if [[ -n "${home_ctx}" && "${home_ctx}" != "?" ]]; then
+      chcon -h "${home_ctx}" "${HOME}/${dir_name}" 2> /dev/null || true
+    fi
   done
 }
 
@@ -208,11 +214,20 @@ symlink_configurations() {
     return 0
   fi
 
+  if [[ "${dotfiles_dir}" -ef "${HOME}" ]]; then
+    return 0
+  fi
+
   ln -sfn "${dotfiles_dir}/zsh/.zshrc" "${HOME}/.zshrc"
   ln -sfn "${dotfiles_dir}/colors/.dircolors" "${HOME}/.dircolors"
   ln -sfn "${dotfiles_dir}/termux/colors.properties" "${HOME}/.termux/colors.properties"
   ln -sfn "${dotfiles_dir}/termux/termux.properties" "${HOME}/.termux/termux.properties"
   ln -sfn "${dotfiles_dir}/nano/.nanorc" "${HOME}/.nanorc"
+
+  local home_ctx
+  if home_ctx=$(stat -c %C "${HOME}" 2> /dev/null) && [[ -n "${home_ctx}" && "${home_ctx}" != "?" ]]; then
+    chcon -h "${home_ctx}" "${HOME}/.zshrc" "${HOME}/.dircolors" "${HOME}/.termux/colors.properties" "${HOME}/.termux/termux.properties" "${HOME}/.nanorc" 2> /dev/null || true
+  fi
 }
 
 setup_boot_services() {
@@ -231,6 +246,11 @@ setup_boot_services() {
   mkdir -p "${HOME}/.termux/boot"
   ln -sfn "${dotfiles_dir}/sh/boot/start-sshd" "${HOME}/.termux/boot/start-sshd"
   chmod +x "${dotfiles_dir}/sh/boot/start-sshd" 2> /dev/null || true
+
+  local home_ctx
+  if home_ctx=$(stat -c %C "${HOME}" 2> /dev/null) && [[ -n "${home_ctx}" && "${home_ctx}" != "?" ]]; then
+    chcon -h "${home_ctx}" "${HOME}/.termux/boot/start-sshd" 2> /dev/null || true
+  fi
 
   local magisk_service_dir="/data/adb/service.d"
   local magisk_runner="${magisk_service_dir}/muxrc-boot.sh"

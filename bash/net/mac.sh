@@ -51,7 +51,7 @@ validate_mac() {
   fi
 
   local lower_mac="${mac,,}"
-  if [[ "${lower_mac}" == "00:00:00:00:00:00" || "${lower_mac}" == "ff:ff:ff:ff:ff:ff" ]]; then
+  if [[ "${lower_mac}" == "00:00:00:00:00:00" || "${lower_mac}" == "ff:ff:ff:ff:ff:ff" || "${lower_mac}" == "02:00:00:00:00:00" ]]; then
     log_error "reserved mac rejected: ${mac}"
     return 1
   fi
@@ -78,7 +78,7 @@ save_original_mac() {
   local cur_mac
   cur_mac=$(get_current_mac "${iface}")
 
-  if [[ -n "${cur_mac}" ]]; then
+  if [[ -n "${cur_mac}" && "${cur_mac}" != "02:00:00:00:00:00" && "${cur_mac}" != "00:00:00:00:00:00" ]]; then
     mkdir -p "${state_dir}"
     printf "%s\n" "${cur_mac}" > "${orig_file}"
     chmod 600 "${orig_file}"

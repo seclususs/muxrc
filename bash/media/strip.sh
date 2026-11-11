@@ -67,9 +67,14 @@ strip_metadata() {
 
     trap 'cleanup_spinner' EXIT
     start_spinner "stripping metadata"
-    exiftool -all= -o "${output_dir}/" "${target}" > /dev/null 2>&1 || true
-    stop_spinner "success" "done. saved to ${output_dir}/"
-    trap - EXIT
+    if exiftool -all= -o "${output_dir}/" "${target}" > /dev/null 2>&1; then
+      stop_spinner "success" "done. saved to ${output_dir}/"
+      trap - EXIT
+    else
+      stop_spinner "error" "metadata stripping failed"
+      trap - EXIT
+      return 1
+    fi
   elif [[ -f "${target}" ]]; then
     local bname
     bname="$(basename "${target}")"
@@ -78,9 +83,14 @@ strip_metadata() {
 
     trap 'cleanup_spinner' EXIT
     start_spinner "stripping metadata from ${bname}"
-    exiftool -all= -o "${out_file}" "${target}" > /dev/null 2>&1 || true
-    stop_spinner "success" "done. saved to ${out_file}"
-    trap - EXIT
+    if exiftool -all= -o "${out_file}" "${target}" > /dev/null 2>&1; then
+      stop_spinner "success" "done. saved to ${out_file}"
+      trap - EXIT
+    else
+      stop_spinner "error" "metadata stripping failed"
+      trap - EXIT
+      return 1
+    fi
   else
     log_error "unsupported target type: ${target}"
     return 1

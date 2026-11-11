@@ -90,10 +90,13 @@ display_duplicates_and_collect_deletions() {
     | sort -k1,1 > "${tmp_dir}/dup_files.txt"
 
   while IFS= read -r line; do
-    hash="${line%% *}"
-    hash="${hash#\\}"
-    file="${line#* }"
-    file="${file# }"
+    if [[ "${line}" == \\* ]]; then
+      hash="${line:1:64}"
+      file="${line:67}"
+    else
+      hash="${line:0:64}"
+      file="${line:66}"
+    fi
 
     if [[ "${hash}" != "${current_hash}" ]]; then
       current_hash="${hash}"

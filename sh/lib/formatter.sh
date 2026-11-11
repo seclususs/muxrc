@@ -21,7 +21,12 @@ format_truncate() {
   esac
 
   if [ "${#text}" -gt "${max_len}" ]; then
-    printf '%s...\n' "$(printf '%s' "${text}" | cut -c 1-"${max_len}")"
+    if [ "${max_len}" -gt 3 ]; then
+      local cut_len=$((max_len - 3))
+      printf '%s...\n' "$(printf '%s' "${text}" | cut -c 1-"${cut_len}")"
+    else
+      printf '%s\n' "$(printf '%s' "${text}" | cut -c 1-"${max_len}")"
+    fi
   else
     printf '%s\n' "${text}"
   fi
