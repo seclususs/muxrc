@@ -132,7 +132,7 @@ execute_spoof() {
 
   while IFS="=" read -r key val; do
     if [[ ! "${key}" =~ ^[A-Za-z0-9_]+$ ]]; then
-      log_warn "skipping invalid key: ${key}"
+      log_warn "invalid key: ${key}"
       continue
     fi
     args+=("-${key}=${val}")

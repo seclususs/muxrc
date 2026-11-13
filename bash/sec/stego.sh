@@ -131,7 +131,7 @@ extract_data() {
   local extract_success=0
   pushd "${extract_dir}" > /dev/null
   if steghide extract -sf "${stego_img_abs}" -f -p "${pass}" > /dev/null 2>&1; then
-    stop_spinner "success" "extracted to ${extract_dir}/"
+    stop_spinner "success" "extracted to ${extract_dir}"
     extract_success=1
   else
     stop_spinner "error" "extraction failed"
@@ -170,7 +170,7 @@ main() {
   elif [[ "${opt}" == "2" ]]; then
     extract_data "${extract_dir}"
   elif [[ "${opt}" == "0" ]]; then
-    log_warn "exiting..."
+    log_warn "aborted"
     exit 0
   else
     log_error "invalid option"

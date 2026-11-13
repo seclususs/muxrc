@@ -77,7 +77,7 @@ compress_video() {
   local orig_size
   orig_size=$(stat -c '%s' "${target_file}" 2> /dev/null || wc -c < "${target_file}")
 
-  log_info "compressing ${file_name} to hevc..."
+  log_info "compressing ${file_name} to hevc"
 
   local -a mov_opts=()
   local ext_lower="${ext,,}"
@@ -111,7 +111,7 @@ compress_video() {
   if ((orig_size > 0 && new_size >= orig_size)); then
     rm -f "${temp_file}" 2> /dev/null || true
     CURRENT_TEMP=""
-    log_warn "done: ${orig_fmt}->${new_fmt} (kept)"
+    log_warn "size increased: kept original"
   else
     mv -f "${temp_file}" "${target_file}"
     CURRENT_TEMP=""
@@ -119,9 +119,9 @@ compress_video() {
     if ((orig_size > 0 && new_size < orig_size)); then
       local saved_pct
       saved_pct=$(awk -v o="${orig_size}" -v n="${new_size}" 'BEGIN { printf "%.1f", ((o - n) / o) * 100 }')
-      log_success "done: ${new_fmt} (-${saved_pct}%)"
+      log_success "${new_fmt} (-${saved_pct}%)"
     else
-      log_success "done: ${new_fmt}"
+      log_success "${new_fmt}"
     fi
   fi
 }

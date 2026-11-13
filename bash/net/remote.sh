@@ -349,14 +349,14 @@ pair_client_key() {
   target_key=$(printf "%s\n" "${target_key}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | grep -v '^[[:space:]]*$' || true)
 
   if [[ -z "${target_key}" ]]; then
-    log_error "empty public key."
+    log_error "empty public key"
     return 1
   fi
 
   local line_count
   line_count=$(printf "%s\n" "${target_key}" | wc -l)
   if [[ "${line_count}" -ne 1 || ! "${target_key}" =~ ${key_regex} ]] || ! ssh-keygen -l -f - <<< "${target_key}" > /dev/null 2>&1; then
-    log_error "invalid openssh public key format."
+    log_error "invalid openssh public key format"
     return 1
   fi
 
@@ -397,7 +397,7 @@ edit_ssh_config() {
     elif command -v vi > /dev/null 2>&1; then
       editor="vi"
     else
-      log_error "no editor found."
+      log_error "no editor found"
       return 1
     fi
   fi
@@ -416,33 +416,31 @@ edit_ssh_config() {
 }
 
 start_remote() {
+  if pgrep -x sshd > /dev/null 2>&1; then
+    status_remote
+    return 0
+  fi
+
   local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
   mkdir -p "${state_dir}"
 
   if command -v termux-wake-lock > /dev/null 2>&1; then
     termux-wake-lock 2> /dev/null || true
     touch "${state_dir}/wakelock"
-    log_success "wake-lock acquired."
   fi
 
-  if ! pgrep -x sshd > /dev/null 2>&1; then
-    local ssh_dir="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh"
-    if ! compgen -G "${ssh_dir}/ssh_host_*_key" > /dev/null 2>&1; then
-      trap 'cleanup_spinner' EXIT
-      start_spinner "generating ssh host keys"
-      ssh-keygen -A > /dev/null 2>&1 || true
-      stop_spinner "success" "ssh host keys generated"
-      trap - EXIT
-    fi
+  local ssh_dir="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh"
+  if ! compgen -G "${ssh_dir}/ssh_host_*_key" > /dev/null 2>&1; then
+    trap 'cleanup_spinner' EXIT
+    start_spinner "generating ssh host keys"
+    ssh-keygen -A > /dev/null 2>&1 || true
+    stop_spinner "success" "ssh host keys generated"
+    trap - EXIT
+  fi
 
-    if sshd; then
-      log_success "sshd started."
-    else
-      log_error "sshd failed to start."
-      return 1
-    fi
-  else
-    log_info "sshd already running."
+  if ! sshd; then
+    log_error "sshd failed to start"
+    return 1
   fi
 
   status_remote
@@ -474,9 +472,9 @@ stop_remote() {
       pkill -9 -u "${my_uid}" sshd 2> /dev/null || true
     fi
 
-    log_success "sshd stopped."
+    log_success "sshd stopped"
   else
-    log_info "sshd not running."
+    log_warn "sshd: inactive"
   fi
 
   if [[ -f "${state_dir}/wakelock" ]]; then
@@ -484,7 +482,6 @@ stop_remote() {
       termux-wake-unlock 2> /dev/null || true
     fi
     rm -f "${state_dir}/wakelock"
-    log_success "wake-lock released."
   fi
 }
 

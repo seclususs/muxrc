@@ -128,9 +128,9 @@ set_ipv6_state() {
   fi
 
   if [[ "${state}" == "1" ]]; then
-    log_info "ipv6 disabled (leak protected)"
+    log_info "ipv6 disabled"
   else
-    log_info "ipv6 restored to enabled"
+    log_info "ipv6 enabled"
   fi
 }
 
@@ -166,7 +166,7 @@ rotate_identity() {
     if [[ -f "${script_dir}/mac.sh" ]]; then
       bash "${script_dir}/mac.sh" random "${iface}"
     else
-      log_warn "mac.sh not found, skipping"
+      log_warn "mac.sh not found"
     fi
   else
     confirm_ssh_hazard "this will drop your ssh connection" || return 1
@@ -215,7 +215,7 @@ reset_identity() {
   flush_network_caches "${iface}"
   signal_tor
 
-  log_success "identity restored to factory"
+  log_success "identity restored"
   show_status "${iface}"
 }
 

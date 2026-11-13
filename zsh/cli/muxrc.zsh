@@ -22,7 +22,7 @@ _muxrc_sync() {
   [[ ! -d "$plugins_dir" && -d "$HOME/.zsh/plugins" ]] && plugins_dir="$HOME/.zsh/plugins"
 
   if [[ ! -d "$muxrc_dir" ]]; then
-    log_error "muxrc dir not found."
+    log_error "muxrc dir not found"
     return 1
   fi
 
@@ -41,13 +41,13 @@ _muxrc_sync() {
      git -C "$muxrc_dir" reset --hard -q "${upstream_branch}" 2> "$sync_err"; then
     new_head=$(git -C "$muxrc_dir" rev-parse HEAD 2> /dev/null)
     if [[ "$old_head" == "$new_head" ]]; then
-      stop_spinner "success" "repository up to date."
+      stop_spinner "success" "repository up to date"
     else
-      stop_spinner "success" "repository updated."
+      stop_spinner "success" "repository updated"
     fi
     rm -f "$sync_err" 2> /dev/null
   else
-    stop_spinner "error" "failed to sync repository."
+    stop_spinner "error" "failed to sync repository"
     if [[ -s "$sync_err" ]]; then
       local err_line
       while IFS= read -r err_line; do
@@ -71,7 +71,6 @@ _muxrc_sync() {
   fi
 
   if [[ "$old_head" == "$new_head" && $plugins_changed -eq 0 ]]; then
-    log_success "everything up to date."
     return 0
   fi
 
@@ -79,7 +78,7 @@ _muxrc_sync() {
     if [[ -f "$muxrc_dir/bash/common/migrate.sh" ]]; then
       start_spinner "checking migrations"
       bash "$muxrc_dir/bash/common/migrate.sh" > /dev/null 2>&1 || true
-      stop_spinner "success" "migrations checked."
+      stop_spinner "success" "migrations checked"
     fi
 
     if [[ -f "$install_script" ]]; then
@@ -96,11 +95,11 @@ _muxrc_sync() {
   local zshrc_file="${ZSH_CONFIG_DIR:-${muxrc_dir}/zsh}/.zshrc"
   if [[ -f "$zshrc_file" ]] && ! zsh -n "$zshrc_file" 2> /dev/null; then
     log_error "syntax check failed on .zshrc"
-    log_warn "reload aborted for safety"
+    log_warn "reload aborted"
     return 1
   fi
 
-  log_success "sync complete. reloading shell..."
+  log_success "sync complete"
   exec zsh
 }
 
@@ -117,7 +116,7 @@ _muxrc_clean() {
   local hfile="${HISTFILE:-${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history}"
   rm -f "$hfile" "${hfile}.LOCK" "$HOME/.zsh_history" "$HOME/.zsh_history.LOCK" "$HOME/.zsh_history_root" "$HOME/.zsh_history_root.LOCK" 2> /dev/null
 
-  log_success "history cleaned. reloading shell..."
+  log_success "history cleaned"
   exec zsh
 }
 

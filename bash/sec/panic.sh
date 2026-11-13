@@ -158,7 +158,7 @@ main() {
       shred_target "${target}" 1
     done
     wipe_clipboard 1
-    log_success "dry-run complete: 0 files modified"
+    log_success "dry-run complete"
     return 0
   fi
 

@@ -119,7 +119,7 @@ validate_target_readable() {
 ################################
 require_root() {
   if [ "$(id -u)" -ne 0 ]; then
-    log_error "root access required (use sudo)"
+    log_error "root required"
     return 1
   fi
   return 0

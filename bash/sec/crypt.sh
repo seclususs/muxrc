@@ -135,7 +135,7 @@ decrypt_target_file() {
     trap - EXIT
     return 0
   else
-    stop_spinner "error" "decryption failed (bad pass or corrupt)"
+    stop_spinner "error" "decryption failed"
     trap - EXIT
     rm -f "${out_file}" 2> /dev/null || true
     return 1

@@ -10,7 +10,7 @@ source "${SCRIPT_DIR}/sh/init.sh"
 
 setup_storage() {
   if [[ ! -d "${HOME}/storage" ]]; then
-    log_info "requesting storage permission..."
+    log_info "requesting storage permission"
     termux-setup-storage
     sleep 2
   fi
@@ -27,7 +27,7 @@ enable_repos() {
   pkg update -y -o Dpkg::Options::="--force-confold" > /dev/null 2>&1 || true
   pkg install -y -o Dpkg::Options::="--force-confold" root-repo x11-repo > /dev/null 2>&1 || true
   pkg upgrade -y -o Dpkg::Options::="--force-confold" > /dev/null 2>&1 || true
-  stop_spinner "success" "repos enabled."
+  stop_spinner "success" "repos enabled"
 }
 
 install_packages() {
@@ -52,7 +52,7 @@ install_packages() {
 
   start_spinner "installing missing packages"
   pkg install -y -o Dpkg::Options::="--force-confold" "${missing_pkgs[@]}" > /dev/null 2>&1 || true
-  stop_spinner "success" "packages installed."
+  stop_spinner "success" "packages installed"
 }
 
 setup_directories() {
@@ -60,7 +60,7 @@ setup_directories() {
   local zsh_plugins_dir="${2:-}"
 
   if [[ -z "${dotfiles_dir}" || -z "${zsh_plugins_dir}" ]]; then
-    log_error "missing directory parameters."
+    log_error "missing directory parameters"
     return 1
   fi
 
@@ -139,9 +139,9 @@ setup_sudo_wrapper() {
     fi
 
     rm -f "${HOME}/.config/muxrc/sudo_hash" "${HOME}/.sudo_hash" 2> /dev/null || true
-    log_success "shadow password configured."
+    log_success "shadow password configured"
   else
-    log_error "passwords mismatch. please retry."
+    log_error "passwords mismatch"
     return 1
   fi
 }
@@ -159,7 +159,7 @@ SUDO__SHELLS_AUTOMATICALLY_CREATE_HISTORY_FILES=0
 SUDO__SHELLS_HISTORY_ENABLED=0
 EOF
     chmod 600 "${config_file}"
-    log_success "sudo environment configured."
+    log_success "sudo environment configured"
   fi
 }
 
@@ -167,7 +167,7 @@ setup_zsh_plugins() {
   local zsh_plugins_dir="${1:-}"
 
   if [[ -z "${zsh_plugins_dir}" ]]; then
-    log_error "plugins directory not specified."
+    log_error "plugins directory not specified"
     return 1
   fi
 
@@ -199,7 +199,7 @@ symlink_configurations() {
   local dotfiles_dir="${1:-}"
 
   if [[ -z "${dotfiles_dir}" ]]; then
-    log_error "dotfiles directory not specified."
+    log_error "dotfiles directory not specified"
     return 1
   fi
 
@@ -223,7 +223,7 @@ setup_boot_services() {
   local dotfiles_dir="${1:-}"
 
   if [[ -z "${dotfiles_dir}" ]]; then
-    log_error "dotfiles directory not specified."
+    log_error "dotfiles directory not specified"
     return 1
   fi
 
@@ -239,10 +239,10 @@ setup_boot_services() {
 
 setup_nerd_font() {
   if [[ ! -f "${HOME}/.termux/font.ttf" ]]; then
-    log_info "installing jetbrains mono font..."
+    log_info "installing jetbrains mono font"
     if ! wget -q --show-progress -O "${HOME}/.termux/font.ttf" \
       "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/v3.4.0/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf"; then
-      log_warn "font download failed, skipping."
+      log_warn "font download failed"
       rm -f "${HOME}/.termux/font.ttf" 2> /dev/null || true
     fi
     termux-reload-settings 2> /dev/null || true
@@ -279,7 +279,7 @@ main() {
   setup_nerd_font
   setup_default_shell
 
-  log_success "install done. restart termux"
+  log_success "install complete"
   trap - EXIT
 }
 

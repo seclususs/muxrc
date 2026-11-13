@@ -24,8 +24,8 @@ alias xsel='termux-clipboard-set'
 alias pbcopy='termux-clipboard-set'
 alias pbpaste='termux-clipboard-get'
 
-alias wakelock='termux-wake-lock && echo "Wakelock acquired: Termux background session secured."'
-alias wakelock-off='termux-wake-unlock && echo "Wakelock released."'
+alias wakelock='termux-wake-lock && echo "wakelock acquired"'
+alias wakelock-off='termux-wake-unlock && echo "wakelock released"'
 
 alias ssh-setup='net remote setup'
 alias ssh-start='net remote start'

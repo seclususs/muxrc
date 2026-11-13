@@ -12,7 +12,7 @@ _run_as_root() {
   elif (( $+functions[sudo] )) || whence sudo > /dev/null 2>&1; then
     sudo bash "$@"
   else
-    log_error "root required (sudo not found)"
+    log_error "root required"
     return 1
   fi
 }

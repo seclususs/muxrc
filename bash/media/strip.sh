@@ -68,7 +68,7 @@ strip_metadata() {
     trap 'cleanup_spinner' EXIT
     start_spinner "stripping metadata"
     if exiftool -all= -o "${output_dir}/" "${target}" > /dev/null 2>&1; then
-      stop_spinner "success" "done. saved to ${output_dir}/"
+      stop_spinner "success" "saved to ${output_dir}"
       trap - EXIT
     else
       stop_spinner "error" "metadata stripping failed"
@@ -84,7 +84,7 @@ strip_metadata() {
     trap 'cleanup_spinner' EXIT
     start_spinner "stripping metadata from ${bname}"
     if exiftool -all= -o "${out_file}" "${target}" > /dev/null 2>&1; then
-      stop_spinner "success" "done. saved to ${out_file}"
+      stop_spinner "success" "saved to ${out_file}"
       trap - EXIT
     else
       stop_spinner "error" "metadata stripping failed"

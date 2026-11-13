@@ -57,7 +57,7 @@ start_tor() {
       log_warn "tor running (pid ${existing_pid})"
       return 0
     else
-      log_error "external tor running (stop it)"
+      log_error "external tor running"
       return 1
     fi
   fi
@@ -239,7 +239,7 @@ check_tor_connection() {
   fi
 
   if [[ ${is_running} -eq 0 ]]; then
-    log_warn "tor not running (run: net tor start)"
+    log_warn "tor not running"
     return 1
   fi
 
@@ -260,9 +260,9 @@ check_tor_connection() {
   exit_ip=$(echo "${response}" | jq -r '.IP // empty' 2> /dev/null)
 
   if [[ "${is_tor}" == "true" ]]; then
-    stop_spinner "success" "tor verified (exit ip: ${exit_ip})"
+    stop_spinner "success" "tor verified (${exit_ip})"
   else
-    stop_spinner "warn" "not routed through tor (ip: ${exit_ip})"
+    stop_spinner "warn" "not routed through tor (${exit_ip})"
   fi
   trap - EXIT
 }

@@ -38,7 +38,7 @@ execute_arp_sweep() {
   local target_cidr="${1}"
 
   if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-    log_warn "non-root: mac/vendor omitted by nmap"
+    log_warn "non-root: mac/vendor omitted"
   fi
 
   log_info "target: ${target_cidr}"
@@ -127,7 +127,7 @@ main() {
   fi
 
   if [[ -z "${cidr}" ]]; then
-    log_error "subnet not detected (pass CIDR)"
+    log_error "subnet not detected"
     exit 1
   fi
 

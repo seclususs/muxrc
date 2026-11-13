@@ -19,7 +19,7 @@ run_as_root() {
   elif command -v su > /dev/null 2>&1 && su -c true 2> /dev/null; then
     su -c "$*"
   else
-    log_error "root required (sudo not found)"
+    log_error "root required"
     return 1
   fi
 }
