@@ -30,27 +30,31 @@ _muxrc_sync() {
   local new_head=""
   old_head=$(git -C "$muxrc_dir" rev-parse HEAD 2> /dev/null)
 
-  local pull_err
-  pull_err=$(mktemp "${TMPDIR:-/data/data/com.termux/files/usr/tmp}/pull.err.XXXXXX" 2> /dev/null || mktemp)
+  local upstream_branch
+  upstream_branch=$(git -C "$muxrc_dir" rev-parse --abbrev-ref '@{u}' 2> /dev/null || echo "origin/main")
 
-  start_spinner "pulling repository"
-  if git -C "$muxrc_dir" pull --rebase --autostash -q 2> "$pull_err"; then
+  local sync_err
+  sync_err=$(mktemp "${TMPDIR:-/data/data/com.termux/files/usr/tmp}/sync.err.XXXXXX" 2> /dev/null || mktemp)
+
+  start_spinner "syncing repository"
+  if git -C "$muxrc_dir" fetch -q 2> "$sync_err" && \
+     git -C "$muxrc_dir" reset --hard -q "${upstream_branch}" 2> "$sync_err"; then
     new_head=$(git -C "$muxrc_dir" rev-parse HEAD 2> /dev/null)
     if [[ "$old_head" == "$new_head" ]]; then
       stop_spinner "success" "repository up to date."
     else
       stop_spinner "success" "repository updated."
     fi
-    rm -f "$pull_err" 2> /dev/null
+    rm -f "$sync_err" 2> /dev/null
   else
-    stop_spinner "error" "failed to pull repository."
-    if [[ -s "$pull_err" ]]; then
+    stop_spinner "error" "failed to sync repository."
+    if [[ -s "$sync_err" ]]; then
       local err_line
       while IFS= read -r err_line; do
         [[ -n "$err_line" ]] && print -u2 "$err_line"
-      done < "$pull_err"
+      done < "$sync_err"
     fi
-    rm -f "$pull_err" 2> /dev/null
+    rm -f "$sync_err" 2> /dev/null
     return 1
   fi
 
