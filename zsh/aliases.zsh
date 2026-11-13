@@ -30,7 +30,10 @@ alias wakelock-off='termux-wake-unlock && echo "wakelock released"'
 alias ssh-setup='net remote setup'
 alias ssh-start='net remote start'
 alias ssh-stop='net remote stop'
+alias ssh-reload='net remote reload'
 alias ssh-status='net remote status'
+alias ssh-pair='net remote pair'
+alias ssh-config='net remote config'
 
 ##################################
 # Android file handlers & suffixes

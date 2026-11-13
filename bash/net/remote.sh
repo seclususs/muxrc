@@ -7,6 +7,9 @@ set -euo pipefail
 
 source "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")/init.sh"
 
+SSH_DIR="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh"
+SSH_CONFIG="${SSH_DIR}/sshd_config"
+
 check_dependencies() {
   require_cmd sshd ssh-keygen awk grep
 }
@@ -21,10 +24,11 @@ usage() {
   echo "  config               open sshd cfg in editor"
   echo "  start                start ssh daemon"
   echo "  stop                 stop ssh daemon"
+  echo "  reload               reload ssh daemon"
 }
 
 get_sshd_port() {
-  local config_file="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh/sshd_config"
+  local config_file="${SSH_CONFIG}"
   local port="8022"
 
   if [[ -f "${config_file}" ]]; then
@@ -55,7 +59,7 @@ run_ip_cmd() {
     return 0
   fi
 
-  if [[ "${EUID:-$(id -u)}" -ne 0 ]] && command -v su > /dev/null 2>&1; then
+  if [[ "${EUID:-$(id -u)}" -ne 0 ]] && command -v su > /dev/null 2>&1 && su -c true 2> /dev/null; then
     local su_ip="/system/bin/ip"
     [[ -x "${su_ip}" ]] || su_ip="ip"
     local safe_args
@@ -277,8 +281,8 @@ set_config_value() {
 }
 
 setup_remote() {
-  local ssh_dir="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh"
-  local config_file="${ssh_dir}/sshd_config"
+  local ssh_dir="${SSH_DIR}"
+  local config_file="${SSH_CONFIG}"
 
   if [[ ! -d "${ssh_dir}" ]]; then
     mkdir -p "${ssh_dir}"
@@ -388,7 +392,7 @@ pair_client_key() {
 }
 
 edit_ssh_config() {
-  local config_file="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh/sshd_config"
+  local config_file="${SSH_CONFIG}"
   local editor="${EDITOR:-nano}"
 
   if ! command -v "${editor}" > /dev/null 2>&1; then
@@ -429,7 +433,11 @@ start_remote() {
     touch "${state_dir}/wakelock"
   fi
 
-  local ssh_dir="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh"
+  local ssh_dir="${SSH_DIR}"
+  if [[ ! -f "${SSH_CONFIG}" ]]; then
+    setup_remote
+  fi
+
   if ! compgen -G "${ssh_dir}/ssh_host_*_key" > /dev/null 2>&1; then
     trap 'cleanup_spinner' EXIT
     start_spinner "generating ssh host keys"
@@ -485,6 +493,16 @@ stop_remote() {
   fi
 }
 
+reload_remote() {
+  local my_uid="${EUID:-$(id -u)}"
+  if pgrep -u "${my_uid}" -x sshd > /dev/null 2>&1; then
+    pkill -HUP -u "${my_uid}" -x sshd 2> /dev/null || true
+    log_success "sshd reloaded"
+  else
+    log_warn "sshd: inactive"
+  fi
+}
+
 main() {
   local cmd="${1:-status}"
 
@@ -514,6 +532,9 @@ main() {
       ;;
     stop)
       stop_remote
+      ;;
+    reload)
+      reload_remote
       ;;
     *)
       log_error "unknown command: ${cmd}"
