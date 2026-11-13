@@ -19,7 +19,6 @@ usage() {
   echo "  setup                sshd config"
   echo "  pair [key|file]      register public key"
   echo "  config               open sshd cfg in editor"
-  echo "  start                start ssh daemon"
   echo "  stop                 stop ssh daemon"
 }
 
@@ -208,46 +207,25 @@ get_active_clients() {
 }
 
 status_remote() {
-  log_info "remote service status"
-
   local port
   port=$(get_sshd_port)
   local current_user="${USER:-$(whoami)}"
 
-  local sshd_active=0
-  if pgrep -x sshd > /dev/null 2>&1; then
-    sshd_active=1
-    local sshd_pid
-    sshd_pid=$(pgrep -x sshd | head -n 1)
-    log_success "sshd: active (port ${port})"
-  else
+  if ! pgrep -x sshd > /dev/null 2>&1; then
     log_warn "sshd: inactive"
+    return 0
   fi
 
-  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
-  if [[ -f "${state_dir}/wakelock" ]]; then
-    log_success "wake-lock: held"
-  elif pgrep -u "${EUID:-$(id -u)}" -x termux-wake-lock > /dev/null 2>&1; then
-    log_success "wake-lock: held"
-  else
-    log_info "wake-lock: standard"
-  fi
+  log_success "sshd: active (port ${port})"
 
-  if [[ "${sshd_active}" -eq 1 ]]; then
-    local clients
-    clients=$(get_active_clients "${port}")
-    if [[ "${clients}" == "none" ]]; then
-      log_info "clients: none"
-    else
-      log_success "clients: ${clients}"
-    fi
+  local clients
+  clients=$(get_active_clients "${port}")
+  if [[ "${clients}" != "none" ]]; then
+    log_info "clients: ${clients}"
   fi
 
   local lan_ip
   lan_ip=$(get_device_ip)
-  if [[ -n "${lan_ip}" ]]; then
-    log_info "ip (lan): ${lan_ip}"
-  fi
 
   local vpn_ips=()
   local vpn_lines=""
@@ -255,14 +233,9 @@ status_remote() {
   if [[ -n "${vpn_lines}" ]]; then
     while read -r vpn_iface vpn_addr; do
       if [[ -n "${vpn_iface}" && -n "${vpn_addr}" ]]; then
-        log_info "ip (vpn): ${vpn_addr} (${vpn_iface})"
         vpn_ips+=("${vpn_addr}")
       fi
     done <<< "${vpn_lines}"
-  fi
-
-  if [[ -z "${lan_ip}" && ${#vpn_ips[@]} -eq 0 ]]; then
-    log_warn "ip: no network connection"
   fi
 
   local connect_cmds=()
@@ -283,6 +256,8 @@ status_remote() {
     for cmd in "${connect_cmds[@]}"; do
       echo "  ${cmd}"
     done
+  elif [[ -z "${lan_ip}" && ${#vpn_ips[@]} -eq 0 ]]; then
+    log_warn "ip: no network connection"
   fi
 }
 
@@ -439,53 +414,41 @@ edit_ssh_config() {
   fi
 }
 
-start_remote() {
-  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
-  mkdir -p "${state_dir}"
-
-  if command -v termux-wake-lock > /dev/null 2>&1; then
-    termux-wake-lock 2> /dev/null || true
-    touch "${state_dir}/wakelock"
-    log_success "wake-lock acquired."
-  fi
-
-  if ! pgrep -x sshd > /dev/null 2>&1; then
-    local ssh_dir="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh"
-    if ! compgen -G "${ssh_dir}/ssh_host_*_key" > /dev/null 2>&1; then
-      trap 'cleanup_spinner' EXIT
-      start_spinner "generating ssh host keys"
-      ssh-keygen -A > /dev/null 2>&1 || true
-      stop_spinner "success" "ssh host keys generated"
-      trap - EXIT
-    fi
-
-    if sshd; then
-      log_success "sshd started."
-    else
-      log_error "sshd failed to start."
-      return 1
-    fi
-  else
-    log_info "sshd already running."
-  fi
-
-  status_remote
-}
-
 stop_remote() {
   confirm_ssh_hazard "this will terminate your ssh session" || return 1
 
   local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+  local my_uid="${EUID:-$(id -u)}"
+  local sv_dir="${PREFIX:-/data/data/com.termux/files/usr}/var/service/sshd"
 
-  if pgrep -x sshd > /dev/null 2>&1; then
-    pkill sshd 2> /dev/null || true
+  if command -v sv > /dev/null 2>&1 && [[ -d "${sv_dir}" ]]; then
+    sv down "${sv_dir}" > /dev/null 2>&1 || true
+  fi
+
+  if pgrep -u "${my_uid}" sshd > /dev/null 2>&1; then
+    pkill -u "${my_uid}" sshd 2> /dev/null || true
+
+    local i
+    for ((i = 0; i < 20; i++)); do
+      if ! pgrep -u "${my_uid}" sshd > /dev/null 2>&1; then
+        break
+      fi
+      sleep 0.1
+    done
+
+    if pgrep -u "${my_uid}" sshd > /dev/null 2>&1; then
+      pkill -9 -u "${my_uid}" sshd 2> /dev/null || true
+    fi
+
     log_success "sshd stopped."
   else
     log_info "sshd not running."
   fi
 
-  if command -v termux-wake-unlock > /dev/null 2>&1; then
-    termux-wake-unlock 2> /dev/null || true
+  if [[ -f "${state_dir}/wakelock" ]]; then
+    if command -v termux-wake-unlock > /dev/null 2>&1; then
+      termux-wake-unlock 2> /dev/null || true
+    fi
     rm -f "${state_dir}/wakelock"
     log_success "wake-lock released."
   fi
@@ -514,9 +477,6 @@ main() {
       ;;
     config)
       edit_ssh_config
-      ;;
-    start)
-      start_remote
       ;;
     stop)
       stop_remote

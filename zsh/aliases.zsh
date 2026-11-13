@@ -28,7 +28,6 @@ alias wakelock='termux-wake-lock && echo "Wakelock acquired: Termux background s
 alias wakelock-off='termux-wake-unlock && echo "Wakelock released."'
 
 alias ssh-setup='net remote setup'
-alias ssh-start='net remote start'
 alias ssh-stop='net remote stop'
 alias ssh-status='net remote status'
 
