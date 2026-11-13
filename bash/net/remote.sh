@@ -19,6 +19,7 @@ usage() {
   echo "  setup                sshd config"
   echo "  pair [key|file]      register public key"
   echo "  config               open sshd cfg in editor"
+  echo "  start                start ssh daemon"
   echo "  stop                 stop ssh daemon"
 }
 
@@ -414,6 +415,39 @@ edit_ssh_config() {
   fi
 }
 
+start_remote() {
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+  mkdir -p "${state_dir}"
+
+  if command -v termux-wake-lock > /dev/null 2>&1; then
+    termux-wake-lock 2> /dev/null || true
+    touch "${state_dir}/wakelock"
+    log_success "wake-lock acquired."
+  fi
+
+  if ! pgrep -x sshd > /dev/null 2>&1; then
+    local ssh_dir="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh"
+    if ! compgen -G "${ssh_dir}/ssh_host_*_key" > /dev/null 2>&1; then
+      trap 'cleanup_spinner' EXIT
+      start_spinner "generating ssh host keys"
+      ssh-keygen -A > /dev/null 2>&1 || true
+      stop_spinner "success" "ssh host keys generated"
+      trap - EXIT
+    fi
+
+    if sshd; then
+      log_success "sshd started."
+    else
+      log_error "sshd failed to start."
+      return 1
+    fi
+  else
+    log_info "sshd already running."
+  fi
+
+  status_remote
+}
+
 stop_remote() {
   confirm_ssh_hazard "this will terminate your ssh session" || return 1
 
@@ -477,6 +511,9 @@ main() {
       ;;
     config)
       edit_ssh_config
+      ;;
+    start)
+      start_remote
       ;;
     stop)
       stop_remote

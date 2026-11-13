@@ -184,17 +184,9 @@ cleanup_legacy_dirs() {
   [[ -d "${HOME}/.sessions" ]] && rmdir "${HOME}/.sessions" 2> /dev/null || true
   [[ -L "${HOME}/.shortcuts/backup.sh" || -f "${HOME}/.shortcuts/backup.sh" ]] && rm -f "${HOME}/.shortcuts/backup.sh" 2> /dev/null || true
   [[ -d "${HOME}/.shortcuts" ]] && rmdir "${HOME}/.shortcuts" 2> /dev/null || true
-}
 
-migrate_magisk_boot() {
-  local magisk_service_dir="/data/adb/service.d"
-  local magisk_runner="${magisk_service_dir}/muxrc-boot.sh"
-  local repo_dir
-  repo_dir="$(dirname "$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]:-$0}")")")")"
-  local source_runner="${repo_dir}/sh/boot/magisk-boot.sh"
-
-  if [[ -f "${source_runner}" ]] && command -v su > /dev/null 2>&1 && su -c true 2> /dev/null; then
-    su -c "if [ -d '${magisk_service_dir}' ] && [ -f '${magisk_runner}' ]; then cp '${source_runner}' '${magisk_runner}' && chmod 755 '${magisk_runner}'; fi" 2> /dev/null || true
+  if command -v su > /dev/null 2>&1 && su -c true 2> /dev/null; then
+    su -c "rm -f /data/adb/service.d/muxrc-boot.sh" 2> /dev/null || true
   fi
 }
 
@@ -209,7 +201,6 @@ main() {
   local state_file="${state_dir}/.migrated"
 
   if [[ -f "${state_file}" ]]; then
-    migrate_magisk_boot
     exit 0
   fi
 
@@ -218,7 +209,6 @@ main() {
   migrate_zsh_history
   migrate_trash
   migrate_vault
-  migrate_magisk_boot
   cleanup_legacy_dirs
 
   mkdir -p "${state_dir}"

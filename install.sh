@@ -181,13 +181,10 @@ setup_zsh_plugins() {
 setup_storage_symlinks() {
   local dir_name
   local target_path
-  local home_ctx
 
   local -A storage_dirs=(
     ["Workspace"]="/storage/emulated/0/Workspace"
   )
-
-  home_ctx=$(stat -c %C "${HOME}" 2> /dev/null || true)
 
   for dir_name in "${!storage_dirs[@]}"; do
     target_path="${storage_dirs[${dir_name}]}"
@@ -195,9 +192,6 @@ setup_storage_symlinks() {
       mkdir -p "${target_path}" 2> /dev/null || true
     fi
     ln -sfn "${target_path}" "${HOME}/${dir_name}"
-    if [[ -n "${home_ctx}" && "${home_ctx}" != "?" ]]; then
-      chcon -h "${home_ctx}" "${HOME}/${dir_name}" 2> /dev/null || true
-    fi
   done
 }
 
@@ -223,11 +217,6 @@ symlink_configurations() {
   ln -sfn "${dotfiles_dir}/termux/colors.properties" "${HOME}/.termux/colors.properties"
   ln -sfn "${dotfiles_dir}/termux/termux.properties" "${HOME}/.termux/termux.properties"
   ln -sfn "${dotfiles_dir}/nano/.nanorc" "${HOME}/.nanorc"
-
-  local home_ctx
-  if home_ctx=$(stat -c %C "${HOME}" 2> /dev/null) && [[ -n "${home_ctx}" && "${home_ctx}" != "?" ]]; then
-    chcon -h "${home_ctx}" "${HOME}/.zshrc" "${HOME}/.dircolors" "${HOME}/.termux/colors.properties" "${HOME}/.termux/termux.properties" "${HOME}/.nanorc" 2> /dev/null || true
-  fi
 }
 
 setup_boot_services() {
@@ -246,21 +235,6 @@ setup_boot_services() {
   mkdir -p "${HOME}/.termux/boot"
   ln -sfn "${dotfiles_dir}/sh/boot/start-sshd" "${HOME}/.termux/boot/start-sshd"
   chmod +x "${dotfiles_dir}/sh/boot/start-sshd" 2> /dev/null || true
-
-  local home_ctx
-  if home_ctx=$(stat -c %C "${HOME}" 2> /dev/null) && [[ -n "${home_ctx}" && "${home_ctx}" != "?" ]]; then
-    chcon -h "${home_ctx}" "${HOME}/.termux/boot/start-sshd" 2> /dev/null || true
-  fi
-
-  local magisk_service_dir="/data/adb/service.d"
-  local magisk_runner="${magisk_service_dir}/muxrc-boot.sh"
-
-  if command -v su > /dev/null 2>&1 && su -c true 2> /dev/null; then
-    if su -c "[ -d '${magisk_service_dir}' ]" 2> /dev/null; then
-      su -c "cp '${dotfiles_dir}/sh/boot/magisk-boot.sh' '${magisk_runner}'" 2> /dev/null \
-        && su -c "chmod 755 '${magisk_runner}'" 2> /dev/null || true
-    fi
-  fi
 }
 
 setup_nerd_font() {
