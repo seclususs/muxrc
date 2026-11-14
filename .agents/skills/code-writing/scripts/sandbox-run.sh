@@ -296,7 +296,12 @@ run_script() {
 }
 
 snapshot() {
-  (cd "${tmp}" && find home prefix -type f ! -path 'prefix/bin/*' -exec cksum {} + 2> /dev/null | LC_ALL=C sort -k3)
+  (
+    cd "${tmp}" || exit 1
+    find home prefix -type f ! -path 'prefix/bin/*' -exec cksum {} + 2> /dev/null
+    find home prefix -type l ! -path 'prefix/bin/*' -exec sh -c 'for p; do printf "link %s -> %s\n" "$p" "$(readlink "$p")"; done' sh {} + 2> /dev/null
+    find home prefix -type d ! -path 'prefix/bin' ! -path 'prefix/bin/*' 2> /dev/null | sed 's/^/dir /'
+  ) | LC_ALL=C sort
 }
 
 if [ "$(uname -s 2> /dev/null)" = "Darwin" ]; then
@@ -311,9 +316,13 @@ rc=$?
 if [ "${twice}" -eq 1 ]; then
   snapshot > "${tmp}/snap1"
   run_script "${script}" "$@" > /dev/null 2>&1
+  rc2=$?
   snapshot > "${tmp}/snap2"
+  if [ "${rc2}" -ne "${rc}" ]; then
+    echo "sandbox: NOT idempotent: second run exited ${rc2}, first run ${rc}" >&2
+  fi
   if cmp -s "${tmp}/snap1" "${tmp}/snap2"; then
-    echo "sandbox: idempotent: second run left home/prefix unchanged" >&2
+    [ "${rc2}" -ne "${rc}" ] || echo "sandbox: idempotent: second run left home/prefix unchanged" >&2
   else
     echo "sandbox: NOT idempotent: second run changed files:" >&2
     diff "${tmp}/snap1" "${tmp}/snap2" > "${tmp}/snap.diff"

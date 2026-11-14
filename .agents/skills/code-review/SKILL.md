@@ -1,19 +1,22 @@
 ---
 name: code-review
-description: Reviews code beyond the diff: reads whole files and callers, verifies every command, flag, function, and path exists, and ranks findings by severity. Use for review, audit, 'what changed', and before commit.
+description: Reviews code beyond diffs and verifies commands, paths, and callers. Use when reviewing diffs, auditing shell code, checking 'what changed', or before git commit.
 ---
 
 # Code review
 
-Read-only: report findings, do not edit. A request to review and fix: report first, then fix only the findings that pass the finding gate (`termux-scripting` or `code-refactoring`); at high risk wait for the user's go.
+Read-only: report findings, do not edit. A request to review and fix: report first, then fix only the findings that pass the finding gate (through `code-writing`, or `termux-customization` for configuration files); at high risk wait for the user's go.
 
 ## Modes
 - Review: findings by severity and a verdict (`assets/review-report.md`).
 - Change analysis ("what changed", "analyze the diff"): what changed, where, and why, without a verdict unless asked (`assets/change-analysis.md`).
   Both modes use the same evidence procedure.
 
+## Flow
+Starts after the plan's unit checks pass, or directly on a review or analysis request. Finished when each boundary check of the written plan is matched to evidence, every finding passes the finding gate, and the coverage line is written. Hands off to the plan's behavior checks (`sandbox-run`, `code-writing`), then the report. Blocker and major findings go back to `code-writing` (`termux-customization` for configuration files); a failure that needs a cause goes to `systematic-debugging`. When you wrote the change under review, the review is not independent: read the collected diffs, the files on disk, and the plan, not your memory of why a line changed, and say so in the report.
+
 ## Evidence procedure
-1. Scope: `git --no-pager status --short`. A clean tree, or a request about existing code (a file, a directory, the repository), has no diff: the scope is the files the user named, else the files listed by `lint-shell --list` (`termux-scripting`). Skip steps 2-4, read each file whole (step 5), and list the files in the coverage line.
+1. Scope: `git --no-pager status --short`. A clean tree, or a request about existing code (a file, a directory, the repository), has no diff: the scope is the files the user named, else the files listed by `lint-shell --list` (`code-writing`). Skip steps 2-4, read each file whole (step 5), and list the files in the coverage line.
 2. Collect the diff to disk: `sh .agents/skills/code-review/scripts/diff-collect.sh` (or `powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/code-review/scripts/diff-collect.ps1`). Options: `--staged`, `--unstaged`, `--range A..B`, `--include-agent`, `--out DIR`, `--chunk N`. Default scope: working tree vs HEAD plus untracked files, without `.agent`, `.agents`, and `.artifacts` (agent tooling and its output are not project code).
 3. Check the script output:
    - It ends with `END`. No `END` means the terminal cut it: read `MANIFEST.tsv` from disk.
@@ -27,8 +30,8 @@ Read-only: report findings, do not edit. A request to review and fix: report fir
    - Library API, URL, package name, or version: a primary source, cited with its URL.
    - Claims in comments, help text, docs, and the commit message ("idempotent", "works without root"): run the code through a harness (`sandbox-run`, `trace-run`), or on the device when the user granted SSH (`termux-environment`); otherwise mark the claim UNVERIFIED.
      A reference without proof is a major finding when the code depends on it (unverified assumption), else an unverified lead.
-7. Run the lint gate (`termux-scripting` `lint-shell`) on the changed files; read every ERROR and WARN and the SUMMARY line.
-8. Review: Stage A, spec: does the change do exactly what was asked? Map every hunk to a criterion or a finding; an unmapped hunk is extra behavior. Stage B, quality: apply the checklist. Each finding must pass the finding gate and carries a concrete fix; mark device-only items UNVERIFIED.
+7. Run the lint gate (`lint-shell` of `code-writing`) on the changed files; read every ERROR and WARN and the SUMMARY line.
+8. Review: Stage A, spec: does the change do exactly what was asked? Map every hunk to a requirement or check of the written plan (else to the request's criteria) or to a finding; an unmapped hunk is extra behavior. Stage B, quality: apply the checklist. Each finding must pass the finding gate and carries a concrete fix; mark device-only items UNVERIFIED.
    Change analysis: per file, state what changed (code facts), where (function, file:line), and the behavior effect. Take intent only from the request, commit messages (`git --no-pager log -n 10 --format="%h %s%n%b"`), or code comments; mark inferred intent as inferred.
 9. Report with the template. Include the coverage line: parts and line counts read in full, files read in full, skipped files, references checked and unverified.
 

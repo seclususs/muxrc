@@ -1,27 +1,25 @@
 # Plan: one-line task summary
 
-Save it as `.artifacts/scratch/plan.md` and reopen it after each step and before the report. Keep it to what the task needs; delete a section that does not apply.
+Save as `.artifacts/temp/plan.md`; reopen it after each step and before the report. Keep what the task needs; a trivial task needs one line.
 
-## Goal
-- Observable result that means the task is done (one line each)
+## Requirements
+- R1: an explicit requirement from the request, one line each (ask or inspect for anything unclear)
 
 ## Project facts
 - What the project does and where this change fits, with file:line
 - Conventions in use: shell dialect, logger, naming, formatting
+- Files in scope (found with repo-map or search, not from memory) and what stays untouched on purpose
 
-## Scope
-- Files: found with repo-map or search, not from memory
-- Out of scope: what stays untouched on purpose
+## Checks
+Written before the code. A check is not weakened or dropped later without a stated reason.
+- Behavior, whole change: R1 -> the observable result and how it runs (a `sandbox-run` case, a device command)
+- Boundary: R1 -> platform, Termux runtime, dialect, flags, paths, config keys, and the check that covers them (`code-review` against this plan, `check-termux-config`, `diff-collect`)
+- Unit: R1 -> contract of each function or command (quoting, exit codes, errors, idempotency) and its check (lint, test harness, a sandbox case)
 
 ## Steps
-1. Step. Check: the command or observation that shows it worked.
-2. Step. Check: ...
+1. Step. Done when: the command or observation that shows it worked.
 
-## Risk and checks
-- Risk level: trivial | standard | high, with the reason
-- Checkpoint: high risk: stop and wait for the user's go before the first edit | not required
-- Needs the Termux device: item and exact command, or none
-- Delegation gate: met | not met, with the reason (see core policy)
-
-## Open questions
-- Only questions that block the work; ask them before the first edit
+## Risk
+- trivial | standard | high, with the reason. High: stop and wait for the user's go before the first edit.
+- Needs the Termux device: item and exact command, or none.
+- Open questions: only those that block the work; ask them before the first edit.

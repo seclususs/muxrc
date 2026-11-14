@@ -1,6 +1,6 @@
 ---
 name: platform-detection
-description: Detects the host OS, shell environment, package manager, and full path of each dev tool (ShellCheck, shfmt, dash, bash, zsh, git, PowerShell). Use before the first host command and after any 'not found' error.
+description: Detects host OS, shell, and dev tools (ShellCheck, shfmt, git). Use when finding tool paths before running host commands or after 'not found' errors.
 ---
 
 # Platform detection
@@ -18,11 +18,14 @@ The host is where code is edited and checked; the target is Termux. Do not assum
 5. Missing tool: use the fallback; do not stop. Report which checks ran with reduced coverage.
 6. `hint.*` lines are suggestions. Offer them only if the user wants the tool; do not install system packages without approval; verify package ids with the package manager first.
 
+## Flow
+Starts before the first host command of a task, again after a "not found" failure, and whenever a path, flag, or version is not in context. Finished when the `tool.*` paths, `cap.*` providers, and `run.scripts` are known for the steps the task needs. Hands off to the skill that asked (`code-writing`, `code-review`, `systematic-debugging`, `termux-customization`). If the detector itself fails, report the error and carry on with reduced coverage and no guessed paths.
+
 ## Output keys
 `host.os` linux|macos|windows|android; `host.env` native|wsl|git-bash|msys|cygwin|termux; `host.arch`; `host.pkgmgr` (`pkg` on Termux); `tool.NAME` full path or `-` (`--brief`: one `tool.missing` line, no paths); `ver.shellcheck`, `ver.shfmt`; `cap.NAME` provider or `none`; `hint.NAME`; `run.scripts` sh|ps1. `--tools a,b` probes extra tools.
 
 ## Host command rules
-- Every host script exists as `.sh` (needs a POSIX shell) and `.ps1` (Windows PowerShell 5.1+ or PowerShell 7+) with the same options, output, and exit codes. `behavior-snapshot.ps1`, `sandbox-run.ps1`, and `trace-run.ps1` are launchers that need a POSIX shell; without one they exit 3 and say so.
+- Every host script exists as `.sh` (needs a POSIX shell) and `.ps1` (Windows PowerShell 5.1+ or PowerShell 7+) with the same options, output, and exit codes. `sandbox-run.ps1` and `trace-run.ps1` are launchers that need a POSIX shell; without one they exit 3 and say so.
 - Windows PowerShell 5.1 has no `&&`, `||`, or `?:`: run commands separately. Pass forward slashes to POSIX tools. Its `>` and `Out-File` write UTF-16, so scripts let git or .NET write files. It does not preserve embedded double quotes or empty arguments when it starts a native program (also PowerShell 7 with `$PSNativeCommandArgumentPassing = 'Legacy'`; see about_Parsing): a snippet passed as an argument can run as different text and still exit 0, so put it in a file.
 - Git for Windows bundles `sh`, `bash`, `awk`, `sed` but may not put them on PATH; the `.ps1` scripts search its install directories, and `tool.*` prints the path they found.
 - `host.env=termux` means you run inside the target: host-only assumptions do not apply.

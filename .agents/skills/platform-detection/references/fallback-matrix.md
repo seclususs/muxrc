@@ -15,9 +15,8 @@ Resolve each need from the `cap.*` keys of the detection output. "Partial" means
 | JSON | `jq`, `python3`, PowerShell `ConvertFrom-Json` | | |
 | Archive | `zip`, `tar`, PowerShell `Compress-Archive` | | keep the directory structure |
 | Termux-like run | `cap.sandbox` (sandbox-run stubs), `cap.termux_container` (docker) | give the user device commands | stub-based only |
-| Behavior snapshot | `behavior-snapshot` (POSIX shell plus the shell under test) | run the cases by hand in `sandbox-run` or on a device and compare | partial |
 | Real device check | SSH command from the user (`termux-environment`, Device checks over SSH) | user runs the commands | leaves no files on the device |
-| POSIX shell on Windows | Git Bash, WSL, MSYS2 | skip sandbox-run, trace-run, behavior-snapshot; use a container or the device | partial |
+| POSIX shell on Windows | Git Bash, WSL, MSYS2 | skip sandbox-run and trace-run; use a container or the device | partial |
 | LF endings | `.gitattributes` plus editor setting; verify with lint `E001` | | |
 
 ## Notes

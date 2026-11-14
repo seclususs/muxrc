@@ -1,11 +1,14 @@
 ---
 name: termux-environment
-description: Verified Termux and Android runtime facts, rooted or not: paths, exec limits, dash as sh, packages, storage, su, Termux:API, process kills, SSH device checks. Use when code depends on device behavior.
+description: Provides verified Termux and Android runtime facts, rooted or not. Use when code depends on device paths, storage, permissions, su wrapper, or SSH checks.
 ---
 
 # Termux environment
 
 Facts were verified against official Termux, Android, and root-tool sources (list: `references/runtime-facts.md`). For anything not listed here, search the web before relying on it. Device-only behavior cannot be proven from a host (see Device checks over SSH).
+
+## Flow
+Starts when code or configuration depends on how Termux or Android behaves, before the plan fixes its boundary checks, and when a check needs the device. Finished when each device-dependent fact is sourced (this file, `references/runtime-facts.md`, or a primary source) or marked unverified with the exact device command. Hands off to `code-writing` or `termux-customization` as design constraints. A device check that fails goes to `systematic-debugging`; a missing fact is searched on the web before anything is built on it.
 
 ## Core facts
 - `$PREFIX` = `/data/data/com.termux/files/usr`; `$HOME` = `/data/data/com.termux/files/home` (outside the prefix). `$PREFIX/bin` combines `/bin`, `/sbin`, `/usr/bin`, `/usr/sbin`; `$PREFIX/tmp` combines `/tmp` and `/var/tmp` (erased on each app restart); `$PREFIX/var/run` replaces `/run`; `$PREFIX/etc`, `$PREFIX/var`, `$PREFIX/lib`, `$PREFIX/share` hold the Termux equivalents (Android's `/etc` is a symlink to `/system/etc`, not Termux configuration).

@@ -1,20 +1,23 @@
 ---
 name: systematic-debugging
-description: Finds root causes of shell and Termux failures: capture, reproduce, localize, hypothesize, minimal fix, verify. Use for errors, crashes, wrong output, hangs, 'not working', and 'command not found'.
+description: Finds root causes of shell and Termux failures via minimal fixes. Use when encountering errors, crashes, wrong output, command hangs, or 'command not found'.
 ---
 
 # Systematic debugging
 
 Run `platform-detection` first; runtime facts: skill `termux-environment`.
 
+## Flow
+Starts when an error, wrong output, or hang is reported, or when a check of the plan fails (`using-termux-skills`). Finished when the root cause is stated with evidence, the smallest fix is applied under the rules of `code-writing` or `termux-customization`, and the reproducer and the failed check pass. Hands off to `code-review`, then to the failed check level, which runs again with every level above it. A fix that does not clear the reproducer returns to Localize with the new evidence; a cause in the requirement or design returns to `code-writing` or `termux-customization` and the plan.
+
 ## Workflow
 1. Capture: exact command, environment (host or Termux, shell, dialect), expected vs actual, full error text, exit status. Ask the user only for what you cannot obtain yourself (device output).
-2. Reproduce on the host when possible: `sh .agents/skills/systematic-debugging/scripts/trace-run.sh --shell <dialect> -- script args`, or the sandbox (`sandbox-run` in `termux-scripting`). When the failure depends on Termux facts (`uname -o`, `su`, `getprop`, `pkg`, shared storage, a missing command), reproduce it on the device over SSH (`termux-environment`, Device checks over SSH). Without SSH access, say that it fails only on a device and prepare device commands. A reproducer is a file run through a harness, with the shell and its version recorded (`termux-scripting` section 5); a result that contradicts the manual of that version points at the reproducer first (wrong shell, altered quotes).
+2. Reproduce on the host when possible: `sh .agents/skills/systematic-debugging/scripts/trace-run.sh --shell <dialect> -- script args`, or the sandbox (`sandbox-run` in `code-writing`). When the failure depends on Termux facts (`uname -o`, `su`, `getprop`, `pkg`, shared storage, a missing command), reproduce it on the device over SSH (`termux-environment`, Device checks over SSH). Without SSH access, say that it fails only on a device and prepare device commands. A reproducer is a file run through a harness, with the shell and its version recorded (`code-writing`, Test); a result that contradicts the manual of that version points at the reproducer first (wrong shell, altered quotes).
 3. Localize: lint gate and `-n` for syntax; trace for flow (full logs stay on disk, read them in ranges); minimal reproducer; `git --no-pager log -S'text' --format='%h %s%n%b'` or `git bisect` for regressions (the reason for a line is usually in the commit body); compare dialects (dash, bash, zsh) when behavior differs.
 4. Hypothesize: at most 3, ranked; test the cheapest first; change one thing at a time. Check `references/termux-error-patterns.md` for known Termux symptoms.
 5. State the root cause in one sentence with evidence (file:line, command output). No fix before this step.
 6. Fix: smallest change at the root cause; keep style; no refactor or drive-by edits. Wrapper and CLI-integration code keeps native wording, streams, and exit codes. Run the intent check (core policy) before changing a line that looks deliberate.
-7. Verify: the reproducer passes; lint gate clean; re-run for idempotency; one neighboring case for regressions. Add a regression test only when the project has tests or the bug was subtle (`termux-scripting` test harness).
+7. Verify: the reproducer passes; lint gate clean; re-run for idempotency; one neighboring case for regressions. Add a regression test only when the project has tests or the bug was subtle (`code-writing` test harness).
 8. Review with `code-review`, then report with `assets/bug-report.md` and the final report format of `using-termux-skills`.
 
 ## trace-run

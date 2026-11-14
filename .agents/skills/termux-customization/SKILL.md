@@ -1,11 +1,14 @@
 ---
 name: termux-customization
-description: Customizes Termux: termux.properties, extra keys, colors, fonts, prompt, aliases, shell init, startup speed, boot scripts. Use to theme, tune, or speed up the Termux shell environment.
+description: Customizes Termux properties, extra keys, colors, and prompt. Use when tuning, theming, configuring .properties files, or speeding up the shell environment.
 ---
 
 # Termux customization
 
-Code goes through `termux-scripting`; runtime facts through `termux-environment`.
+Code goes through `code-writing`; runtime facts through `termux-environment`.
+
+## Flow
+Starts when the plan calls for a change to Termux configuration, a prompt, shell init, or startup speed, after `termux-environment` fixed the runtime facts. Finished when the change sits in the right place (table below), `check-termux-config` shows no ERROR for `.properties` files, shell code passes the lint gate (`code-writing`), the install is idempotent, and the apply steps are given. Hands off to `code-review`, then to the plan's behavior checks. A failed config check returns to step 3; a failure with an unknown cause goes to `systematic-debugging`.
 
 ## Workflow
 1. Facts: run repo-map (skill `using-termux-skills`); read the existing config and how the shell loads modules. Do not assume file locations.
@@ -29,7 +32,7 @@ Code goes through `termux-scripting`; runtime facts through `termux-environment`
 
 ## Rules
 - Output contract by code role (core policy): utilities that print status use the project's logger convention; wrappers and external-CLI integrations have no prefixes and keep native output.
-- Startup speed: measure first (`.agents/skills/termux-scripting/references/zsh.md`), remove forks from startup, defer heavy plugins, cache completion; report before and after timings.
+- Startup speed: measure first (`.agents/skills/code-writing/references/zsh.md`), remove forks from startup, defer heavy plugins, cache completion; report before and after timings.
 - Keep the prompt cheap: no blocking git or network calls on every prompt.
 - `allow-external-apps` lets other apps run commands in Termux: security-sensitive; change it only on explicit request.
 - Prefer a few durable options over large themes; every added option must earn its place.

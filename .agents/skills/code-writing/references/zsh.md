@@ -4,7 +4,7 @@
 Order: `.zshenv` (every shell: no output, never assume a tty), `.zprofile` (login), `.zshrc` (interactive), `.zlogin` (login). `ZDOTDIR` defaults to `$HOME`; `zsh -f` skips them. Keep `.zshenv` minimal (variables non-interactive shells need); put interactive logic in `.zshrc` modules. Discover how the project loads modules (search for `source` in its rc file) before adding one.
 
 ## Module pattern
-Guard against double sourcing; define functions only; no output, prompts, or slow work at source time (`assets/templates/zsh-module.zsh.tpl`).
+Guard against double sourcing; define functions only; no output, prompts, or slow work at source time.
 
 ## Function hygiene
 - First line `emulate -L zsh` (localizes options, resets zsh defaults).
