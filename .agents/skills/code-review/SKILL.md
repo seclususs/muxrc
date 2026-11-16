@@ -8,8 +8,8 @@ description: Reviews code beyond diffs and verifies commands, paths, and callers
 Read-only: report findings, do not edit. A request to review and fix: report first, then fix only the findings that pass the finding gate (through `code-writing`, or `termux-customization` for configuration files); at high risk wait for the user's go.
 
 ## Modes
-- Review: findings by severity and a verdict (`assets/review-report.md`).
-- Change analysis ("what changed", "analyze the diff"): what changed, where, and why, without a verdict unless asked (`assets/change-analysis.md`).
+- Review: findings by severity and a verdict.
+- Change analysis ("what changed", "analyze the diff"): what changed, where, and why, without a verdict unless asked.
   Both modes use the same evidence procedure.
 
 ## Flow
@@ -33,7 +33,7 @@ Starts after the plan's unit checks pass, or directly on a review or analysis re
 7. Run the lint gate (`lint-shell` of `code-writing`) on the changed files; read every ERROR and WARN and the SUMMARY line.
 8. Review: Stage A, spec: does the change do exactly what was asked? Map every hunk to a requirement or check of the written plan (else to the request's criteria) or to a finding; an unmapped hunk is extra behavior. Stage B, quality: apply the checklist. Each finding must pass the finding gate and carries a concrete fix; mark device-only items UNVERIFIED.
    Change analysis: per file, state what changed (code facts), where (function, file:line), and the behavior effect. Take intent only from the request, commit messages (`git --no-pager log -n 10 --format="%h %s%n%b"`), or code comments; mark inferred intent as inferred.
-9. Report with the template. Include the coverage line: parts and line counts read in full, files read in full, skipped files, references checked and unverified.
+9. Report with the coverage line: parts and line counts read in full, files read in full, skipped files, references checked and unverified.
 
 `diff-collect` writes `tracked.diff`, `untracked.diff`, and `MANIFEST.tsv` under `.artifacts/diff` at the project root (inside the workspace). If the file viewer cannot open that path, pass `--out` with a directory inside the workspace.
 
