@@ -5,8 +5,11 @@
 ############
 set -eu
 
+state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+mkdir -p "${state_dir}"
+
 command -v termux-wake-lock > /dev/null 2>&1 && termux-wake-lock 2> /dev/null || true
 
 if ! pgrep -x sshd > /dev/null 2>&1; then
-  sshd
+  sshd -E "${state_dir}/sshd.log"
 fi

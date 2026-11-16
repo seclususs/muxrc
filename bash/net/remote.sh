@@ -101,6 +101,12 @@ get_device_ip() {
     ip_addr=$(run_ip_cmd -4 -o addr show scope global 2> /dev/null | awk '$2 !~ /^(dummy|lo|tun|tailscale|wg)/ {print $4; exit}' | cut -d/ -f1 || true)
   fi
 
+  if [[ -z "${ip_addr}" ]] && command -v ifconfig > /dev/null 2>&1; then
+    local iface
+    iface=$(detect_interface 2> /dev/null || echo "wlan0")
+    ip_addr=$(ifconfig "${iface}" 2> /dev/null | awk '/^[[:space:]]*inet / {sub(/^addr:/, "", $2); print $2; exit}' || true)
+  fi
+
   if [[ -z "${ip_addr}" ]]; then
     ip_addr=$(getprop dhcp.wlan0.ipaddress 2> /dev/null || true)
   fi
@@ -245,6 +251,15 @@ status_remote() {
   local vpn_ips=()
   local vpn_lines=""
   vpn_lines=$(run_ip_cmd -4 -o addr show 2> /dev/null | awk '$2 ~ /^(tailscale|tun|wg)/ {print $2 " " $4}' | cut -d/ -f1 || true)
+  if [[ -z "${vpn_lines}" ]] && command -v ifconfig > /dev/null 2>&1; then
+    vpn_lines=$(ifconfig 2> /dev/null | awk '
+      /^[a-zA-Z0-9_.-]+:/ { iface = $1; sub(/:$/, "", iface) }
+      /^[[:space:]]*inet / {
+        ip = $2; sub(/^addr:/, "", ip)
+        if (ip != "127.0.0.1" && iface ~ /^(tailscale|tun|wg)/) print iface " " ip
+      }
+    ' || true)
+  fi
   if [[ -n "${vpn_lines}" ]]; then
     while read -r vpn_iface vpn_addr; do
       if [[ -n "${vpn_iface}" && -n "${vpn_addr}" ]]; then
@@ -516,6 +531,196 @@ edit_ssh_config() {
   fi
 }
 
+record_history_entry() {
+  local entry_type="${1}"
+  local client_ip="${2}"
+  local auth_mode="${3}"
+  local entry_time="${4:-}"
+
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+  local log_file="${state_dir}/ssh_history.log"
+  mkdir -p "${state_dir}" 2> /dev/null
+
+  if [[ -z "${entry_time}" ]]; then
+    entry_time=$(date +'%Y-%m-%d %H:%M:%S' 2> /dev/null || date)
+  fi
+
+  local last_line
+  last_line=$(tail -n 1 "${log_file}" 2> /dev/null || true)
+  if [[ -n "${last_line}" ]]; then
+    local l_time l_type l_ip l_mode
+    IFS='|' read -r l_time l_type l_ip l_mode <<< "${last_line}"
+    l_time=$(printf "%s" "${l_time}" | tr -d ' ')
+    l_type=$(printf "%s" "${l_type}" | tr -d ' ')
+    l_ip=$(printf "%s" "${l_ip}" | tr -d ' ')
+    l_mode=$(printf "%s" "${l_mode}" | tr -d ' ')
+    if [[ "${l_time}" == "${entry_time}" && "${l_type}" == "${entry_type}" && "${l_ip}" == "${client_ip}" && "${l_mode}" == "${auth_mode}" ]]; then
+      return 0
+    fi
+  fi
+
+  printf "%s | %s | %s | %s\n" "${entry_time}" "${entry_type}" "${client_ip}" "${auth_mode}" >> "${log_file}"
+
+  local max_lines=100
+  local total_lines
+  total_lines=$(wc -l < "${log_file}" 2> /dev/null || echo 0)
+  if ((total_lines > max_lines)); then
+    local tmp_log
+    tmp_log=$(mktemp "${log_file}.XXXXXX" 2> /dev/null || mktemp)
+    if tail -n "${max_lines}" "${log_file}" > "${tmp_log}" 2> /dev/null && mv -f "${tmp_log}" "${log_file}" 2> /dev/null; then
+      :
+    else
+      rm -f "${tmp_log}" 2> /dev/null
+    fi
+  fi
+}
+
+send_security_alert() {
+  local client_ip="${1}"
+  local reason="${2:-auth_failed}"
+
+  if command -v termux-notification > /dev/null 2>&1; then
+    termux-notification --id "muxrc_ssh_security" \
+      --title "SSH Security Alert" \
+      --content "Rejected ${client_ip} (${reason})" \
+      --priority high 2> /dev/null || true
+  fi
+}
+
+parse_sshd_line() {
+  local line="${1}"
+  local notify="${2:-0}"
+  local type="" ip="" mode="" entry_time=""
+
+  if [[ "${line}" =~ ^([0-9]{2}-[0-9]{2}[[:space:]]+[0-9]{2}:[0-9]{2}:[0-9]{2}) ]]; then
+    local cur_year
+    cur_year=$(date +'%Y' 2> /dev/null || echo "2026")
+    entry_time="${cur_year}-${BASH_REMATCH[1]}"
+  else
+    entry_time=$(date +'%Y-%m-%d %H:%M:%S' 2> /dev/null || date)
+  fi
+
+  if [[ "${line}" =~ Failed[[:space:]]+password[[:space:]]+for[[:space:]]+(invalid[[:space:]]+user[[:space:]]+)?([^[:space:]]+)[[:space:]]+from[[:space:]]+([^[:space:]]+) ]]; then
+    type="REJECT"
+    ip="${BASH_REMATCH[3]}"
+    mode="password"
+  elif [[ "${line}" =~ Failed[[:space:]]+publickey[[:space:]]+for[[:space:]]+(invalid[[:space:]]+user[[:space:]]+)?([^[:space:]]+)[[:space:]]+from[[:space:]]+([^[:space:]]+) ]]; then
+    type="REJECT"
+    ip="${BASH_REMATCH[3]}"
+    mode="key"
+  elif [[ "${line}" =~ (Too[[:space:]]+many[[:space:]]+authentication[[:space:]]+failures|maximum[[:space:]]+authentication[[:space:]]+attempts[[:space:]]+exceeded) ]]; then
+    type="REJECT"
+    mode="auth_failed"
+    if [[ "${line}" =~ from[[:space:]]+([^[:space:]]+) ]]; then
+      ip="${BASH_REMATCH[1]}"
+    elif [[ "${line}" =~ user[[:space:]]+[^[:space:]]+[[:space:]]+([0-9a-fA-F.:]+)[[:space:]]+port ]]; then
+      ip="${BASH_REMATCH[1]}"
+    fi
+  elif [[ "${line}" =~ Accepted[[:space:]]+publickey[[:space:]]+for[[:space:]]+([^[:space:]]+)[[:space:]]+from[[:space:]]+([^[:space:]]+) ]]; then
+    type="ACCEPT"
+    ip="${BASH_REMATCH[2]}"
+    mode="key"
+  elif [[ "${line}" =~ Accepted[[:space:]]+password[[:space:]]+for[[:space:]]+([^[:space:]]+)[[:space:]]+from[[:space:]]+([^[:space:]]+) ]]; then
+    type="ACCEPT"
+    ip="${BASH_REMATCH[2]}"
+    mode="password"
+    local ssh_cfg="${SSH_CONFIG}"
+    if [[ -f "${ssh_cfg}" ]] && grep -qE "^[[:space:]]*AuthenticationMethods[[:space:]]+.*password" "${ssh_cfg}" 2> /dev/null; then
+      mode="2fa"
+    fi
+  fi
+
+  if [[ -n "${type}" && -n "${ip}" ]]; then
+    ip="${ip%:*}"
+    record_history_entry "${type}" "${ip}" "${mode}" "${entry_time}"
+    if [[ "${type}" == "REJECT" && "${notify}" -eq 1 ]]; then
+      send_security_alert "${ip}" "${mode}"
+    fi
+  fi
+}
+
+sync_sshd_log() {
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+  local sshd_log="${state_dir}/sshd.log"
+  local pos_file="${state_dir}/sshd_log.pos"
+
+  if [[ -s "${sshd_log}" ]]; then
+    local start_line=0
+    [[ -f "${pos_file}" ]] && start_line=$(< "${pos_file}")
+    [[ "${start_line}" =~ ^[0-9]+$ ]] || start_line=0
+
+    local total_lines=0
+    total_lines=$(wc -l < "${sshd_log}" 2> /dev/null || echo 0)
+
+    if ((total_lines > start_line)); then
+      local new_lines
+      new_lines=$(awk -v start="${start_line}" 'NR > start' "${sshd_log}")
+      while read -r raw_line; do
+        [[ -z "${raw_line}" ]] && continue
+        parse_sshd_line "${raw_line}" 0
+      done <<< "${new_lines}"
+      echo "${total_lines}" > "${pos_file}"
+    elif ((total_lines < start_line)); then
+      echo 0 > "${pos_file}"
+    fi
+  elif command -v logcat > /dev/null 2>&1; then
+    local logcat_out
+    logcat_out=$(logcat -d -s 'sshd:*' 2> /dev/null | grep -E 'Failed (password|publickey)|Too many authentication failures|Accepted (publickey|password)' || true)
+    if [[ -n "${logcat_out}" ]]; then
+      while read -r raw_line; do
+        [[ -z "${raw_line}" ]] && continue
+        parse_sshd_line "${raw_line}" 0
+      done <<< "${logcat_out}"
+    fi
+  fi
+}
+
+start_monitor() {
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+  mkdir -p "${state_dir}"
+  local pid_file="${state_dir}/sshd_monitor.pid"
+
+  if [[ -f "${pid_file}" ]]; then
+    local old_pid
+    old_pid=$(< "${pid_file}")
+    if [[ -n "${old_pid}" ]] && kill -0 "${old_pid}" 2> /dev/null; then
+      return 0
+    fi
+  fi
+
+  local sshd_log="${state_dir}/sshd.log"
+  touch "${sshd_log}"
+
+  (
+    trap 'pkill -P $$ 2> /dev/null || true; exit 0' TERM INT EXIT
+    exec < /dev/null
+    exec >> "${state_dir}/monitor.err" 2>&1
+
+    tail -n 0 -F "${sshd_log}" 2> /dev/null | while read -r raw_line; do
+      [[ -z "${raw_line}" ]] && continue
+      parse_sshd_line "${raw_line}" 1
+    done
+  ) &
+  local mon_pid=$!
+  echo "${mon_pid}" > "${pid_file}"
+  disown "${mon_pid}" 2> /dev/null || true
+}
+
+stop_monitor() {
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+  local pid_file="${state_dir}/sshd_monitor.pid"
+
+  if [[ -f "${pid_file}" ]]; then
+    local mon_pid
+    mon_pid=$(< "${pid_file}")
+    if [[ -n "${mon_pid}" ]]; then
+      pkill -P "${mon_pid}" 2> /dev/null || true
+      kill "${mon_pid}" 2> /dev/null || true
+    fi
+    rm -f "${pid_file}" 2> /dev/null
+  fi
+}
+
 start_remote() {
   if pgrep -x sshd > /dev/null 2>&1; then
     status_remote
@@ -543,16 +748,22 @@ start_remote() {
     trap - EXIT
   fi
 
-  if ! sshd; then
+  local sshd_log="${state_dir}/sshd.log"
+  touch "${sshd_log}"
+
+  if ! sshd -E "${sshd_log}"; then
     log_error "sshd failed to start"
     return 1
   fi
 
+  start_monitor
   status_remote
 }
 
 stop_remote() {
   confirm_ssh_hazard "this will terminate your ssh session" || return 1
+
+  stop_monitor
 
   local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
   local my_uid="${EUID:-$(id -u)}"
@@ -594,6 +805,7 @@ reload_remote() {
   local my_uid="${EUID:-$(id -u)}"
   if pgrep -u "${my_uid}" -x sshd > /dev/null 2>&1; then
     pkill -HUP -u "${my_uid}" -x sshd 2> /dev/null || true
+    start_monitor
     log_success "sshd reloaded"
   else
     log_warn "sshd: inactive"
@@ -603,6 +815,8 @@ reload_remote() {
 history_remote() {
   local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
   local log_file="${state_dir}/ssh_history.log"
+
+  sync_sshd_log
 
   if [[ ! -s "${log_file}" ]]; then
     log_warn "no login history"
@@ -626,33 +840,9 @@ record_session() {
     auth_mode="2fa"
   fi
 
-  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
-  local log_file="${state_dir}/ssh_history.log"
-  mkdir -p "${state_dir}" 2> /dev/null
-
-  local cur_time
-  cur_time=$(date +'%Y-%m-%d %H:%M:%S' 2> /dev/null || date)
-  printf "%s | ACCEPT | %s | %s\n" "${cur_time}" "${client_ip}" "${auth_mode}" >> "${log_file}"
-
-  local max_lines=100
-  local total_lines
-  total_lines=$(wc -l < "${log_file}" 2> /dev/null || echo 0)
-  if ((total_lines > max_lines)); then
-    local tmp_log
-    tmp_log=$(mktemp "${log_file}.XXXXXX" 2> /dev/null || mktemp)
-    if tail -n "${max_lines}" "${log_file}" > "${tmp_log}" 2> /dev/null && mv -f "${tmp_log}" "${log_file}" 2> /dev/null; then
-      :
-    else
-      rm -f "${tmp_log}" 2> /dev/null
-    fi
-  fi
-
-  if command -v termux-notification > /dev/null 2>&1; then
-    termux-notification --id "muxrc_ssh_login" \
-      --title "SSH Login Alert" \
-      --content "Accepted ${client_ip} (${auth_mode})" \
-      --priority high 2> /dev/null || true
-  fi
+  sync_sshd_log
+  start_monitor
+  record_history_entry "ACCEPT" "${client_ip}" "${auth_mode}"
 }
 
 main() {

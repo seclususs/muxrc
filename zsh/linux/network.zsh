@@ -127,13 +127,58 @@ _net_active_ips() {
   local -a parts=()
   local vpn_ip=""
   local wlan_ip=""
+  local lines=""
 
   if command -v ip > /dev/null 2>&1; then
-    local ip_out
-    ip_out=$(command ip -4 -o addr show 2> /dev/null || true)
-    if [[ -n "$ip_out" ]]; then
-      vpn_ip=$(awk '$2 ~ /^(tailscale|tun|wg)/ {split($4, a, "/"); print a[1]; exit}' <<< "$ip_out")
-      wlan_ip=$(awk '$2 ~ /^wlan/ {split($4, a, "/"); print a[1]; exit}' <<< "$ip_out")
+    lines=$(command ip -4 -o addr show 2> /dev/null || true)
+  fi
+
+  if [[ -z "$lines" ]] && command -v ifconfig > /dev/null 2>&1; then
+    lines=$(_ip_format_ifconfig -br 2> /dev/null || true)
+    if [[ -z "$lines" ]]; then
+      lines=$(ifconfig 2> /dev/null || true)
+    fi
+  fi
+
+  if [[ -n "$lines" ]]; then
+    vpn_ip=$(awk '
+      /^[a-zA-Z0-9_.-]+:/ { iface = $1; sub(/:$/, "", iface) }
+      /^[[:space:]]*inet / {
+        ip = $2; sub(/^addr:/, "", ip)
+        if (ip != "127.0.0.1" && iface ~ /^(tailscale|tun|wg)/) { print ip; exit }
+      }
+      $1 ~ /^(tailscale|tun|wg)/ || $2 ~ /^(tailscale|tun|wg)/ {
+        for (i = 1; i <= NF; i++) {
+          if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(\/[0-9]+)?$/) {
+            split($i, a, "/")
+            if (a[1] != "127.0.0.1") { print a[1]; exit }
+          }
+        }
+      }
+    ' <<< "$lines")
+
+    wlan_ip=$(awk '
+      /^[a-zA-Z0-9_.-]+:/ { iface = $1; sub(/:$/, "", iface) }
+      /^[[:space:]]*inet / {
+        ip = $2; sub(/^addr:/, "", ip)
+        if (ip != "127.0.0.1" && iface ~ /^wlan/) { print ip; exit }
+      }
+      $1 ~ /^wlan/ || $2 ~ /^wlan/ {
+        for (i = 1; i <= NF; i++) {
+          if ($i ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(\/[0-9]+)?$/) {
+            split($i, a, "/")
+            if (a[1] != "127.0.0.1") { print a[1]; exit }
+          }
+        }
+      }
+    ' <<< "$lines")
+  fi
+
+  if [[ -z "$wlan_ip" ]] && command -v termux-wifi-connectioninfo > /dev/null 2>&1 && command -v jq > /dev/null 2>&1; then
+    local tip
+    tip=$(termux-wifi-connectioninfo 2> /dev/null | jq -r '.ip // empty' 2> /dev/null || true)
+    if [[ -n "$tip" && "$tip" != "null" && "$tip" != "0.0.0.0" ]]; then
+      wlan_ip="$tip"
     fi
   fi
 
