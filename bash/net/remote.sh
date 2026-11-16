@@ -531,11 +531,20 @@ edit_ssh_config() {
   fi
 }
 
+trim_str() {
+  local var="$*"
+  var="${var#"${var%%[![:space:]]*}"}"
+  var="${var%"${var##*[![:space:]]}"}"
+  printf '%s' "${var}"
+}
+
 record_history_entry() {
   local entry_type="${1}"
   local client_ip="${2}"
   local auth_mode="${3}"
   local entry_time="${4:-}"
+
+  [[ "${entry_type}" == "REJECT" ]] || return 0
 
   local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
   local log_file="${state_dir}/ssh_history.log"
@@ -545,17 +554,32 @@ record_history_entry() {
     entry_time=$(date +'%Y-%m-%d %H:%M:%S' 2> /dev/null || date)
   fi
 
+  entry_time=$(trim_str "${entry_time}")
+  entry_type=$(trim_str "${entry_type}")
+  client_ip=$(trim_str "${client_ip}")
+  auth_mode=$(trim_str "${auth_mode}")
+
   local last_line
   last_line=$(tail -n 1 "${log_file}" 2> /dev/null || true)
   if [[ -n "${last_line}" ]]; then
     local l_time l_type l_ip l_mode
     IFS='|' read -r l_time l_type l_ip l_mode <<< "${last_line}"
-    l_time=$(printf "%s" "${l_time}" | tr -d ' ')
-    l_type=$(printf "%s" "${l_type}" | tr -d ' ')
-    l_ip=$(printf "%s" "${l_ip}" | tr -d ' ')
-    l_mode=$(printf "%s" "${l_mode}" | tr -d ' ')
-    if [[ "${l_time}" == "${entry_time}" && "${l_type}" == "${entry_type}" && "${l_ip}" == "${client_ip}" && "${l_mode}" == "${auth_mode}" ]]; then
-      return 0
+    l_time=$(trim_str "${l_time}")
+    l_type=$(trim_str "${l_type}")
+    l_ip=$(trim_str "${l_ip}")
+    l_mode=$(trim_str "${l_mode}")
+
+    if [[ "${l_type}" == "${entry_type}" && "${l_ip}" == "${client_ip}" && "${l_mode}" == "${auth_mode}" ]]; then
+      local t_cur t_prev
+      t_cur=$(date -d "${entry_time}" +%s 2> /dev/null || true)
+      t_prev=$(date -d "${l_time}" +%s 2> /dev/null || true)
+      if [[ -n "${t_cur}" && -n "${t_prev}" ]]; then
+        if ((t_cur - t_prev < 5)); then
+          return 0
+        fi
+      elif [[ "${l_time}" == "${entry_time}" ]]; then
+        return 0
+      fi
     fi
   fi
 
@@ -608,7 +632,7 @@ parse_sshd_line() {
     type="REJECT"
     ip="${BASH_REMATCH[3]}"
     mode="key"
-  elif [[ "${line}" =~ (Too[[:space:]]+many[[:space:]]+authentication[[:space:]]+failures|maximum[[:space:]]+authentication[[:space:]]+attempts[[:space:]]+exceeded) ]]; then
+  elif [[ "${line}" =~ Too[[:space:]]+many[[:space:]]+authentication[[:space:]]+failures ]]; then
     type="REJECT"
     mode="auth_failed"
     if [[ "${line}" =~ from[[:space:]]+([^[:space:]]+) ]]; then
@@ -616,24 +640,12 @@ parse_sshd_line() {
     elif [[ "${line}" =~ user[[:space:]]+[^[:space:]]+[[:space:]]+([0-9a-fA-F.:]+)[[:space:]]+port ]]; then
       ip="${BASH_REMATCH[1]}"
     fi
-  elif [[ "${line}" =~ Accepted[[:space:]]+publickey[[:space:]]+for[[:space:]]+([^[:space:]]+)[[:space:]]+from[[:space:]]+([^[:space:]]+) ]]; then
-    type="ACCEPT"
-    ip="${BASH_REMATCH[2]}"
-    mode="key"
-  elif [[ "${line}" =~ Accepted[[:space:]]+password[[:space:]]+for[[:space:]]+([^[:space:]]+)[[:space:]]+from[[:space:]]+([^[:space:]]+) ]]; then
-    type="ACCEPT"
-    ip="${BASH_REMATCH[2]}"
-    mode="password"
-    local ssh_cfg="${SSH_CONFIG}"
-    if [[ -f "${ssh_cfg}" ]] && grep -qE "^[[:space:]]*AuthenticationMethods[[:space:]]+.*password" "${ssh_cfg}" 2> /dev/null; then
-      mode="2fa"
-    fi
   fi
 
   if [[ -n "${type}" && -n "${ip}" ]]; then
     ip="${ip%:*}"
     record_history_entry "${type}" "${ip}" "${mode}" "${entry_time}"
-    if [[ "${type}" == "REJECT" && "${notify}" -eq 1 ]]; then
+    if [[ "${notify}" -eq 1 ]]; then
       send_security_alert "${ip}" "${mode}"
     fi
   fi
@@ -665,7 +677,7 @@ sync_sshd_log() {
     fi
   elif command -v logcat > /dev/null 2>&1; then
     local logcat_out
-    logcat_out=$(logcat -d -s 'sshd:*' 2> /dev/null | grep -E 'Failed (password|publickey)|Too many authentication failures|Accepted (publickey|password)' || true)
+    logcat_out=$(logcat -d -s 'sshd:*' 2> /dev/null | grep -E 'Failed (password|publickey)|Too many authentication failures' || true)
     if [[ -n "${logcat_out}" ]]; then
       while read -r raw_line; do
         [[ -z "${raw_line}" ]] && continue
@@ -689,6 +701,7 @@ start_monitor() {
   fi
 
   local sshd_log="${state_dir}/sshd.log"
+  local pos_file="${state_dir}/sshd_log.pos"
   touch "${sshd_log}"
 
   (
@@ -699,6 +712,7 @@ start_monitor() {
     tail -n 0 -F "${sshd_log}" 2> /dev/null | while read -r raw_line; do
       [[ -z "${raw_line}" ]] && continue
       parse_sshd_line "${raw_line}" 1
+      wc -l < "${sshd_log}" 2> /dev/null > "${pos_file}" || true
     done
   ) &
   local mon_pid=$!
@@ -819,30 +833,12 @@ history_remote() {
   sync_sshd_log
 
   if [[ ! -s "${log_file}" ]]; then
-    log_warn "no login history"
+    log_warn "no reject history"
     return 0
   fi
 
-  log_info "ssh login history:"
+  log_info "ssh reject history:"
   tail -n 10 "${log_file}"
-}
-
-record_session() {
-  local client_str="${SSH_CLIENT:-${SSH_CONNECTION:-}}"
-  if [[ -z "${client_str}" ]]; then
-    return 0
-  fi
-
-  local client_ip="${client_str%% *}"
-  local auth_mode="key"
-  local ssh_cfg="${SSH_CONFIG}"
-  if [[ -f "${ssh_cfg}" ]] && grep -qE "^[[:space:]]*AuthenticationMethods[[:space:]]+.*password" "${ssh_cfg}" 2> /dev/null; then
-    auth_mode="2fa"
-  fi
-
-  sync_sshd_log
-  start_monitor
-  record_history_entry "ACCEPT" "${client_ip}" "${auth_mode}"
 }
 
 main() {
@@ -872,9 +868,6 @@ main() {
       ;;
     history)
       history_remote
-      ;;
-    record)
-      record_session
       ;;
     config)
       edit_ssh_config

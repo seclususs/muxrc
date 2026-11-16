@@ -47,9 +47,4 @@ fi
 
 source "$ZSH_CONFIG_DIR/plugins.zsh"
 
-if [[ -n "${SSH_CLIENT:-}" && -z "${_MUXRC_SSH_LOGGED:-}" ]]; then
-  export _MUXRC_SSH_LOGGED=1
-  bash "${ZSH_CONFIG_DIR:h}/bash/net/remote.sh" record 2> /dev/null || true
-fi
-
 source "$ZSH_CONFIG_DIR/motd.zsh"
