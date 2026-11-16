@@ -3,6 +3,12 @@
 #####################
 # Core Initialization
 #####################
+# shellcheck disable=SC2317
+if [ -n "${_MUXRC_INIT_SH_LOADED:-}" ]; then
+  return 0 2> /dev/null || exit 0
+fi
+_MUXRC_INIT_SH_LOADED=1
+
 _sh_dir=""
 if [ -n "${MUXRC_DIR:-}" ] && [ -d "${MUXRC_DIR}/sh" ]; then
   _sh_dir="${MUXRC_DIR}/sh"

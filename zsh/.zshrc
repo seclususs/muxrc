@@ -42,7 +42,19 @@ source "$ZSH_CONFIG_DIR/cli/muxrc.zsh"
 source "$ZSH_CONFIG_DIR/aliases.zsh"
 source "$ZSH_CONFIG_DIR/prompt.zsh"
 if [[ -f "$HOME/.dircolors" ]]; then
-  eval "$(dircolors -b "$HOME/.dircolors")"
+  local _dircolors_cache="${XDG_CACHE_HOME:-$HOME/.cache}/muxrc/dircolors.zsh"
+  if [[ ! -s "$_dircolors_cache" || "$HOME/.dircolors" -nt "$_dircolors_cache" ]]; then
+    mkdir -p "${_dircolors_cache:h}" 2> /dev/null
+    if command -v dircolors > /dev/null 2>&1; then
+      dircolors -b "$HOME/.dircolors" > "$_dircolors_cache" 2> /dev/null
+    fi
+  fi
+  if [[ -s "$_dircolors_cache" ]]; then
+    source "$_dircolors_cache"
+  elif command -v dircolors > /dev/null 2>&1; then
+    eval "$(dircolors -b "$HOME/.dircolors" 2> /dev/null)"
+  fi
+  unset _dircolors_cache
 fi
 
 source "$ZSH_CONFIG_DIR/plugins.zsh"

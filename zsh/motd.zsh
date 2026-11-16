@@ -3,11 +3,25 @@
 ###########################
 () {
   if [[ -o interactive && "$EUID" -ne 0 ]]; then
-    local android_ver
-    local device
+    local android_ver=""
+    local device=""
+    local cache_file="${XDG_CACHE_HOME:-$HOME/.cache}/muxrc/device_info"
 
-    android_ver=$(getprop ro.build.version.release 2> /dev/null)
-    device=$(getprop ro.product.model 2> /dev/null)
+    if [[ -s "$cache_file" ]]; then
+      {
+        read -r device
+        read -r android_ver
+      } < "$cache_file" 2> /dev/null
+    fi
+
+    if [[ -z "$device" || -z "$android_ver" ]]; then
+      android_ver=$(getprop ro.build.version.release 2> /dev/null)
+      device=$(getprop ro.product.model 2> /dev/null)
+      if [[ -n "$device" || -n "$android_ver" ]]; then
+        mkdir -p "${cache_file:h}" 2> /dev/null
+        printf "%s\n%s\n" "${device:-unknown device}" "${android_ver:-?}" > "$cache_file" 2> /dev/null
+      fi
+    fi
 
     local ssh_cfg="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh/sshd_config"
     local tfa_status="off"
