@@ -9,7 +9,24 @@
     android_ver=$(getprop ro.build.version.release 2> /dev/null)
     device=$(getprop ro.product.model 2> /dev/null)
 
+    local ssh_cfg="${PREFIX:-/data/data/com.termux/files/usr}/etc/ssh/sshd_config"
+    local tfa_status="off"
+    local tfa_color="yellow"
+    if [[ -f "$ssh_cfg" ]] && grep -qE '^[[:space:]]*AuthenticationMethods[[:space:]]+.*password' "$ssh_cfg" 2> /dev/null; then
+      tfa_status="on"
+      tfa_color="green"
+    fi
+
+    local storage_free
+    storage_free=$(df -h "$HOME" 2> /dev/null | awk 'NR==2 {print $4" free"}')
+
+    local net_ips="offline"
+    if (( $+functions[_net_active_ips] )); then
+      net_ips=$(_net_active_ips)
+    fi
+
     print -P "%F{39}%n@termux%f - ${device:-unknown device} · Android ${android_ver:-?}"
-    print -P "Storage: $(df -h "$HOME" | awk 'NR==2 {print $4" free"}')"
+    print -P "Storage: ${storage_free:-?} · 2FA: %F{${tfa_color}}${tfa_status}%f"
+    print -P "IP: ${net_ips}"
   fi
 }

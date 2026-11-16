@@ -22,6 +22,7 @@ usage() {
   echo "  setup                sshd config"
   echo "  pair [key|file]      register public key"
   echo "  2fa [on|off]         toggle key+password 2fa"
+  echo "  history              display login history"
   echo "  config               open sshd cfg in editor"
   echo "  start                start ssh daemon"
   echo "  stop                 stop ssh daemon"
@@ -599,6 +600,61 @@ reload_remote() {
   fi
 }
 
+history_remote() {
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+  local log_file="${state_dir}/ssh_history.log"
+
+  if [[ ! -s "${log_file}" ]]; then
+    log_warn "no login history"
+    return 0
+  fi
+
+  log_info "ssh login history:"
+  tail -n 10 "${log_file}"
+}
+
+record_session() {
+  local client_str="${SSH_CLIENT:-${SSH_CONNECTION:-}}"
+  if [[ -z "${client_str}" ]]; then
+    return 0
+  fi
+
+  local client_ip="${client_str%% *}"
+  local auth_mode="key"
+  local ssh_cfg="${SSH_CONFIG}"
+  if [[ -f "${ssh_cfg}" ]] && grep -qE "^[[:space:]]*AuthenticationMethods[[:space:]]+.*password" "${ssh_cfg}" 2> /dev/null; then
+    auth_mode="2fa"
+  fi
+
+  local state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/muxrc"
+  local log_file="${state_dir}/ssh_history.log"
+  mkdir -p "${state_dir}" 2> /dev/null
+
+  local cur_time
+  cur_time=$(date +'%Y-%m-%d %H:%M:%S' 2> /dev/null || date)
+  printf "%s | ACCEPT | %s | %s\n" "${cur_time}" "${client_ip}" "${auth_mode}" >> "${log_file}"
+
+  local max_lines=100
+  local total_lines
+  total_lines=$(wc -l < "${log_file}" 2> /dev/null || echo 0)
+  if ((total_lines > max_lines)); then
+    local tmp_log
+    tmp_log=$(mktemp "${log_file}.XXXXXX" 2> /dev/null || mktemp)
+    if tail -n "${max_lines}" "${log_file}" > "${tmp_log}" 2> /dev/null && mv -f "${tmp_log}" "${log_file}" 2> /dev/null; then
+      :
+    else
+      rm -f "${tmp_log}" 2> /dev/null
+    fi
+  fi
+
+  if command -v termux-notification > /dev/null 2>&1; then
+    termux-notification --id "muxrc_ssh_login" \
+      --title "SSH Login Alert" \
+      --content "Accepted ${client_ip} (${auth_mode})" \
+      --priority high 2> /dev/null || true
+  fi
+}
+
 main() {
   local cmd="${1:-status}"
 
@@ -623,6 +679,12 @@ main() {
     2fa)
       shift
       toggle_2fa "${1:-status}"
+      ;;
+    history)
+      history_remote
+      ;;
+    record)
+      record_session
       ;;
     config)
       edit_ssh_config

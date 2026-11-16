@@ -122,3 +122,31 @@ ip() {
   print -u2 "$err_msg"
   return $rc
 }
+
+_net_active_ips() {
+  local -a parts=()
+  local vpn_ip=""
+  local wlan_ip=""
+
+  if command -v ip > /dev/null 2>&1; then
+    local ip_out
+    ip_out=$(command ip -4 -o addr show 2> /dev/null || true)
+    if [[ -n "$ip_out" ]]; then
+      vpn_ip=$(awk '$2 ~ /^(tailscale|tun|wg)/ {split($4, a, "/"); print a[1]; exit}' <<< "$ip_out")
+      wlan_ip=$(awk '$2 ~ /^wlan/ {split($4, a, "/"); print a[1]; exit}' <<< "$ip_out")
+    fi
+  fi
+
+  if [[ -z "$wlan_ip" ]]; then
+    wlan_ip=$(getprop dhcp.wlan0.ipaddress 2> /dev/null || true)
+  fi
+
+  [[ -n "$vpn_ip" ]] && parts+=("${vpn_ip} (vpn)")
+  [[ -n "$wlan_ip" ]] && parts+=("${wlan_ip} (wlan)")
+
+  if (( ${#parts[@]} > 0 )); then
+    print -r -- "${(j: · :)parts}"
+  else
+    print -r -- "offline"
+  fi
+}
