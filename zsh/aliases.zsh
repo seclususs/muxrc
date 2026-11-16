@@ -33,6 +33,7 @@ alias ssh-stop='net remote stop'
 alias ssh-reload='net remote reload'
 alias ssh-status='net remote status'
 alias ssh-pair='net remote pair'
+alias ssh-2fa='net remote 2fa'
 alias ssh-config='net remote config'
 
 ##################################

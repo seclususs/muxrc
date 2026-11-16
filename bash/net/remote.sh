@@ -21,6 +21,7 @@ usage() {
   echo "  status               display status"
   echo "  setup                sshd config"
   echo "  pair [key|file]      register public key"
+  echo "  2fa [on|off]         toggle key+password 2fa"
   echo "  config               open sshd cfg in editor"
   echo "  start                start ssh daemon"
   echo "  stop                 stop ssh daemon"
@@ -229,6 +230,14 @@ status_remote() {
     log_info "clients: ${clients}"
   fi
 
+  local auth_status
+  auth_status=$(get_2fa_status)
+  if [[ "${auth_status}" == "enabled" ]]; then
+    log_info "auth: key + password (2fa)"
+  else
+    log_info "auth: key only"
+  fi
+
   local lan_ip
   lan_ip=$(get_device_ip)
 
@@ -280,6 +289,92 @@ set_config_value() {
   fi
 }
 
+remove_config_key() {
+  local file="${1}"
+  local key="${2}"
+
+  if [[ -f "${file}" ]]; then
+    sed -i -E "/^[[:space:]]*#?[[:space:]]*${key}[[:space:]]+/d" "${file}"
+  fi
+}
+
+has_user_password() {
+  local shadow_file="${PREFIX:-/data/data/com.termux/files/usr}/etc/shadow"
+  [[ -f "${shadow_file}" ]] || return 1
+
+  local current_user="${USER:-$(whoami)}"
+  local hash=""
+  hash=$(awk -F: -v u="${current_user}" '$1 == u {print $2; exit}' "${shadow_file}" 2> /dev/null || true)
+  if [[ -z "${hash}" ]]; then
+    hash=$(awk -F: 'NR==1 {print $2; exit}' "${shadow_file}" 2> /dev/null || true)
+  fi
+
+  if [[ -z "${hash}" || "${hash}" == "*" || "${hash}" == "!" ]]; then
+    return 1
+  fi
+  return 0
+}
+
+get_2fa_status() {
+  local config_file="${SSH_CONFIG}"
+  if [[ -f "${config_file}" ]] && grep -qE "^[[:space:]]*AuthenticationMethods[[:space:]]+.*password" "${config_file}"; then
+    printf "enabled\n"
+  else
+    printf "disabled\n"
+  fi
+}
+
+toggle_2fa() {
+  local action="${1:-status}"
+  local config_file="${SSH_CONFIG}"
+
+  if [[ ! -f "${config_file}" ]]; then
+    setup_remote
+  fi
+
+  case "${action}" in
+    on | enable)
+      if ! has_user_password; then
+        log_error "no password set"
+        log_info "run 'passwd' first"
+        return 1
+      fi
+
+      set_config_value "${config_file}" "PasswordAuthentication" "yes"
+      set_config_value "${config_file}" "PubkeyAuthentication" "yes"
+      set_config_value "${config_file}" "AuthenticationMethods" "publickey,password"
+
+      log_success "2fa: enabled (key + password)"
+      if pgrep -x sshd > /dev/null 2>&1; then
+        reload_remote
+      fi
+      ;;
+    off | disable)
+      set_config_value "${config_file}" "PasswordAuthentication" "no"
+      set_config_value "${config_file}" "PubkeyAuthentication" "yes"
+      remove_config_key "${config_file}" "AuthenticationMethods"
+
+      log_success "2fa: disabled (key only)"
+      if pgrep -x sshd > /dev/null 2>&1; then
+        reload_remote
+      fi
+      ;;
+    status)
+      local st
+      st=$(get_2fa_status)
+      if [[ "${st}" == "enabled" ]]; then
+        log_info "2fa: enabled (key + password)"
+      else
+        log_info "2fa: disabled (key only)"
+      fi
+      ;;
+    *)
+      log_error "usage: net remote 2fa [on|off]"
+      return 1
+      ;;
+  esac
+}
+
 setup_remote() {
   local ssh_dir="${SSH_DIR}"
   local config_file="${SSH_CONFIG}"
@@ -304,6 +399,7 @@ setup_remote() {
   set_config_value "${config_file}" "AllowAgentForwarding" "no"
   set_config_value "${config_file}" "ClientAliveInterval" "30"
   set_config_value "${config_file}" "ClientAliveCountMax" "3"
+  remove_config_key "${config_file}" "AuthenticationMethods"
 
   if ! compgen -G "${ssh_dir}/ssh_host_*_key" > /dev/null 2>&1; then
     ssh-keygen -A > /dev/null 2>&1 || true
@@ -523,6 +619,10 @@ main() {
     pair)
       shift
       pair_client_key "${*:-}"
+      ;;
+    2fa)
+      shift
+      toggle_2fa "${1:-status}"
       ;;
     config)
       edit_ssh_config
