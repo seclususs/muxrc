@@ -24,13 +24,16 @@ check_dependencies() {
 }
 
 usage() {
-  echo "usage: media compress <file_or_directory>"
+  echo "usage: media compress [--1080p] <file_or_directory>"
   echo "re-compress video file or directory using ffmpeg libx265"
   echo "hevc crf 18 with original audio/metadata copy."
+  echo "options:"
+  echo "  --1080p   downscale resolutions above 1080p keeping aspect ratio"
 }
 
 compress_video() {
   local target_file="${1:-}"
+  local max_1080p="${2:-0}"
 
   if [[ -z "${target_file}" ]]; then
     log_error "usage: media compress <file>"
@@ -85,8 +88,14 @@ compress_video() {
     mov_opts=(-movflags use_metadata_tags)
   fi
 
+  local -a vf_opts=()
+  if [[ "${max_1080p}" -eq 1 ]]; then
+    vf_opts=(-vf "scale='if(gte(iw,ih),if(gt(ih,1080),-2,trunc(iw/2)*2),if(gt(iw,1080),1080,trunc(iw/2)*2))':'if(gte(iw,ih),if(gt(ih,1080),1080,trunc(ih/2)*2),if(gt(iw,1080),-2,trunc(ih/2)*2))'")
+  fi
+
   if ! ffmpeg -hide_banner -loglevel error -stats -y -i "${target_file}" \
     -map 0 -c copy -c:v libx265 -preset slow -crf 18 \
+    ${vf_opts[@]+"${vf_opts[@]}"} \
     -map_metadata 0 ${mov_opts[@]+"${mov_opts[@]}"} \
     "${temp_file}"; then
     log_error "ffmpeg encoding failed"
@@ -128,6 +137,7 @@ compress_video() {
 
 compress_batch() {
   local target_dir="${1}"
+  local max_1080p="${2:-0}"
   local -a video_files=()
   local f
 
@@ -164,7 +174,7 @@ compress_batch() {
   for f in "${video_files[@]}"; do
     idx=$((idx + 1))
     log_info "[${idx}/${total}] $(basename "${f}")"
-    if ! compress_video "${f}"; then
+    if ! compress_video "${f}" "${max_1080p}"; then
       failed=$((failed + 1))
     fi
   done
@@ -177,12 +187,34 @@ compress_batch() {
 }
 
 main() {
-  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-    usage
-    exit 0
-  fi
+  local target=""
+  local max_1080p=0
 
-  local target="${1:-}"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      --1080p)
+        max_1080p=1
+        ;;
+      -*)
+        log_error "unknown option: $1 (see -h)"
+        exit 1
+        ;;
+      *)
+        if [[ -z "${target}" ]]; then
+          target="$1"
+        else
+          log_error "unexpected argument: $1"
+          exit 1
+        fi
+        ;;
+    esac
+    shift
+  done
+
   if [[ -z "${target}" ]]; then
     log_error "usage: media compress <path>"
     exit 1
@@ -196,9 +228,9 @@ main() {
   check_dependencies || exit 1
 
   if [[ -d "${target}" ]]; then
-    compress_batch "${target}"
+    compress_batch "${target}" "${max_1080p}"
   elif [[ -f "${target}" ]]; then
-    compress_video "${target}"
+    compress_video "${target}" "${max_1080p}"
   else
     log_error "unsupported target type: ${target}"
     exit 1

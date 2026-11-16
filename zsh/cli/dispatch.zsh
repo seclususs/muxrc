@@ -122,7 +122,7 @@ commands:
   spoof [pre] <target> inject decoy metadata (file/dir)
   sync <target>        sync dates to exif (file/dir)
   rename <dir> <pfx>   rename photos by date
-  compress <target>    compress video to hevc (file/dir)
+  compress [opt] <tgt> compress video to hevc (file/dir)
 
 run 'media <command> -h' for subcommand details
 EOF
