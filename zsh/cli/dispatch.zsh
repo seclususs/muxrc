@@ -259,3 +259,11 @@ sec() {
       ;;
   esac
 }
+
+################
+# Dossier Router
+################
+dossier() {
+  bash "${MUXRC_DIR}/bash/dossier/dossier.sh" "$@"
+}
+

@@ -1,0 +1,14 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+######################
+# Dossier CLI Launcher
+######################
+set -euo pipefail
+
+_bin_dir="${BASH_SOURCE[0]%/*}"
+if [[ "${_bin_dir}" == "${BASH_SOURCE[0]}" ]]; then
+	_bin_dir="."
+fi
+_repo_dir="$(cd "${_bin_dir}/.." && pwd -P 2>/dev/null || echo "${_bin_dir}/..")"
+
+exec bash "${_repo_dir}/bash/dossier/dossier.sh" "$@"
