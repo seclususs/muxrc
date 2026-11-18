@@ -1,6 +1,6 @@
 ---
 trigger: always_on
-description: Core invariants for Termux-targeted shell projects. Applies to every message.
+description: "Termux workflow policy"
 ---
 
 # Core Policy
