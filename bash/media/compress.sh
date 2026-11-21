@@ -84,6 +84,10 @@ compress_video() {
 
   local -a mov_opts=()
   local ext_lower="${ext,,}"
+  if [[ "${ext_lower}" == "webm" ]]; then
+    log_error "webm does not support hevc"
+    return 1
+  fi
   if [[ "${ext_lower}" =~ ^(mp4|mov|m4v)$ ]]; then
     mov_opts=(-movflags use_metadata_tags)
   fi
@@ -143,7 +147,7 @@ compress_batch() {
 
   while IFS= read -r -d '' f; do
     video_files+=("${f}")
-  done < <(find "${target_dir}" -maxdepth 1 -type f \( -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.mov" -o -iname "*.webm" -o -iname "*.m4v" -o -iname "*.avi" \) -print0 2> /dev/null | sort -z)
+  done < <(find "${target_dir}" -maxdepth 1 -type f \( -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.mov" -o -iname "*.m4v" -o -iname "*.avi" \) -print0 2> /dev/null | sort -z)
 
   local total=${#video_files[@]}
   if [[ "${total}" -eq 0 ]]; then

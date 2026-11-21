@@ -574,7 +574,8 @@ record_history_entry() {
       t_cur=$(date -d "${entry_time}" +%s 2> /dev/null || true)
       t_prev=$(date -d "${l_time}" +%s 2> /dev/null || true)
       if [[ -n "${t_cur}" && -n "${t_prev}" ]]; then
-        if ((t_cur - t_prev < 5)); then
+        local delta=$((t_cur - t_prev))
+        if ((delta >= 0 && delta < 5)); then
           return 0
         fi
       elif [[ "${l_time}" == "${entry_time}" ]]; then
@@ -643,7 +644,11 @@ parse_sshd_line() {
   fi
 
   if [[ -n "${type}" && -n "${ip}" ]]; then
-    ip="${ip%:*}"
+    if [[ "${ip}" =~ ^\[([0-9a-fA-F:]+)\](:[0-9]+)?$ ]]; then
+      ip="${BASH_REMATCH[1]}"
+    elif [[ "${ip}" =~ ^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)(:[0-9]+)?$ ]]; then
+      ip="${BASH_REMATCH[1]}"
+    fi
     record_history_entry "${type}" "${ip}" "${mode}" "${entry_time}"
     if [[ "${notify}" -eq 1 ]]; then
       send_security_alert "${ip}" "${mode}"

@@ -10,6 +10,7 @@ systemctl() {
 
   local action="$1"
   local service="${2%.service}"
+  local svdir="${SVDIR:-$PREFIX/var/service}"
 
   case "$action" in
     start) command sv up "$service" 2> /dev/null ;;
@@ -17,20 +18,24 @@ systemctl() {
     restart) command sv restart "$service" 2> /dev/null ;;
     status) command sv status "$service" ;;
     enable)
-      if [ -d "$PREFIX/share/termux-services/$service" ]; then
-        ln -sf "$PREFIX/share/termux-services/$service" "$PREFIX/var/service/"
-        echo "Created symlink /"etc"/systemd/system/multi-user.target.wants/${service}.service → /"lib"/systemd/system/${service}.service."
+      if [[ -d "$svdir/$service" ]]; then
+        rm -f "$svdir/$service/down"
+        command sv up "$service" > /dev/null 2>&1 || true
+        echo "Created symlink /\"etc\"/systemd/system/multi-user.target.wants/${service}.service → /\"lib\"/systemd/system/${service}.service."
       else
         echo "Failed to enable unit: Unit file ${service}.service does not exist."
         return 1
       fi
       ;;
     disable)
-      if command -v sv-disable > /dev/null 2>&1; then
-        sv-disable "$service" > /dev/null 2>&1 || true
+      if [[ -d "$svdir/$service" ]]; then
+        touch "$svdir/$service/down"
+        command sv down "$service" > /dev/null 2>&1 || true
+        echo "Removed /\"etc\"/systemd/system/multi-user.target.wants/${service}.service."
+      else
+        echo "Unit ${service}.service is not enabled."
+        return 1
       fi
-      rm -rf "$PREFIX/var/service/$service"
-      echo "Removed /"etc"/systemd/system/multi-user.target.wants/${service}.service."
       ;;
     *)
       echo "Unknown operation '$action'."
